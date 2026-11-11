@@ -1,0 +1,2 @@
+# Atlas PC ne dépend que de la bibliothèque standard de Python 3.9+.
+# Outils de développement facultatifs : voir requirements-dev.txt
