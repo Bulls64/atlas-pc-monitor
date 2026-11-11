@@ -6,6 +6,7 @@ import html
 import json
 from pathlib import Path
 
+from .findings import analyze, summary_text
 from .formatting import fmt_date
 from .pages import build_all
 
@@ -27,6 +28,14 @@ def to_text(data: dict) -> str:
     lines = [title.upper(), subtitle]
     if data.get("note"):
         lines += ["", f"Remarque : {data['note']}"]
+    found = analyze(data)
+    if found:
+        lines += ["", "=" * 60, f"CONSTATS — {summary_text(found)}".upper(), "=" * 60]
+        for item in found:
+            lines += ["", f"[{item.label}] {item.title}"]
+            lines += [f"    {line}" for line in item.detail.splitlines()]
+            if item.advice:
+                lines.append(f"    → {item.advice}")
     for page, sections in build_all(data).items():
         lines += ["", "=" * 60, page.upper(), "=" * 60]
         for section in sections:
@@ -46,7 +55,14 @@ _CSS = (
     "border-bottom:2px solid #13865f;padding-bottom:.3rem}h3{margin:1.2rem 0 .4rem;font-size:1rem}"
     "p.meta,p.note{color:#637386}table{width:100%;border-collapse:collapse;background:#fff;"
     "border:1px solid #d5dee8}td{padding:.45rem .8rem;border-top:1px solid #e5ebf2;vertical-align:top}"
-    "td:first-child{width:38%;color:#637386}@media print{body{background:#fff;margin:0}}"
+    "td:first-child{width:38%;color:#637386}.finding{background:#fff;border:1px solid #d5dee8;"
+    "border-left:5px solid #13865f;padding:.6rem .9rem;margin:.5rem 0;break-inside:avoid}.finding p{margin:.3rem 0}"
+    ".finding .advice{color:#637386}.chip{font-size:.75rem;font-weight:700;text-transform:uppercase;margin-right:.6rem}"
+    ".finding.fix{border-left-color:#c0392b}.finding.fix .chip{color:#c0392b}"
+    ".finding.watch{border-left-color:#b87410}.finding.watch .chip{color:#98620a}"
+    ".finding.info{border-left-color:#2766b2}.finding.info .chip{color:#2766b2}"
+    ".finding.ok{border-left-color:#13865f}.finding.ok .chip{color:#13865f}"
+    "@media print{body{background:#fff;margin:0}}"
 )
 
 
@@ -60,6 +76,17 @@ def to_html(data: dict) -> str:
     ]
     if data.get("note"):
         parts.append(f'<p class="note">{esc(data["note"])}</p>')
+    found = analyze(data)
+    if found:
+        parts.append(f'<h2>Constats — {esc(summary_text(found))}</h2><div class="findings">')
+        for item in found:
+            detail = "<br>".join(esc(line) for line in item.detail.splitlines())
+            advice = f'<p class="advice">→ {esc(item.advice)}</p>' if item.advice else ""
+            parts.append(
+                f'<div class="finding {item.level}"><span class="chip">{esc(item.label)}</span>'
+                f"<strong>{esc(item.title)}</strong><p>{detail}</p>{advice}</div>"
+            )
+        parts.append("</div>")
     for page, sections in build_all(data).items():
         parts.append(f"<h2>{esc(page)}</h2>")
         for section in sections:

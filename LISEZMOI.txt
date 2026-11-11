@@ -1,4 +1,4 @@
-ATLAS PC 2.0
+ATLAS PC 2.1
 ============
 
 Application de bureau en Python pour consulter l'inventaire matériel d'un PC
@@ -14,6 +14,14 @@ une seule requête PowerShell/CIM.
 
 Ce que l'application affiche
 ----------------------------
+- Constats : l'inventaire traduit en verdicts (à corriger, à surveiller,
+  à noter, OK) avec un conseil pour chacun : mémoire en mono-canal ou
+  sous sa vitesse nominale, barrettes dépareillées, disque en alerte ou
+  usé, volume plein, batterie usée, Windows 10 en fin de support et
+  éligibilité à Windows 11, Windows non activé, démarrage sécurisé coupé,
+  pilote graphique générique ou ancien, périphériques en erreur, poste
+  jamais redémarré. Les seuils se règlent en tête de atlas/findings.py.
+  Un résumé figure sur la vue d'ensemble et en tête des exports.
 - Vue d'ensemble : modèle du poste, processeur, mémoire, carte graphique,
   carte mère, stockage, températures
 - Système : fabricant et modèle, Windows (édition, version, activation,
@@ -58,6 +66,7 @@ Organisation du code
   atlas/collect.py     script PowerShell, appel, normalisation
   atlas/formatting.py  mise en forme des valeurs (fonctions pures)
   atlas/pages.py       contenu des pages, recherche, comparaison
+  atlas/findings.py    règles des constats et leurs seuils
   atlas/export.py      JSON, texte, HTML
   atlas/ui.py          interface Tkinter
   tests/               tests (pytest)
@@ -65,6 +74,6 @@ Organisation du code
 Développement
 -------------
   pip install -r requirements-dev.txt
-  pytest                       tests
+  pytest                       tests (l'essai d'interface demande un écran)
   ruff check . ; ruff format . contrôle et mise en forme
   pyinstaller atlas_pc.spec    exécutable autonome dans dist/
