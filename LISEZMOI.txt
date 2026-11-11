@@ -1,0 +1,26 @@
+ATLAS PC
+========
+
+Application de bureau en Python pour consulter les informations du PC, dans
+l'esprit des utilitaires d'inventaire matériel comme Speccy.
+
+Lancement
+---------
+Sous Windows 10 ou 11, installez Python 3 si nécessaire, puis double-cliquez
+sur lancer_atlas.bat. Vous pouvez aussi démarrer atlas_pc.py avec Python 3.
+
+Aucune bibliothèque Python externe n'est requise : l'application utilise
+Tkinter et les commandes d'inventaire CIM de Windows.
+
+Fonctions
+---------
+- Résumé du système et de la mémoire utilisée
+- Détails sur Windows, le processeur, la mémoire, la carte mère, les
+  graphiques, le stockage et les interfaces réseau
+- Actualisation de l'inventaire
+- Export du rapport au format JSON ou texte
+- Lecture des températures quand Windows expose les capteurs
+
+La disponibilité des détails varie selon les pilotes, les capteurs et les
+droits d'accès du système. La page des températures explique si aucun capteur
+n'est exposé.
