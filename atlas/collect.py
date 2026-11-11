@@ -35,6 +35,7 @@ LIST_SECTIONS = (
     "monitors",
     "audio",
     "license",
+    "pnp",
 )
 # Sources que Windows ne livre en général qu'à un processus élevé.
 ADMIN_SECTIONS = ("secureboot", "tpm", "bitlocker", "temperatures")
@@ -53,7 +54,7 @@ try{$admin=([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIden
 $machine=Q 'machine' {Get-CimInstance Win32_ComputerSystem|Select-Object Manufacturer,Model,SystemFamily,SystemType,TotalPhysicalMemory,HypervisorPresent,PartOfDomain,Domain}
 $bios=Q 'bios' {Get-CimInstance Win32_BIOS|ForEach-Object{[pscustomobject]@{Manufacturer=$_.Manufacturer;Version=$_.SMBIOSBIOSVersion;ReleaseDate=(I $_.ReleaseDate 'yyyy-MM-dd');SerialNumber=$_.SerialNumber}}}
 $secureboot=Q 'secureboot' {[pscustomobject]@{Enabled=[bool](Confirm-SecureBootUEFI)}}
-$os=Q 'os' {Get-CimInstance Win32_OperatingSystem|ForEach-Object{$r=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue;[pscustomobject]@{Caption=$_.Caption;Version=$_.Version;BuildNumber=$_.BuildNumber;DisplayVersion=$r.DisplayVersion;OSArchitecture=$_.OSArchitecture;TotalVisibleMemorySize=$_.TotalVisibleMemorySize;FreePhysicalMemory=$_.FreePhysicalMemory;InstallDate=(I $_.InstallDate);LastBootUpTime=(I $_.LastBootUpTime)}}}
+$os=Q 'os' {Get-CimInstance Win32_OperatingSystem|ForEach-Object{$r=Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion' -ErrorAction SilentlyContinue;[pscustomobject]@{Caption=$_.Caption;SystemDrive=$_.SystemDrive;FirmwareType=$env:firmware_type;Version=$_.Version;BuildNumber=$_.BuildNumber;DisplayVersion=$r.DisplayVersion;OSArchitecture=$_.OSArchitecture;TotalVisibleMemorySize=$_.TotalVisibleMemorySize;FreePhysicalMemory=$_.FreePhysicalMemory;InstallDate=(I $_.InstallDate);LastBootUpTime=(I $_.LastBootUpTime)}}}
 $cpu=Q 'cpu' {Get-CimInstance Win32_Processor|Select-Object Name,Manufacturer,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,CurrentClockSpeed,SocketDesignation,L2CacheSize,L3CacheSize,VirtualizationFirmwareEnabled,LoadPercentage}
 $board=Q 'board' {Get-CimInstance Win32_BaseBoard|Select-Object Manufacturer,Product,Version,SerialNumber}
 $ram=Q 'ram' {Get-CimInstance Win32_PhysicalMemory|Select-Object Manufacturer,PartNumber,SerialNumber,Capacity,Speed,ConfiguredClockSpeed,DeviceLocator,BankLabel,SMBIOSMemoryType,FormFactor}
@@ -75,9 +76,10 @@ $battery=Q 'battery' {Get-CimInstance Win32_Battery|ForEach-Object{$full=$null;$
 $monitors=Q 'monitors' {$p=@{};try{Get-CimInstance -Namespace root/wmi WmiMonitorBasicDisplayParams -ErrorAction Stop|ForEach-Object{$p[$_.InstanceName]=$_}}catch{};Get-CimInstance -Namespace root/wmi WmiMonitorID|ForEach-Object{$d=$p[$_.InstanceName];[pscustomobject]@{Name=(S $_.UserFriendlyName);Manufacturer=(S $_.ManufacturerName);SerialNumber=(S $_.SerialNumberID);Year=$_.YearOfManufacture;WidthCm=$d.MaxHorizontalImageSize;HeightCm=$d.MaxVerticalImageSize}}}
 $audio=Q 'audio' {Get-CimInstance Win32_SoundDevice|Select-Object Name,Manufacturer,Status}
 $tpm=Q 'tpm' {Get-CimInstance -Namespace root/cimv2/security/microsofttpm -ClassName Win32_Tpm|Select-Object IsEnabled_InitialValue,IsActivated_InitialValue,SpecVersion,ManufacturerVersion}
+$pnp=Q 'pnp' {Get-CimInstance Win32_PnPEntity -Filter 'ConfigManagerErrorCode<>0'|Select-Object Name,PNPClass,ConfigManagerErrorCode}
 $license=Q 'license' {Get-CimInstance SoftwareLicensingProduct -Filter "ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f' AND PartialProductKey IS NOT NULL"|Select-Object Name,Description,LicenseStatus}
 
-$json=[ordered]@{admin=$admin;machine=$machine;bios=$bios;secureboot=$secureboot;os=$os;cpu=$cpu;board=$board;ram=$ram;memoryarray=$memoryarray;gpu=$gpu;disks=$disks;volumes=$volumes;bitlocker=$bitlocker;adapters=$adapters;network=$network;temperatures=$temperatures;battery=$battery;monitors=$monitors;audio=$audio;tpm=$tpm;license=$license;errors=$err}|ConvertTo-Json -Depth 6 -Compress
+$json=[ordered]@{admin=$admin;machine=$machine;bios=$bios;secureboot=$secureboot;os=$os;cpu=$cpu;board=$board;ram=$ram;memoryarray=$memoryarray;gpu=$gpu;disks=$disks;volumes=$volumes;bitlocker=$bitlocker;adapters=$adapters;network=$network;temperatures=$temperatures;battery=$battery;monitors=$monitors;audio=$audio;tpm=$tpm;license=$license;pnp=$pnp;errors=$err}|ConvertTo-Json -Depth 6 -Compress
 # Sortie en base64 : le JSON traverse intact n'importe quelle page de code console.
 'ATLAS:'+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
 """

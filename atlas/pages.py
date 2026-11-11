@@ -14,9 +14,11 @@ from .collect import ADMIN_SECTIONS
 from .formatting import EMPTY
 
 OVERVIEW = "Vue d'ensemble"
+FINDINGS = "Constats"
 # (nom de la page, icône) : ajouter une page ici suffit à l'ajouter à la navigation.
 PAGES: list[tuple[str, str]] = [
     (OVERVIEW, "⌂"),
+    (FINDINGS, "✓"),
     ("Système", "▣"),
     ("Processeur", "◉"),
     ("Mémoire", "▤"),
@@ -27,7 +29,7 @@ PAGES: list[tuple[str, str]] = [
     ("Audio", "♪"),
     ("Batterie", "▮"),
 ]
-DETAIL_PAGES = [name for name, _icon in PAGES if name != OVERVIEW]
+DETAIL_PAGES = [name for name, _icon in PAGES if name not in (OVERVIEW, FINDINGS)]
 
 HEALTH = {"healthy": "Sain", "warning": "Avertissement", "unhealthy": "Défaillant", "unknown": "Inconnu"}
 NET_STATUS = {"up": "Connecté", "disconnected": "Déconnecté", "disabled": "Désactivé", "not present": "Absent"}
@@ -116,6 +118,8 @@ def page_system(data: dict) -> list[Section]:
         rows = []
         boot = data.get("secureboot") or {}
         tpm = data.get("tpm") or {}
+        firmware = str(system.get("FirmwareType") or "")
+        _add(rows, "Mode de démarrage", {"uefi": "UEFI", "legacy": "BIOS hérité (Legacy)"}.get(firmware.lower(), firmware))
         if "Enabled" in boot:
             _add(rows, "Démarrage sécurisé", "Activé" if boot.get("Enabled") else "Désactivé")
         if tpm:
@@ -124,6 +128,15 @@ def page_system(data: dict) -> list[Section]:
         if "admin" in data:
             _add(rows, "Session administrateur", f.fmt_bool(data.get("admin")))
         sections.append(Section("Sécurité", rows, _error_note(data, "secureboot", "tpm")))
+    rows = []
+    for device in data.get("pnp") or []:
+        code = f.to_number(device.get("ConfigManagerErrorCode"))
+        if code and int(code) != 45:
+            text = f"Code {int(code)} : {f.PNP_ERRORS.get(int(code), 'erreur inconnue')}"
+            _add(rows, f.clean(device.get("Name")), text)
+    note = _error_note(data, "pnp")
+    if rows or note:
+        sections.append(Section("Périphériques en erreur", rows, note))
     return sections
 
 
@@ -171,8 +184,8 @@ def page_memory(data: dict) -> list[Section]:
         if f.to_number(stick.get("FormFactor")):
             _add(rows, "Format", f.fmt_code(stick.get("FormFactor"), f.FORM_FACTORS))
         _add(rows, "Capacité", f.fmt_binary(stick.get("Capacity")))
-        _add(rows, "Vitesse nominale", f.fmt_mhz(stick.get("Speed")))
-        _add(rows, "Vitesse configurée", f.fmt_mhz(stick.get("ConfiguredClockSpeed")))
+        _add(rows, "Vitesse nominale", f.fmt_mts(stick.get("Speed")))
+        _add(rows, "Vitesse configurée", f.fmt_mts(stick.get("ConfiguredClockSpeed")))
         _add(rows, "Fabricant", f.clean(stick.get("Manufacturer")))
         _add(rows, "Référence", f.clean(stick.get("PartNumber")))
         _add(rows, "Numéro de série", f.clean(stick.get("SerialNumber")))

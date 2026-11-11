@@ -36,7 +36,7 @@ def test_memory_page(data):
     assert summary["Capacité maximale de la carte mère"] == "64 Go"
     stick = rows_of(sections, "Barrette 2")
     assert stick["Capacité"] == "8 Go" and stick["Type"] == "DDR4" and stick["Format"] == "SO-DIMM"
-    assert stick["Vitesse nominale"] == "3,2 GHz" and stick["Vitesse configurée"] == "2,93 GHz"
+    assert stick["Vitesse nominale"] == "3200 MT/s" and stick["Vitesse configurée"] == "2933 MT/s"
 
 
 def test_graphics_page(data):

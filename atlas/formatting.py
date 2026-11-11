@@ -60,6 +60,31 @@ LICENSE_STATUS = {
     6: "Période de grâce étendue",
 }
 
+# Codes ConfigManagerErrorCode (les « points jaunes » du Gestionnaire de périphériques).
+PNP_ERRORS = {
+    1: "mal configuré",
+    3: "pilote endommagé ou mémoire insuffisante",
+    10: "le périphérique ne peut pas démarrer",
+    12: "ressources insuffisantes",
+    14: "redémarrage nécessaire",
+    18: "pilotes à réinstaller",
+    19: "configuration du registre endommagée",
+    21: "suppression en cours",
+    22: "désactivé",
+    24: "absent ou mal détecté",
+    28: "pilote non installé",
+    31: "Windows ne peut pas charger les pilotes",
+    32: "service du pilote désactivé",
+    37: "le pilote a signalé un échec",
+    39: "pilote endommagé ou manquant",
+    41: "pilote chargé mais matériel introuvable",
+    43: "arrêté après avoir signalé des problèmes",
+    45: "non connecté actuellement",
+    47: "préparé pour un retrait sécurisé",
+    48: "pilote bloqué (incompatible)",
+    52: "signature du pilote non vérifiable",
+}
+
 
 def to_number(value) -> float | None:
     """Convertit en nombre, ou None si la valeur n'est pas exploitable."""
@@ -110,6 +135,12 @@ def fmt_mhz(value) -> str:
     if number >= 1000:
         return f"{_decimal(number / 1000, 2)} GHz"
     return f"{_decimal(number, 0)} MHz"
+
+
+def fmt_mts(value) -> str:
+    """Débit mémoire : Windows le rapporte en « MHz », mais c'est le nombre de MT/s (DDR4-3200 → 3200)."""
+    number = to_number(value)
+    return EMPTY if number is None or number <= 0 else f"{int(number)} MT/s"
 
 
 def fmt_percent(value) -> str:

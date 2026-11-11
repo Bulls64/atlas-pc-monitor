@@ -20,8 +20,9 @@ from tkinter import filedialog, messagebox, ttk
 
 from . import __version__, export
 from .collect import scan
+from .findings import FIX, INFO, LEVELS, OK, WATCH, Finding, analyze, summary, summary_text
 from .formatting import EMPTY, fmt_binary, fmt_celsius, fmt_date
-from .pages import OVERVIEW, PAGES, Section, build_page, diff_reports, overview_tiles, search
+from .pages import FINDINGS, OVERVIEW, PAGES, Section, build_page, diff_reports, overview_tiles, search
 
 log = logging.getLogger("atlas")
 FONT = "Segoe UI"
@@ -62,6 +63,7 @@ class Palette:
     green: str
     blue: str
     amber: str
+    red: str
     row: str
     subtle: str
 
@@ -69,11 +71,11 @@ class Palette:
 PALETTES = {
     "dark": Palette(
         bg="#0b1018", card="#111a25", alt="#162231", line="#223142", fg="#edf3fa", dim="#8c9bad",
-        green="#51d6a5", blue="#68a9ff", amber="#f4bb65", row="#131e2a", subtle="#637386",
+        green="#51d6a5", blue="#68a9ff", amber="#f4bb65", red="#ff7b72", row="#131e2a", subtle="#637386",
     ),
     "light": Palette(
         bg="#f3f6fa", card="#ffffff", alt="#e5ebf2", line="#d5dee8", fg="#172333", dim="#637386",
-        green="#13865f", blue="#2766b2", amber="#98620a", row="#f7f9fc", subtle="#66788c",
+        green="#13865f", blue="#2766b2", amber="#98620a", red="#c0392b", row="#f7f9fc", subtle="#66788c",
     ),
 }  # fmt: skip
 
@@ -136,6 +138,7 @@ class Atlas(tk.Tk):
         self.theme = self.config_data.get("theme") if self.config_data.get("theme") in PALETTES else "dark"
         self.colors = PALETTES[self.theme]
         self.data: dict = {}
+        self.findings: list[Finding] = []
         self.page = OVERVIEW
         self.nav: dict[str, tk.Button] = {}
         self.trees: list[ttk.Treeview] = []
@@ -340,6 +343,7 @@ class Atlas(tk.Tk):
         except queue.Empty:
             self.after(100, self._poll)
             return
+        self.findings = analyze(self.data)
         self._scanning = False
         self._set_status()
         self.render()
@@ -363,6 +367,7 @@ class Atlas(tk.Tk):
         for name, button in self.nav.items():
             active = name == self.page and not query
             button.configure(bg=c.alt if active else c.bg, fg=c.green if active else c.dim)
+        self._update_findings_nav()
         if query:
             self.title_label.configure(text="Recherche")
             self._render_search(query)
@@ -373,6 +378,8 @@ class Atlas(tk.Tk):
             if self.data:
                 if self.page == OVERVIEW:
                     self._render_overview()
+                elif self.page == FINDINGS:
+                    self._render_findings()
                 else:
                     self._render_sections(build_page(self.data, self.page))
         self.canvas.yview_moveto(0)
@@ -477,6 +484,8 @@ class Atlas(tk.Tk):
         usage = f"{fmt_binary(memory.get('used'))} sur {fmt_binary(memory.get('total'))}"
         tk.Label(card, text=usage, bg=c.card, fg=c.dim, font=(FONT, 9)).pack(anchor="w")
 
+        if self.findings:
+            self._findings_banner()
         self.heading("Vue rapide")
         grid = tk.Frame(self.inner, bg=c.bg)
         grid.pack(fill="x")
@@ -515,6 +524,116 @@ class Atlas(tk.Tk):
             self.note(f"Sources indisponibles : {', '.join(names)}.{hint} Le détail figure sur chaque page.", c.amber)
         if d.get("note"):
             self.note(d["note"], c.amber)
+
+    # ------------------------------------------------------------------ constats
+
+    def level_color(self, level: str) -> str:
+        c = self.colors
+        return {FIX: c.red, WATCH: c.amber, INFO: c.blue, OK: c.green}[level]
+
+    def _update_findings_nav(self) -> None:
+        button = self.nav.get(FINDINGS)
+        if not button:
+            return
+        icon = dict(PAGES)[FINDINGS]
+        counts = summary(self.findings)
+        alerts = counts[FIX] + counts[WATCH]
+        button.configure(text=f"{icon}   {FINDINGS}" + (f"  ({alerts})" if alerts else ""))
+        if self.page != FINDINGS or self.query.get().strip():
+            if counts[FIX]:
+                button.configure(fg=self.colors.red)
+            elif counts[WATCH]:
+                button.configure(fg=self.colors.amber)
+
+    def _findings_banner(self) -> None:
+        """Bandeau cliquable de la vue d'ensemble : le résumé des constats."""
+        c = self.colors
+        counts = summary(self.findings)
+        level = FIX if counts[FIX] else WATCH if counts[WATCH] else OK
+        color = self.level_color(level)
+        banner = tk.Frame(self.inner, bg=c.card, highlightbackground=c.line, highlightthickness=1, cursor="hand2")
+        banner.pack(fill="x", pady=(10, 0))
+        tk.Frame(banner, bg=color, width=5).pack(side="left", fill="y")
+        body = tk.Frame(banner, bg=c.card, padx=14, pady=10, cursor="hand2")
+        body.pack(side="left", fill="x", expand=True)
+        tk.Label(body, text="CONSTATS", bg=c.card, fg=c.dim, font=(FONT, 8, "bold"), cursor="hand2").pack(anchor="w")
+        headline = summary_text(self.findings)
+        if level == OK:
+            headline = "Rien à corriger ni à surveiller"
+        tk.Label(body, text=headline, bg=c.card, fg=color, font=(FONT, 12, "bold"), cursor="hand2").pack(anchor="w", pady=(3, 0))
+        urgent = [item.title for item in self.findings if item.level in (FIX, WATCH)][:3]
+        if urgent:
+            label = tk.Label(body, text=" · ".join(urgent), bg=c.card, fg=c.dim, font=(FONT, 9), justify="left", cursor="hand2")
+            label.pack(anchor="w", pady=(2, 0))
+            self._wrap(label, 1.0, 80)
+        link = tk.Label(banner, text="Voir les constats ›", bg=c.card, fg=c.blue, font=(FONT, 9, "bold"), cursor="hand2")
+        link.pack(side="right", padx=14)
+        for widget in (banner, body, link, *body.winfo_children()):
+            widget.bind("<Button-1>", lambda _event: self.open_page(FINDINGS))
+
+    def _render_findings(self) -> None:
+        c = self.colors
+        counts = summary(self.findings)
+        parts = [
+            f"{counts[level]} {LEVELS[level] if level == OK else LEVELS[level].lower()}"
+            for level in (FIX, WATCH, INFO, OK)
+            if counts[level]
+        ]
+        self.subtitle.configure(text=" · ".join(parts) or "Aucun constat")
+        if not self.findings:
+            self.note("Aucun constat : l'inventaire Windows n'a pas pu être lu.", c.amber)
+            return
+        for level in (FIX, WATCH, INFO, OK):
+            items = [item for item in self.findings if item.level == level]
+            if not items:
+                continue
+            header = tk.Label(
+                self.inner, text=f"{LEVELS[level]} ({len(items)})", bg=c.bg, fg=self.level_color(level), font=(FONT, 12, "bold")
+            )
+            header.pack(anchor="w", pady=(14, 6))
+            for item in items:
+                self._finding_card(item)
+        tk.Label(
+            self.inner,
+            text="Seuils et règles : atlas/findings.py. Ce sont des repères d'atelier, pas des normes.",
+            bg=c.bg, fg=c.subtle, font=(FONT, 8),
+        ).pack(anchor="w", pady=(14, 0))  # fmt: skip
+
+    def _finding_card(self, item: Finding) -> None:
+        c = self.colors
+        color = self.level_color(item.level)
+        card = tk.Frame(self.inner, bg=c.card, highlightbackground=c.line, highlightthickness=1)
+        card.pack(fill="x", pady=(0, 6))
+        tk.Frame(card, bg=color, width=4).pack(side="left", fill="y")
+        body = tk.Frame(card, bg=c.card, padx=14, pady=10)
+        body.pack(side="left", fill="x", expand=True)
+        top = tk.Frame(body, bg=c.card)
+        top.pack(fill="x")
+        tk.Label(top, text=item.label.upper(), bg=c.card, fg=color, font=(FONT, 8, "bold")).pack(side="left")
+        tk.Label(top, text=f"  ·  {item.topic}", bg=c.card, fg=c.dim, font=(FONT, 8)).pack(side="left")
+        if item.page:
+            link = tk.Label(top, text=f"{item.page} ›", bg=c.card, fg=c.blue, font=(FONT, 9), cursor="hand2")
+            link.pack(side="right")
+            link.bind("<Button-1>", lambda _event, page=item.page: self.open_page(page))
+        title = tk.Label(body, text=item.title, bg=c.card, fg=c.fg, font=(FONT, 11, "bold"), justify="left", anchor="w")
+        title.pack(fill="x", pady=(4, 0))
+        self._wrap(title, 1.0, 60)
+        if item.detail:
+            detail = tk.Label(body, text=item.detail, bg=c.card, fg=c.fg, font=(FONT, 9), justify="left", anchor="w")
+            detail.pack(fill="x", pady=(3, 0))
+            self._wrap(detail, 1.0, 60)
+        if item.advice:
+            advice = tk.Label(body, text=f"→ {item.advice}", bg=c.card, fg=c.dim, font=(FONT, 9), justify="left", anchor="w")
+            advice.pack(fill="x", pady=(3, 0))
+            self._wrap(advice, 1.0, 60)
+        menu_text = "\n".join(filter(None, [f"[{item.label}] {item.title}", item.detail, item.advice and f"→ {item.advice}"]))
+        for widget in (card, body, top, *body.winfo_children()):
+            widget.bind("<Button-3>", lambda event, text=menu_text: self._copy_menu(event, text))
+
+    def _copy_menu(self, event, text: str) -> None:
+        menu = tk.Menu(self, tearoff=0)
+        menu.add_command(label="Copier ce constat", command=lambda: self._to_clipboard(text, "Constat copié"))
+        menu.tk_popup(event.x_root, event.y_root)
 
     # ------------------------------------------------------------------ copie
 
