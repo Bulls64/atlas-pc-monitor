@@ -10,15 +10,17 @@ import queue
 import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import tkinter as tk
 import tkinter.font
+import webbrowser
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from . import __version__, export
+from . import __version__, export, fiche
 from .collect import scan
 from .findings import FIX, INFO, LEVELS, OK, WATCH, Finding, analyze, summary, summary_text
 from .formatting import EMPTY, fmt_binary, fmt_celsius, fmt_date
@@ -139,6 +141,8 @@ class Atlas(tk.Tk):
         self.colors = PALETTES[self.theme]
         self.data: dict = {}
         self.findings: list[Finding] = []
+        self.fiche_info = fiche.FicheInfo(technician=str(self.config_data.get("technician", "")))
+        self.fiche_window: tk.Toplevel | None = None
         self.page = OVERVIEW
         self.nav: dict[str, tk.Button] = {}
         self.trees: list[ttk.Treeview] = []
@@ -202,6 +206,7 @@ class Atlas(tk.Tk):
             button.pack(fill="x", pady=1)
             self.nav[name] = button
         tk.Frame(side, bg=c.line, height=1).pack(fill="x", pady=10)
+        self.button(side, "🖨 Fiche d'intervention", self.open_fiche, accent=True).pack(fill="x", pady=(0, 6))
         self.button(side, "⇩ Exporter le rapport", self.export).pack(fill="x", pady=(0, 6))
         self.button(side, "⧉ Copier le rapport", self.copy_report).pack(fill="x", pady=(0, 6))
         self.button(side, "⇄ Comparer à un rapport", self.compare).pack(fill="x", pady=(0, 6))
@@ -634,6 +639,136 @@ class Atlas(tk.Tk):
         menu = tk.Menu(self, tearoff=0)
         menu.add_command(label="Copier ce constat", command=lambda: self._to_clipboard(text, "Constat copié"))
         menu.tk_popup(event.x_root, event.y_root)
+
+    # ------------------------------------------------------------------ fiche d'intervention
+
+    def open_fiche(self) -> None:
+        """Formulaire de la fiche : champs saisis, puis ouverture dans le navigateur pour imprimer."""
+        if not self.data:
+            return
+        if self.fiche_window is not None and self.fiche_window.winfo_exists():
+            self.fiche_window.lift()
+            self.fiche_window.focus_set()
+            return
+        c = self.colors
+        info = self.fiche_info
+        if not info.reference:
+            info.reference = fiche.default_reference(self.data)
+        window = tk.Toplevel(self, bg=c.bg, padx=20, pady=16)
+        window.title("Atlas PC — Fiche d'intervention")
+        window.geometry(f"{min(640, self.winfo_screenwidth() - 80)}x{min(720, self.winfo_screenheight() - 120)}")
+        window.transient(self)
+        self.fiche_window = window
+        tk.Label(window, text="Fiche d'intervention", bg=c.bg, fg=c.fg, font=(FONT, 15, "bold")).pack(anchor="w")
+        tk.Label(
+            window, text="Tous les champs sont facultatifs : laissés vides, ils s'impriment comme des zones à remplir à la main.",
+            bg=c.bg, fg=c.dim, font=(FONT, 9), wraplength=580, justify="left",
+        ).pack(anchor="w", pady=(2, 10))  # fmt: skip
+
+        grid = tk.Frame(window, bg=c.bg)
+        grid.pack(fill="x")
+        entries: dict[str, tk.Entry] = {}
+        for row, (key, label) in enumerate(
+            (("technician", "Technicien"), ("client", "Client"), ("contact", "Contact"), ("reference", "Référence"))
+        ):
+            tk.Label(grid, text=label, bg=c.bg, fg=c.dim, font=(FONT, 9, "bold")).grid(row=row, column=0, sticky="w", pady=3)
+            frame = tk.Frame(grid, bg=c.card, highlightthickness=1, highlightbackground=c.line)
+            frame.grid(row=row, column=1, sticky="ew", padx=(12, 0), pady=3)
+            entry = tk.Entry(frame, relief="flat", bd=0, bg=c.card, fg=c.fg, insertbackground=c.fg, font=(FONT, 10), highlightthickness=0)
+            entry.insert(0, getattr(info, key))
+            entry.pack(fill="x", padx=8, pady=6)
+            entry.bind("<FocusIn>", lambda _event, box=frame: box.configure(highlightbackground=c.green))
+            entry.bind("<FocusOut>", lambda _event, box=frame: box.configure(highlightbackground=c.line))
+            entries[key] = entry
+        grid.columnconfigure(1, weight=1)
+
+        texts: dict[str, tk.Text] = {}
+        for key, label in (("request", "Demande du client"), ("work", "Travaux réalisés"), ("recommendations", "Recommandations")):
+            head = tk.Frame(window, bg=c.bg)
+            head.pack(fill="x", pady=(10, 3))
+            tk.Label(head, text=label, bg=c.bg, fg=c.dim, font=(FONT, 9, "bold")).pack(side="left")
+            box = tk.Text(
+                window, height=4, wrap="word", relief="flat", bg=c.card, fg=c.fg, insertbackground=c.fg, font=(FONT, 10),
+                highlightthickness=1, highlightbackground=c.line, highlightcolor=c.green, padx=8, pady=6, undo=True,
+            )  # fmt: skip
+            box.insert("1.0", getattr(info, key))
+            box.pack(fill="both", expand=True)
+            texts[key] = box
+            if key == "recommendations":
+                link = tk.Label(head, text="Reprendre les conseils des constats", bg=c.bg, fg=c.blue, font=(FONT, 9), cursor="hand2")
+                link.pack(side="right")
+                link.bind("<Button-1>", lambda _event, target=box: self._insert_advice(target))
+
+        def collect() -> fiche.FicheInfo:
+            for key, entry in entries.items():
+                setattr(info, key, entry.get().strip())
+            for key, box in texts.items():
+                setattr(info, key, box.get("1.0", "end").strip())
+            if info.technician != self.config_data.get("technician", ""):
+                self.config_data["technician"] = info.technician
+                save_config(self.config_data)
+            return info
+
+        bar = tk.Frame(window, bg=c.bg)
+        bar.pack(fill="x", pady=(14, 0))
+        self.button(bar, "🖨 Ouvrir pour imprimer", lambda: self.print_fiche(collect()), accent=True).pack(side="right")
+        self.button(bar, "Enregistrer…", lambda: self.save_fiche(collect(), parent=window)).pack(side="right", padx=(0, 8))
+
+        def close() -> None:
+            collect()
+            window.destroy()
+
+        self.button(bar, "Fermer", close).pack(side="left")
+        window.protocol("WM_DELETE_WINDOW", close)
+        window.fiche_fields = (entries, texts)  # accès pour les tests
+        entries["client"].focus_set()
+
+    def _insert_advice(self, box: tk.Text) -> None:
+        """Ajoute les conseils des constats à corriger et à surveiller, sans doublon."""
+        current = box.get("1.0", "end")
+        lines = [f"- {item.title} : {item.advice}" for item in self.findings if item.level in (FIX, WATCH) and item.advice]
+        new = [line for line in lines if line not in current]
+        if not new:
+            self._set_status(flash="Aucun conseil à ajouter")
+            return
+        prefix = "" if not current.strip() else "\n"
+        box.insert("end-1c", prefix + "\n".join(new))
+
+    def fiche_html(self, info: fiche.FicheInfo) -> str:
+        return fiche.to_html(self.data, info, self.findings)
+
+    def print_fiche(self, info: fiche.FicheInfo) -> Path | None:
+        """Écrit la fiche dans le dossier temporaire et l'ouvre dans le navigateur (Ctrl+P pour imprimer ou faire un PDF)."""
+        folder = Path(tempfile.gettempdir()) / "AtlasPC"
+        safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in (info.reference or "fiche"))
+        target = folder / f"fiche-{safe}.html"
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            target.write_text(self.fiche_html(info), encoding="utf-8")
+        except OSError as error:
+            messagebox.showerror("Fiche impossible", str(error), parent=self)
+            return None
+        if not webbrowser.open(target.as_uri()):
+            messagebox.showinfo("Fiche d'intervention", f"Ouvrez ce fichier dans un navigateur pour l'imprimer :\n{target}", parent=self)
+        self._set_status(flash="Fiche ouverte dans le navigateur")
+        return target
+
+    def save_fiche(self, info: fiche.FicheInfo, parent=None) -> Path | None:
+        safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in (info.reference or "fiche"))
+        path = filedialog.asksaveasfilename(
+            parent=parent or self, title="Enregistrer la fiche d'intervention", initialfile=f"fiche-{safe}.html",
+            defaultextension=".html", filetypes=[("Page HTML", "*.html")],
+        )  # fmt: skip
+        if not path:
+            return None
+        target = Path(path) if Path(path).suffix.lower() in (".html", ".htm") else Path(f"{path}.html")
+        try:
+            target.write_text(self.fiche_html(info), encoding="utf-8")
+        except OSError as error:
+            messagebox.showerror("Enregistrement impossible", str(error), parent=parent or self)
+            return None
+        self._set_status(flash="Fiche enregistrée")
+        return target
 
     # ------------------------------------------------------------------ copie
 

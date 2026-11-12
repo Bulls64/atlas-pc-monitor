@@ -153,3 +153,43 @@ def test_closing_during_scan_is_clean(app):
     app.refresh()
     app.destroy()
     time.sleep(0.6)  # le thread de collecte se termine sans toucher à Tk
+
+
+def test_fiche_dialog(app, monkeypatch, tmp_path):
+    from atlas import ui
+
+    opened = []
+    monkeypatch.setattr(ui.webbrowser, "open", lambda uri: opened.append(uri) or True)
+    monkeypatch.setattr(ui.tempfile, "gettempdir", lambda: str(tmp_path))
+    app.open_fiche()
+    pump(app, 100)
+    window = app.fiche_window
+    entries, texts = window.fiche_fields
+    assert entries["reference"].get() == "INT-20261111-1030" or entries["reference"].get().startswith("INT-")
+    entries["technician"].insert(0, "Chris")
+    entries["client"].insert(0, "Mme Dupont")
+    texts["request"].insert("1.0", "Lenteurs")
+    app._insert_advice(texts["recommendations"])
+    app._insert_advice(texts["recommendations"])  # pas de doublon
+    advice = texts["recommendations"].get("1.0", "end")
+    assert advice.count("- Barrettes dépareillées") == 1
+
+    app.open_fiche()  # déjà ouverte : ramenée au premier plan, pas dupliquée
+    assert len([w for w in app.winfo_children() if w.winfo_class() == "Toplevel"]) == 1
+
+    window.protocol("WM_DELETE_WINDOW")  # le bouton Fermer enregistre la saisie
+    for child in window.winfo_children():
+        if child.winfo_class() == "Frame":
+            for button in child.winfo_children():
+                if button.winfo_class() == "Button" and button.cget("text") == "Fermer":
+                    button.invoke()
+    assert app.fiche_info.client == "Mme Dupont" and app.fiche_info.request == "Lenteurs"
+    assert json.loads(ui.config_path().read_text())["technician"] == "Chris"
+
+    target = app.print_fiche(app.fiche_info)
+    assert opened == [target.as_uri()] and "Mme Dupont" in target.read_text(encoding="utf-8")
+
+    out = tmp_path / "ma-fiche"
+    monkeypatch.setattr(ui.filedialog, "asksaveasfilename", lambda **_k: str(out))
+    saved = app.save_fiche(app.fiche_info)
+    assert saved.name == "ma-fiche.html" and "Lenteurs" in saved.read_text(encoding="utf-8")
