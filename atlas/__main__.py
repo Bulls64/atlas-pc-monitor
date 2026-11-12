@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import __version__, export
+from . import __version__, export, fiche
 from .collect import scan
 
 
@@ -18,6 +18,10 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--json", action="store_true", help="imprime l'inventaire en JSON, sans interface")
     group.add_argument("--text", action="store_true", help="imprime le rapport texte, sans interface")
     group.add_argument("--html", action="store_true", help="imprime le rapport HTML, sans interface")
+    group.add_argument("--fiche", action="store_true", help="fiche d'intervention HTML imprimable, sans interface")
+    parser.add_argument("--technicien", default="", help="nom du technicien sur la fiche")
+    parser.add_argument("--client", default="", help="nom du client sur la fiche")
+    parser.add_argument("--reference", default="", help="référence de l'intervention sur la fiche")
     parser.add_argument("-o", "--output", metavar="FICHIER", help="écrit le rapport dans ce fichier (.json, .txt ou .html)")
     parser.add_argument("--debug", action="store_true", help="journal détaillé dans le dossier temporaire (atlas-debug.log)")
     parser.add_argument("--version", action="version", version=f"Atlas PC {__version__}")
@@ -38,23 +42,30 @@ def main(argv: list[str] | None = None) -> int:
     log_path = setup_logging(args.debug)
     if log_path:
         print(f"Journal de débogage : {log_path}", file=sys.stderr)
-    if not (args.json or args.text or args.html or args.output):
+    if not (args.json or args.text or args.html or args.fiche or args.output):
         from .ui import run  # Tkinter n'est chargé que pour l'interface
 
         run()
         return 0
     data = scan()
-    forced = ".txt" if args.text else ".html" if args.html else ".json" if args.json else ""
+    forced = ".txt" if args.text else ".html" if args.html or args.fiche else ".json" if args.json else ""
+
+    def content(suffix: str) -> str:
+        if args.fiche:
+            info = fiche.FicheInfo(technician=args.technicien, client=args.client, reference=args.reference)
+            return fiche.to_html(data, info)
+        return export.render(data, suffix)
+
     if args.output:
         target = Path(args.output) if forced else export.resolve_path(args.output)
-        target.write_text(export.render(data, forced or target.suffix), encoding="utf-8")
-        print(f"Rapport enregistré : {target}", file=sys.stderr)
+        target.write_text(content(forced or target.suffix), encoding="utf-8")
+        print(f"{'Fiche' if args.fiche else 'Rapport'} enregistré(e) : {target}", file=sys.stderr)
     else:
         if sys.stdout is None:  # exécutable sans console : il faut passer par -o
             return 2
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
-        sys.stdout.write(export.render(data, forced).rstrip("\n") + "\n")
+        sys.stdout.write(content(forced).rstrip("\n") + "\n")
     return 1 if data.get("note") and "os" not in data and sys.platform == "win32" else 0
 
 

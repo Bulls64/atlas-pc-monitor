@@ -1,4 +1,4 @@
-ATLAS PC 2.1
+ATLAS PC 2.2
 ============
 
 Application de bureau en Python pour consulter l'inventaire matériel d'un PC
@@ -44,6 +44,13 @@ indique pourquoi une information manque.
 
 Actions
 -------
+- Fiche d'intervention : bouton « Fiche d'intervention ». Saisir technicien,
+  client, contact, référence, demande, travaux et recommandations (un lien
+  reprend les conseils des constats), puis « Ouvrir pour imprimer » : la fiche
+  s'ouvre dans le navigateur, Ctrl+P pour l'imprimer ou l'enregistrer en PDF.
+  Format A4, poste diagnostiqué, constats, zones de signature ; les champs
+  laissés vides deviennent des lignes à remplir à la main. Le nom du
+  technicien est mémorisé.
 - Recherche (Ctrl+F) dans toutes les pages, sans tenir compte des accents ;
   Échap pour revenir
 - Copie : Ctrl+C sur les lignes sélectionnées, double-clic pour copier une
@@ -57,6 +64,8 @@ Ligne de commande
   python atlas_pc.py --json            inventaire JSON sur la sortie standard
   python atlas_pc.py --text            rapport texte
   python atlas_pc.py -o rapport.html   rapport dans un fichier (.json .txt .html)
+  python atlas_pc.py --fiche -o fiche.html --client "Mme Dupont" --technicien Chris
+                                       fiche d'intervention sans interface
   python atlas_pc.py --debug           journal détaillé (dossier temporaire)
   python atlas_pc.py --help
 
@@ -67,6 +76,7 @@ Organisation du code
   atlas/formatting.py  mise en forme des valeurs (fonctions pures)
   atlas/pages.py       contenu des pages, recherche, comparaison
   atlas/findings.py    règles des constats et leurs seuils
+  atlas/fiche.py       fiche d'intervention A4
   atlas/export.py      JSON, texte, HTML
   atlas/ui.py          interface Tkinter
   tests/               tests (pytest)
