@@ -90,10 +90,20 @@ Organisation du code
   atlas/export.py      JSON, texte, HTML
   atlas/ui.py          interface Tkinter
   tests/               tests (pytest)
+  tools/check_scan.py  vérification d'un inventaire réel (CI)
 
 Développement
 -------------
   pip install -r requirements-dev.txt
   pytest                       tests (l'essai d'interface demande un écran)
   ruff check . ; ruff format . contrôle et mise en forme
-  pyinstaller atlas_pc.spec    exécutable autonome dans dist/
+  pyinstaller atlas_pc.spec --noconfirm
+                               exécutable dans dist/AtlasPC/ (dossier à distribuer)
+  python tools/check_scan.py scan.json
+                               vérifie un inventaire Windows réel
+
+La CI GitHub (.github/workflows/ci.yml) lance les tests sous Linux et Windows,
+fait un vrai inventaire sur Windows, le vérifie, et construit l'exécutable.
+Essais manuels à faire sur de vrais PC : docs/ESSAIS-WINDOWS.md
+
+Licence MIT (fichier LICENSE).

@@ -142,6 +142,15 @@ PAYLOAD = {
 }
 
 
+@pytest.fixture(autouse=True)
+def not_windows(monkeypatch):
+    """Par défaut, aucun test ne lance PowerShell, même sous Windows : le vrai inventaire
+    est vérifié à part (tools/check_scan.py, job « windows-scan » de la CI)."""
+    from atlas import collect
+
+    monkeypatch.setattr(collect, "is_windows", lambda: False)
+
+
 @pytest.fixture
 def payload():
     return json.loads(json.dumps(PAYLOAD))
