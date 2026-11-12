@@ -120,7 +120,7 @@ def test_theme_switch_during_scan_does_not_start_a_second_scan(app):
     pump(app, 1000)
     assert calls == [1]
     assert str(app.refresh_button.cget("state")) == "normal" and app.theme == "light"
-    assert json.loads(ui.config_path().read_text())["theme"] == "light"
+    assert json.loads(ui.config_path().read_text(encoding="utf-8"))["theme"] == "light"
 
 
 def test_compare_and_export(app, monkeypatch, tmp_path):
@@ -184,7 +184,7 @@ def test_fiche_dialog(app, monkeypatch, tmp_path):
                 if button.winfo_class() == "Button" and button.cget("text") == "Fermer":
                     button.invoke()
     assert app.fiche_info.client == "Mme Dupont" and app.fiche_info.request == "Lenteurs"
-    assert json.loads(ui.config_path().read_text())["technician"] == "Chris"
+    assert json.loads(ui.config_path().read_text(encoding="utf-8"))["technician"] == "Chris"
 
     target = app.print_fiche(app.fiche_info)
     assert opened == [target.as_uri()] and "Mme Dupont" in target.read_text(encoding="utf-8")
@@ -209,7 +209,7 @@ def test_sharing_mode(app, monkeypatch, tmp_path):
     pump(app, 50)
     assert app.sharing and app.sharing_button.cget("text") == "◑ Partage activé"
     assert app.sharing_button.cget("bg") == app.colors.amber
-    assert json.loads(ui.config_path().read_text())["sharing"] is True
+    assert json.loads(ui.config_path().read_text(encoding="utf-8"))["sharing"] is True
     values = [v for tree in app.trees for item in tree.get_children() for v in tree.item(item, "values")]
     assert "PF3ABCDE" not in values and "[masqué]" in values
     assert app.data["bios"]["SerialNumber"] == "PF3ABCDE"  # l'inventaire brut reste intact

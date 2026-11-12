@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUTF8: "1"
+
+jobs:
+  linux:
+    name: Lint et tests (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: sudo apt-get install -y xvfb
+      - run: python -m pip install pytest ruff
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: xvfb-run -a python -m pytest -q
+
+  windows-tests:
+    name: Tests Windows (Python ${{ matrix.python }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.9", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m pip install pytest
+      - run: python -m pytest -q -rs
+
+  windows-scan:
+    name: Inventaire réel sur Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Inventaire JSON (journal de débogage)
+        shell: pwsh
+        run: |
+          python atlas_pc.py --json -o scan.json --debug
+          Copy-Item (Join-Path $env:TEMP "atlas-debug.log") atlas-debug.log
+      - name: Vérification de l'inventaire
+        shell: pwsh
+        run: |
+          python tools/check_scan.py scan.json | Tee-Object -FilePath check.md
+          $code = $LASTEXITCODE
+          Get-Content check.md | Add-Content $env:GITHUB_STEP_SUMMARY
+          exit $code
+      - name: Exports, fiche et mode partage
+        shell: pwsh
+        run: |
+          python atlas_pc.py --text -o rapport.txt
+          python atlas_pc.py --html -o rapport.html
+          python atlas_pc.py --fiche -o fiche.html --client "CI" --technicien "GitHub Actions"
+          python atlas_pc.py --json --anonyme -o scan-anonyme.json
+          Get-Content rapport.txt -TotalCount 40
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: inventaire-windows
+          path: |
+            scan.json
+            scan-anonyme.json
+            atlas-debug.log
+            check.md
+            rapport.txt
+            rapport.html
+            fiche.html
+
+  windows-build:
+    name: Exécutable Windows (onedir)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pyinstaller
+      - run: pyinstaller atlas_pc.spec --noconfirm
+      - name: Lancer l'exécutable construit
+        shell: pwsh
+        run: |
+          # Exécutable fenêtré : on attend explicitement la fin du processus.
+          $p = Start-Process -FilePath dist\AtlasPC\AtlasPC.exe -ArgumentList "--json", "-o", "built.json" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "AtlasPC.exe a renvoyé $($p.ExitCode)" }
+          python tools/check_scan.py built.json
+      - name: Archive
+        shell: pwsh
+        run: Compress-Archive -Path dist\AtlasPC -DestinationPath AtlasPC-windows.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AtlasPC-windows
+          path: AtlasPC-windows.zip
