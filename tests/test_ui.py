@@ -236,3 +236,16 @@ def test_sharing_mode(app, monkeypatch, tmp_path):
     monkeypatch.setattr(ui.messagebox, "showinfo", lambda title, message, **_k: shown.append(message))
     app.compare()
     assert shown and "Aucune différence" in shown[0]
+
+
+def test_sidebar_scrolls_on_small_screens(app):
+    app.geometry("900x420")
+    pump(app, 300)
+    assert app.side_scrollbar.winfo_manager(), "l'ascenseur doit apparaître quand les boutons dépassent"
+    app.side_canvas.yview_moveto(1.0)
+    pump(app, 100)
+    assert app.side_canvas.yview()[1] == 1.0
+    app.geometry("1160x900")
+    pump(app, 300)
+    if app.side_inner.winfo_reqheight() <= app.side_canvas.winfo_height():
+        assert not app.side_scrollbar.winfo_manager()

@@ -9,6 +9,7 @@ import os
 import platform
 import socket
 import subprocess
+import time
 from datetime import datetime
 
 from . import __version__
@@ -44,7 +45,9 @@ PS_SCRIPT = r"""
 $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
 $err=[ordered]@{}
-function Q([string]$n,[scriptblock]$b){try{,@(& $b)}catch{$script:err[$n]="$($_.Exception.Message)".Trim();,@()}}
+$time=[ordered]@{}
+$total=[Diagnostics.Stopwatch]::StartNew()
+function Q([string]$n,[scriptblock]$b){$w=[Diagnostics.Stopwatch]::StartNew();try{$r=,@(& $b)}catch{$script:err[$n]="$($_.Exception.Message)".Trim();$r=,@()};$script:time[$n]=$w.ElapsedMilliseconds;$r}
 function S($a){if($a){(-join($a|Where-Object{$_ -ne 0}|ForEach-Object{[char]$_})).Trim()}}
 function I($d,[string]$f='s'){if($d){([datetime]$d).ToString($f)}}
 
@@ -61,7 +64,7 @@ $ram=Q 'ram' {Get-CimInstance Win32_PhysicalMemory|Select-Object Manufacturer,Pa
 $memoryarray=Q 'memoryarray' {Get-CimInstance Win32_PhysicalMemoryArray|Select-Object -First 1 MemoryDevices,MaxCapacity}
 
 $vram=@{}
-try{Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*' -ErrorAction SilentlyContinue|ForEach-Object{$m=$_.'HardwareInformation.qwMemorySize';if($m -is [byte[]]){if($m.Length -ge 8){$m=[BitConverter]::ToUInt64($m,0)}else{$m=$null}};if($m -and $_.DriverDesc){$vram[[string]$_.DriverDesc]=[uint64]$m}}}catch{}
+$null=Q 'vram' {Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*' -ErrorAction SilentlyContinue|ForEach-Object{$m=$_.'HardwareInformation.qwMemorySize';if($m -is [byte[]]){if($m.Length -ge 8){$m=[BitConverter]::ToUInt64($m,0)}else{$m=$null}};if($m -and $_.DriverDesc){$vram[[string]$_.DriverDesc]=[uint64]$m}}}
 $gpu=Q 'gpu' {Get-CimInstance Win32_VideoController|ForEach-Object{$k=[string]$_.Name;$v=$_.AdapterRAM;$s='AdapterRAM';if($vram.ContainsKey($k)){$v=$vram[$k];$s='registre'};[pscustomobject]@{Name=$_.Name;VRAM=$v;VRAMSource=$s;DriverVersion=$_.DriverVersion;DriverDate=(I $_.DriverDate 'yyyy-MM-dd');VideoModeDescription=$_.VideoModeDescription;RefreshRate=$_.CurrentRefreshRate}}}
 
 $disks=Q 'disks' {Get-PhysicalDisk|ForEach-Object{$r=$null;try{$r=$_|Get-StorageReliabilityCounter -ErrorAction Stop}catch{};[pscustomobject]@{Model=$_.FriendlyName;MediaType="$($_.MediaType)";BusType="$($_.BusType)";Size=$_.Size;Health="$($_.HealthStatus)";Status="$($_.OperationalStatus)";SerialNumber="$($_.SerialNumber)".Trim();Firmware=$_.FirmwareVersion;Temperature=$r.Temperature;PowerOnHours=$r.PowerOnHours;Wear=$r.Wear;ReadErrors=$r.ReadErrorsTotal}}}
@@ -79,7 +82,7 @@ $tpm=Q 'tpm' {Get-CimInstance -Namespace root/cimv2/security/microsofttpm -Class
 $pnp=Q 'pnp' {Get-CimInstance Win32_PnPEntity -Filter 'ConfigManagerErrorCode<>0'|Select-Object Name,PNPClass,ConfigManagerErrorCode}
 $license=Q 'license' {Get-CimInstance SoftwareLicensingProduct -Filter "ApplicationID='55c92734-d682-4d71-983e-d6ec3f16059f' AND PartialProductKey IS NOT NULL"|Select-Object Name,Description,LicenseStatus}
 
-$json=[ordered]@{admin=$admin;machine=$machine;bios=$bios;secureboot=$secureboot;os=$os;cpu=$cpu;board=$board;ram=$ram;memoryarray=$memoryarray;gpu=$gpu;disks=$disks;volumes=$volumes;bitlocker=$bitlocker;adapters=$adapters;network=$network;temperatures=$temperatures;battery=$battery;monitors=$monitors;audio=$audio;tpm=$tpm;license=$license;pnp=$pnp;errors=$err}|ConvertTo-Json -Depth 6 -Compress
+$json=[ordered]@{admin=$admin;machine=$machine;bios=$bios;secureboot=$secureboot;os=$os;cpu=$cpu;board=$board;ram=$ram;memoryarray=$memoryarray;gpu=$gpu;disks=$disks;volumes=$volumes;bitlocker=$bitlocker;adapters=$adapters;network=$network;temperatures=$temperatures;battery=$battery;monitors=$monitors;audio=$audio;tpm=$tpm;license=$license;pnp=$pnp;errors=$err;timings=$time;total_ms=$total.ElapsedMilliseconds}|ConvertTo-Json -Depth 6 -Compress
 # Sortie en base64 : le JSON traverse intact n'importe quelle page de code console.
 'ATLAS:'+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
 """
@@ -193,6 +196,7 @@ def scan(runner=run_powershell) -> dict:
     if not is_windows():
         data["note"] = "Informations matérielles détaillées disponibles sous Windows."
         return data
+    started = time.perf_counter()
     try:
         code, stdout, stderr = runner()
     except subprocess.TimeoutExpired:
@@ -214,4 +218,11 @@ def scan(runner=run_powershell) -> dict:
         log.warning("Sortie PowerShell illisible : %s", error)
         return data
     data["memory"] = compute_memory(data)
+    data["scan_seconds"] = round(time.perf_counter() - started, 2)
+    timings = payload.get("timings")
+    if isinstance(timings, dict):
+        data["timings"] = {str(k): int(v) for k, v in timings.items() if isinstance(v, (int, float))}
+        data["powershell_ms"] = int(payload.get("total_ms") or 0)
+        slowest = sorted(data["timings"].items(), key=lambda item: -item[1])[:5]
+        log.debug("Durée : %.2f s ; PowerShell %s ms ; plus lentes : %s", data["scan_seconds"], data["powershell_ms"], slowest)
     return data

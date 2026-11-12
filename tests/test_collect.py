@@ -85,3 +85,14 @@ def test_script_fits_in_a_windows_command_line():
 
     encoded = base64.b64encode(collect.PS_SCRIPT.encode("utf-16le"))
     assert len(encoded) < 30000  # limite CreateProcess : 32 767 caractères
+
+
+def test_timings(data):
+    assert data["timings"]["license"] == 2300 and data["powershell_ms"] == 4100
+    assert isinstance(data["scan_seconds"], float)
+    from atlas import pages
+
+    analysis = next(s for s in pages.page_system(data) if s.title == "Analyse")
+    rows = {row.label: row.value for row in analysis.rows}
+    assert rows["Source la plus lente"] == "activation Windows (2,3 s)"
+    assert all(row.volatile for row in analysis.rows)
