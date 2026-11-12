@@ -1,4 +1,4 @@
-ATLAS PC 2.2
+ATLAS PC 2.3
 ============
 
 Application de bureau en Python pour consulter l'inventaire matériel d'un PC
@@ -29,6 +29,9 @@ Ce que l'application affiche
 - Processeur : socket, cœurs, fréquences, caches, virtualisation
 - Mémoire : installée et utilisable, emplacements, et par barrette le type
   (DDR4, DDR5...), le format, la vitesse nominale et configurée
+  ; conseiller d'évolution : barrettes à acheter (type, format, vitesse) et
+  façons de passer à la capacité supérieure (ajout de barrettes identiques
+  ou kit de remplacement), mémoire soudée détectée
 - Carte mère : carte, BIOS/UEFI, zones thermiques ACPI
 - Graphiques : cartes (mémoire lue dans le registre, donc juste au-delà de
   4 Go), pilote, écrans (diagonale, année, numéro de série)
@@ -44,6 +47,10 @@ indique pourquoi une information manque.
 
 Actions
 -------
+- Mode partage (bouton dans l'en-tête) : masque le nom du poste, le domaine,
+  les numéros de série, la fin des adresses MAC et IPv4 et les adresses IPv6,
+  à l'écran comme dans les copies, les exports et la fiche. Pratique pour une
+  capture d'écran ou un rapport publié dans un ticket ou sur un forum.
 - Fiche d'intervention : bouton « Fiche d'intervention ». Saisir technicien,
   client, contact, référence, demande, travaux et recommandations (un lien
   reprend les conseils des constats), puis « Ouvrir pour imprimer » : la fiche
@@ -66,6 +73,7 @@ Ligne de commande
   python atlas_pc.py -o rapport.html   rapport dans un fichier (.json .txt .html)
   python atlas_pc.py --fiche -o fiche.html --client "Mme Dupont" --technicien Chris
                                        fiche d'intervention sans interface
+  python atlas_pc.py --json --anonyme  inventaire sans identifiants
   python atlas_pc.py --debug           journal détaillé (dossier temporaire)
   python atlas_pc.py --help
 
@@ -77,6 +85,8 @@ Organisation du code
   atlas/pages.py       contenu des pages, recherche, comparaison
   atlas/findings.py    règles des constats et leurs seuils
   atlas/fiche.py       fiche d'intervention A4
+  atlas/privacy.py     mode partage (masquage des identifiants)
+  atlas/upgrade.py     conseiller d'évolution mémoire
   atlas/export.py      JSON, texte, HTML
   atlas/ui.py          interface Tkinter
   tests/               tests (pytest)

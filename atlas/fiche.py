@@ -179,6 +179,7 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
     verdict_text = " · ".join(verdict) or ("Rien à signaler" if found else "")
     note = f'<p class="ok-line" style="color:#98620a">{esc(data["note"])}</p>' if data.get("note") else ""
 
+    masked = "<br>Identifiants masqués" if data.get("anonymized") else ""
     title = f"Fiche d'intervention {reference}"
     return f"""<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><title>{esc(title)} — {esc(computer)}</title><style>{_CSS}</style></head>
@@ -187,7 +188,7 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
 <div class="sheet">
 <header>
   <h1>Fiche d'intervention</h1>
-  <div class="meta">Référence <strong>{esc(reference)}</strong><br>Diagnostic du <strong>{esc(stamp)}</strong></div>
+  <div class="meta">Référence <strong>{esc(reference)}</strong><br>Diagnostic du <strong>{esc(stamp)}</strong>{masked}</div>
 </header>
 <div class="parties">
   {party("Client", info.client, info.contact)}

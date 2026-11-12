@@ -20,7 +20,8 @@ def to_json(data: dict) -> str:
 def _header(data: dict) -> tuple[str, str]:
     computer = (data.get("system") or {}).get("computer", "")
     stamp = fmt_date(data.get("captured_at", "")[:19])
-    return f"Atlas PC — rapport système de {computer}", f"Généré le {stamp} · Atlas PC {data.get('atlas_version', '')}"
+    masked = " · identifiants masqués (mode partage)" if data.get("anonymized") else ""
+    return f"Atlas PC — rapport système de {computer}", f"Généré le {stamp} · Atlas PC {data.get('atlas_version', '')}{masked}"
 
 
 def to_text(data: dict) -> str:
@@ -46,6 +47,8 @@ def to_text(data: dict) -> str:
                 lines.append(f"({section.note})")
             elif not section.rows:
                 lines.append("(Aucune information détectée.)")
+            if section.tip:
+                lines.append(section.tip)
     return "\n".join(lines) + "\n"
 
 
@@ -96,6 +99,8 @@ def to_html(data: dict) -> str:
                 parts.append(f"<table>{cells}</table>")
             if section.note or not section.rows:
                 parts.append(f'<p class="note">{esc(section.note or "Aucune information détectée.")}</p>')
+            if section.tip:
+                parts.append(f'<p class="meta">{esc(section.tip)}</p>')
     parts.append("</body></html>")
     return "\n".join(parts) + "\n"
 

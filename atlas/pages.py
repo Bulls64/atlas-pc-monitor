@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from . import formatting as f
 from .collect import ADMIN_SECTIONS
 from .formatting import EMPTY
+from .upgrade import memory_advice
 
 OVERVIEW = "Vue d'ensemble"
 FINDINGS = "Constats"
@@ -50,6 +51,7 @@ class Section:
     title: str
     rows: list[Row] = field(default_factory=list)
     note: str = ""
+    tip: str = ""  # remarque neutre (conseil), par opposition à note (problème de collecte)
 
 
 def _add(rows: list[Row], label: str, value: str, volatile: bool = False) -> None:
@@ -175,6 +177,13 @@ def page_memory(data: dict) -> list[Section]:
         _add(rows, "Emplacements occupés", f"{len(sticks)} sur {int(slots)}")
     _add(rows, "Capacité maximale de la carte mère", _kb(array.get("MaxCapacity")))
     sections = [Section("Synthèse", rows, _error_note(data, "ram", "os"))]
+    advice = memory_advice(data)
+    if advice:
+        rows = [Row("Configuration actuelle", advice.current)]
+        if advice.upgradable:
+            _add(rows, "Barrettes à acheter", advice.spec)
+            rows += [Row(goal, way[:1].upper() + way[1:]) for goal, way in advice.options]
+        sections.append(Section("Évolution possible", rows, tip=" ".join(advice.notes)))
     for index, stick in enumerate(sticks, 1):
         rows = []
         _add(rows, "Emplacement", f.clean(stick.get("DeviceLocator")))
