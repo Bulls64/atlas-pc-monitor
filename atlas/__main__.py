@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import __version__, export, fiche
+from . import __version__, export, fiche, privacy
 from .collect import scan
 
 
@@ -19,6 +19,7 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--text", action="store_true", help="imprime le rapport texte, sans interface")
     group.add_argument("--html", action="store_true", help="imprime le rapport HTML, sans interface")
     group.add_argument("--fiche", action="store_true", help="fiche d'intervention HTML imprimable, sans interface")
+    parser.add_argument("--anonyme", action="store_true", help="masque nom du poste, numéros de série, MAC et IP")
     parser.add_argument("--technicien", default="", help="nom du technicien sur la fiche")
     parser.add_argument("--client", default="", help="nom du client sur la fiche")
     parser.add_argument("--reference", default="", help="référence de l'intervention sur la fiche")
@@ -48,6 +49,8 @@ def main(argv: list[str] | None = None) -> int:
         run()
         return 0
     data = scan()
+    if args.anonyme:
+        data = privacy.anonymize(data)
     forced = ".txt" if args.text else ".html" if args.html or args.fiche else ".json" if args.json else ""
 
     def content(suffix: str) -> str:

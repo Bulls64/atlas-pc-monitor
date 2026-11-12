@@ -193,3 +193,46 @@ def test_fiche_dialog(app, monkeypatch, tmp_path):
     monkeypatch.setattr(ui.filedialog, "asksaveasfilename", lambda **_k: str(out))
     saved = app.save_fiche(app.fiche_info)
     assert saved.name == "ma-fiche.html" and "Lenteurs" in saved.read_text(encoding="utf-8")
+
+
+def test_sharing_mode(app, monkeypatch, tmp_path):
+    from atlas import ui
+    from atlas.privacy import HOST_MASK
+
+    assert not app.sharing and app.sharing_button.cget("text") == "◐ Mode partage"
+    app.open_page("Carte mère")
+    pump(app, 50)
+    values = [v for tree in app.trees for item in tree.get_children() for v in tree.item(item, "values")]
+    assert "PF3ABCDE" in values
+
+    app.toggle_sharing()
+    pump(app, 50)
+    assert app.sharing and app.sharing_button.cget("text") == "◑ Partage activé"
+    assert app.sharing_button.cget("bg") == app.colors.amber
+    assert json.loads(ui.config_path().read_text())["sharing"] is True
+    values = [v for tree in app.trees for item in tree.get_children() for v in tree.item(item, "values")]
+    assert "PF3ABCDE" not in values and "[masqué]" in values
+    assert app.data["bios"]["SerialNumber"] == "PF3ABCDE"  # l'inventaire brut reste intact
+
+    app.copy_report()
+    assert "PF3ABCDE" not in app.clipboard_get() and HOST_MASK in app.clipboard_get()
+    assert "PF3ABCDE" not in app.fiche_html(app.fiche_info)
+    out = tmp_path / "partage"
+
+    def fake_save(**kwargs):
+        kwargs["typevariable"].set("Rapport JSON")
+        return str(out)
+
+    monkeypatch.setattr(ui.filedialog, "asksaveasfilename", fake_save)
+    monkeypatch.setattr(ui.messagebox, "showinfo", lambda *a, **k: None)
+    app.export()
+    saved = json.loads((tmp_path / "partage.json").read_text(encoding="utf-8"))
+    assert saved["anonymized"] is True and saved["bios"]["SerialNumber"] == "[masqué]"
+
+    # comparer un rapport masqué à l'inventaire : les identifiants masqués ne comptent pas comme des changements
+    app.toggle_sharing()
+    monkeypatch.setattr(ui.filedialog, "askopenfilename", lambda **_k: str(tmp_path / "partage.json"))
+    shown = []
+    monkeypatch.setattr(ui.messagebox, "showinfo", lambda title, message, **_k: shown.append(message))
+    app.compare()
+    assert shown and "Aucune différence" in shown[0]

@@ -20,7 +20,7 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
-from . import __version__, export, fiche
+from . import __version__, export, fiche, privacy
 from .collect import scan
 from .findings import FIX, INFO, LEVELS, OK, WATCH, Finding, analyze, summary, summary_text
 from .formatting import EMPTY, fmt_binary, fmt_celsius, fmt_date
@@ -140,6 +140,8 @@ class Atlas(tk.Tk):
         self.theme = self.config_data.get("theme") if self.config_data.get("theme") in PALETTES else "dark"
         self.colors = PALETTES[self.theme]
         self.data: dict = {}
+        self.sharing = bool(self.config_data.get("sharing", False))
+        self._shown: tuple[int, bool, dict] | None = None
         self.findings: list[Finding] = []
         self.fiche_info = fiche.FicheInfo(technician=str(self.config_data.get("technician", "")))
         self.fiche_window: tk.Toplevel | None = None
@@ -162,6 +164,16 @@ class Atlas(tk.Tk):
         self.build()
         self.refresh()
 
+    @property
+    def shown(self) -> dict:
+        """Inventaire tel qu'il est affiché et partagé : masqué quand le mode partage est actif."""
+        if not self.sharing or not self.data:
+            return self.data
+        key = (id(self.data), self.sharing)
+        if self._shown is None or self._shown[:2] != key:
+            self._shown = (*key, privacy.anonymize(self.data))
+        return self._shown[2]
+
     # ------------------------------------------------------------------ construction
 
     def build(self) -> None:
@@ -177,8 +189,9 @@ class Atlas(tk.Tk):
         self.refresh_button.pack(side="right")
         label = "☀ Thème clair" if self.theme == "dark" else "☾ Thème sombre"
         self.button(header, label, self.toggle_theme).pack(side="right", padx=(0, 8))
-        self.status = tk.Label(header, bg=c.bg, fg=c.dim, font=(FONT, 9))
-        self.status.pack(side="right", padx=12)
+        self.sharing_button = self.button(header, "", self.toggle_sharing)
+        self.sharing_button.pack(side="right", padx=(0, 8))
+
         box = tk.Frame(header, bg=c.card, highlightbackground=c.line, highlightthickness=1)
         box.pack(side="right", padx=(0, 4))
         tk.Label(box, text="⌕", bg=c.card, fg=c.dim, font=(FONT, 11)).pack(side="left", padx=(8, 0))
@@ -187,6 +200,9 @@ class Atlas(tk.Tk):
             insertbackground=c.fg, font=(FONT, 10),
         )  # fmt: skip
         self.search_entry.pack(side="left", padx=8, pady=7)
+        # placé en dernier : c'est le message d'état, éphémère, qui cède la place si la fenêtre est étroite
+        self.status = tk.Label(header, bg=c.bg, fg=c.dim, font=(FONT, 9))
+        self.status.pack(side="right", padx=12)
         self.bind_all("<Control-f>", lambda _event: self.search_entry.focus_set())
         self.search_entry.bind("<Escape>", lambda _event: self.query.set(""))
 
@@ -210,6 +226,7 @@ class Atlas(tk.Tk):
         self.button(side, "⇩ Exporter le rapport", self.export).pack(fill="x", pady=(0, 6))
         self.button(side, "⧉ Copier le rapport", self.copy_report).pack(fill="x", pady=(0, 6))
         self.button(side, "⇄ Comparer à un rapport", self.compare).pack(fill="x", pady=(0, 6))
+
         self.admin_button = self.button(side, "⛨ Relancer en administrateur", self.relaunch_as_admin)
 
         pane = tk.Frame(body, bg=c.bg)
@@ -279,6 +296,10 @@ class Atlas(tk.Tk):
         else:
             self.status.configure(text="● Analyse en attente", fg=c.dim)
         self.refresh_button.configure(state="disabled" if self._scanning else "normal")
+        if self.sharing:
+            self.sharing_button.configure(text="◑ Partage activé", bg=c.amber, fg=c.bg)
+        else:
+            self.sharing_button.configure(text="◐ Mode partage", bg=c.alt, fg=c.fg)
         needs_admin = os.name == "nt" and bool(self.data) and "admin" in self.data and not self.data.get("admin")
         if needs_admin and not self.admin_button.winfo_manager():
             self.admin_button.pack(fill="x")
@@ -308,6 +329,15 @@ class Atlas(tk.Tk):
         if self._search_job:
             self.after_cancel(self._search_job)
         self._search_job = self.after(200, self.render)
+
+    def toggle_sharing(self) -> None:
+        """Masque ou affiche les identifiants (séries, MAC, IP, nom du poste) partout dans l'application."""
+        self.sharing = not self.sharing
+        self.config_data["sharing"] = self.sharing
+        save_config(self.config_data)
+        self._set_status(flash="Identifiants masqués" if self.sharing else "Identifiants affichés")
+        if self.data:
+            self.render()
 
     def toggle_theme(self) -> None:
         self.theme = "light" if self.theme == "dark" else "dark"
@@ -386,7 +416,7 @@ class Atlas(tk.Tk):
                 elif self.page == FINDINGS:
                     self._render_findings()
                 else:
-                    self._render_sections(build_page(self.data, self.page))
+                    self._render_sections(build_page(self.shown, self.page))
         self.canvas.yview_moveto(0)
 
     def heading(self, text: str) -> None:
@@ -442,11 +472,13 @@ class Atlas(tk.Tk):
                 self.note(section.note, self.colors.amber)
             elif not section.rows:
                 self.note("Aucune information détectée.")
+            if section.tip:
+                self.note(section.tip)
         if self.data.get("note"):
             self.note(self.data["note"], self.colors.amber)
 
     def _render_search(self, query: str) -> None:
-        hits = search(self.data, query) if self.data else []
+        hits = search(self.shown, query) if self.data else []
         self.subtitle.configure(text=f"{len(hits)} résultat(s) pour « {query} » — Échap pour revenir")
         if not hits:
             self.note("Aucun résultat. La recherche porte sur toutes les pages, sans tenir compte des accents.")
@@ -456,7 +488,7 @@ class Atlas(tk.Tk):
         self.table(columns, rows, headings=True).pack(fill="x", pady=(4, 0))
 
     def _render_overview(self) -> None:
-        c, d = self.colors, self.data
+        c, d = self.colors, self.shown
         host = d.get("system") or {}
         system = d.get("os") or {}
         memory = d.get("memory") or {}
@@ -735,7 +767,7 @@ class Atlas(tk.Tk):
         box.insert("end-1c", prefix + "\n".join(new))
 
     def fiche_html(self, info: fiche.FicheInfo) -> str:
-        return fiche.to_html(self.data, info, self.findings)
+        return fiche.to_html(self.shown, info, self.findings)
 
     def print_fiche(self, info: fiche.FicheInfo) -> Path | None:
         """Écrit la fiche dans le dossier temporaire et l'ouvre dans le navigateur (Ctrl+P pour imprimer ou faire un PDF)."""
@@ -801,7 +833,7 @@ class Atlas(tk.Tk):
 
     def copy_report(self) -> None:
         if self.data:
-            self._to_clipboard(export.to_text(self.data), "Rapport copié")
+            self._to_clipboard(export.to_text(self.shown), "Rapport copié")
 
     # ------------------------------------------------------------------ export, comparaison, élévation
 
@@ -816,7 +848,7 @@ class Atlas(tk.Tk):
         if not path:
             return
         try:
-            target = export.save(self.data, path, chosen.get())
+            target = export.save(self.shown, path, chosen.get())
         except OSError as error:
             messagebox.showerror("Export impossible", str(error), parent=self)
             return
@@ -833,7 +865,10 @@ class Atlas(tk.Tk):
         except (OSError, ValueError) as error:
             messagebox.showerror("Rapport illisible", str(error), parent=self)
             return
-        changes = diff_reports(previous, self.data)
+        current = self.data
+        if self.sharing or previous.get("anonymized"):  # comparer à masquage égal
+            previous, current = privacy.anonymize(previous), privacy.anonymize(current)
+        changes = diff_reports(previous, current)
         stamp = fmt_date(str(previous.get("captured_at", ""))[:19])
         other = (previous.get("system") or {}).get("computer", "")
         if not changes:
