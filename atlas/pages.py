@@ -130,6 +130,14 @@ def page_system(data: dict) -> list[Section]:
         if "admin" in data:
             _add(rows, "Session administrateur", f.fmt_bool(data.get("admin")))
         sections.append(Section("Sécurité", rows, _error_note(data, "secureboot", "tpm")))
+    seconds = f.to_number(data.get("scan_seconds"))
+    if seconds is not None:
+        rows = [Row("Durée de l'analyse", f"{f._decimal(seconds)} s", volatile=True)]
+        timings = data.get("timings") or {}
+        if timings:
+            name, ms = max(timings.items(), key=lambda item: item[1])
+            rows.append(Row("Source la plus lente", f"{SOURCE_LABELS.get(name, name)} ({f._decimal(ms / 1000)} s)", volatile=True))
+        sections.append(Section("Analyse", rows))
     rows = []
     for device in data.get("pnp") or []:
         code = f.to_number(device.get("ConfigManagerErrorCode"))
@@ -377,6 +385,16 @@ def page_battery(data: dict) -> list[Section]:
         note = _error_note(data, "battery") or ("Aucune batterie détectée." if data.get("os") else "")
         sections.append(Section("Batterie", [], note))
     return sections
+
+
+SOURCE_LABELS = {
+    "machine": "modèle de l'ordinateur", "bios": "BIOS", "secureboot": "démarrage sécurisé", "os": "Windows",
+    "cpu": "processeur", "board": "carte mère", "ram": "mémoire", "memoryarray": "emplacements mémoire",
+    "vram": "mémoire vidéo", "gpu": "carte graphique", "disks": "disques", "disks_fallback": "disques",
+    "volumes": "volumes", "bitlocker": "BitLocker", "adapters": "cartes réseau", "network": "configuration IP",
+    "temperatures": "températures", "battery": "batterie", "monitors": "écrans", "audio": "audio", "tpm": "TPM",
+    "pnp": "périphériques en erreur", "license": "activation Windows",
+}  # fmt: skip
 
 
 _BUILDERS = {

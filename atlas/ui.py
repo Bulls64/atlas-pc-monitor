@@ -24,34 +24,12 @@ from . import __version__, export, fiche, privacy
 from .collect import scan
 from .findings import FIX, INFO, LEVELS, OK, WATCH, Finding, analyze, summary, summary_text
 from .formatting import EMPTY, fmt_binary, fmt_celsius, fmt_date
-from .pages import FINDINGS, OVERVIEW, PAGES, Section, build_page, diff_reports, overview_tiles, search
+from .pages import FINDINGS, OVERVIEW, PAGES, SOURCE_LABELS, Section, build_page, diff_reports, overview_tiles, search
 
 log = logging.getLogger("atlas")
 FONT = "Segoe UI"
 
-SOURCE_NAMES = {
-    "machine": "modèle de l'ordinateur",
-    "bios": "BIOS",
-    "secureboot": "démarrage sécurisé",
-    "os": "Windows",
-    "cpu": "processeur",
-    "board": "carte mère",
-    "ram": "mémoire",
-    "memoryarray": "emplacements mémoire",
-    "gpu": "carte graphique",
-    "disks": "disques",
-    "disks_fallback": "disques",
-    "volumes": "volumes",
-    "bitlocker": "BitLocker",
-    "adapters": "cartes réseau",
-    "network": "configuration IP",
-    "temperatures": "températures",
-    "battery": "batterie",
-    "monitors": "écrans",
-    "audio": "audio",
-    "tpm": "TPM",
-    "license": "activation Windows",
-}
+SOURCE_NAMES = SOURCE_LABELS
 
 
 @dataclass(frozen=True)
@@ -157,12 +135,18 @@ class Atlas(tk.Tk):
         self._results: queue.Queue = queue.Queue()
 
         self.title("Atlas PC — Informations système")
-        width = min(1160, self.winfo_screenwidth() - 80)
-        height = min(770, self.winfo_screenheight() - 120)
+        # Facteur d'échelle de l'écran (1 à 100 %, 1,5 à 150 %) : les dimensions en pixels le suivent.
+        self.scale = max(1.0, self.winfo_fpixels("1i") / 96)
+        width = min(self.px(1160), self.winfo_screenwidth() - 80)
+        height = min(self.px(770), self.winfo_screenheight() - 120)
         self.geometry(f"{width}x{height}")
-        self.minsize(min(880, width), min(600, height))
+        self.minsize(min(self.px(880), width), min(self.px(600), height))
         self.build()
         self.refresh()
+
+    def px(self, value: float) -> int:
+        """Pixels « 100 % » convertis à l'échelle de l'écran."""
+        return int(round(value * getattr(self, "scale", 1.0)))
 
     @property
     def shown(self) -> dict:
@@ -180,52 +164,67 @@ class Atlas(tk.Tk):
         c = self.colors
         self.configure(bg=c.bg)
         self._style()
-        header = tk.Frame(self, bg=c.bg, height=72)
-        header.pack(fill="x", padx=26, pady=(17, 10))
+        header = tk.Frame(self, bg=c.bg, height=self.px(72))
+        header.pack(fill="x", padx=self.px(26), pady=(self.px(17), self.px(10)))
         header.pack_propagate(False)
-        tk.Label(header, text="◆  ATLAS PC", bg=c.bg, fg=c.green, font=(FONT, 18, "bold")).pack(side="left", pady=10)
-        tk.Label(header, text=f"v{__version__}", bg=c.bg, fg=c.dim, font=(FONT, 8, "bold")).pack(side="left", padx=12)
+        tk.Label(header, text="◆  ATLAS PC", bg=c.bg, fg=c.green, font=(FONT, 18, "bold")).pack(side="left", pady=self.px(10))
+        tk.Label(header, text=f"v{__version__}", bg=c.bg, fg=c.dim, font=(FONT, 8, "bold")).pack(side="left", padx=self.px(12))
         self.refresh_button = self.button(header, "↻ Actualiser", self.refresh, accent=True)
         self.refresh_button.pack(side="right")
         label = "☀ Thème clair" if self.theme == "dark" else "☾ Thème sombre"
-        self.button(header, label, self.toggle_theme).pack(side="right", padx=(0, 8))
+        self.button(header, label, self.toggle_theme).pack(side="right", padx=(self.px(0), self.px(8)))
         self.sharing_button = self.button(header, "", self.toggle_sharing)
-        self.sharing_button.pack(side="right", padx=(0, 8))
+        self.sharing_button.pack(side="right", padx=(self.px(0), self.px(8)))
 
         box = tk.Frame(header, bg=c.card, highlightbackground=c.line, highlightthickness=1)
-        box.pack(side="right", padx=(0, 4))
-        tk.Label(box, text="⌕", bg=c.card, fg=c.dim, font=(FONT, 11)).pack(side="left", padx=(8, 0))
+        box.pack(side="right", padx=(self.px(0), self.px(4)))
+        tk.Label(box, text="⌕", bg=c.card, fg=c.dim, font=(FONT, 11)).pack(side="left", padx=(self.px(8), self.px(0)))
         self.search_entry = tk.Entry(
             box, textvariable=self.query, width=24, relief="flat", highlightthickness=0, bd=0, bg=c.card, fg=c.fg,
             insertbackground=c.fg, font=(FONT, 10),
         )  # fmt: skip
-        self.search_entry.pack(side="left", padx=8, pady=7)
+        self.search_entry.pack(side="left", padx=self.px(8), pady=self.px(7))
         # placé en dernier : c'est le message d'état, éphémère, qui cède la place si la fenêtre est étroite
         self.status = tk.Label(header, bg=c.bg, fg=c.dim, font=(FONT, 9))
-        self.status.pack(side="right", padx=12)
+        self.status.pack(side="right", padx=self.px(12))
         self.bind_all("<Control-f>", lambda _event: self.search_entry.focus_set())
         self.search_entry.bind("<Escape>", lambda _event: self.query.set(""))
 
         body = tk.Frame(self, bg=c.bg)
-        body.pack(fill="both", expand=True, padx=26, pady=(0, 18))
-        side = tk.Frame(body, bg=c.bg, width=215)
-        side.pack(side="left", fill="y", padx=(0, 17))
-        side.pack_propagate(False)
-        tk.Label(side, text="MATÉRIEL", bg=c.bg, fg=c.subtle, font=(FONT, 8, "bold")).pack(anchor="w", padx=10, pady=(6, 8))
+        body.pack(fill="both", expand=True, padx=self.px(26), pady=(self.px(0), self.px(18)))
+        # Barre latérale défilante : sur un petit écran ou à 125-150 %, les boutons du bas restent accessibles.
+        self.side_outer = tk.Frame(body, bg=c.bg, width=self.px(215))
+        self.side_outer.pack(side="left", fill="y", padx=(0, self.px(17)))
+        self.side_outer.pack_propagate(False)
+        self.side_canvas = tk.Canvas(self.side_outer, bg=c.bg, highlightthickness=0, bd=0)
+        self.side_scrollbar = ttk.Scrollbar(
+            self.side_outer, orient="vertical", command=self.side_canvas.yview, style="Atlas.Vertical.TScrollbar"
+        )
+        self.side_canvas.configure(yscrollcommand=self.side_scrollbar.set)
+        self.side_canvas.pack(side="left", fill="both", expand=True)
+        side = tk.Frame(self.side_canvas, bg=c.bg)
+        self.side_inner = side
+        self.side_window = self.side_canvas.create_window((0, 0), window=side, anchor="nw")
+        side.bind("<Configure>", lambda _event: self._update_sidebar())
+        self.side_canvas.bind("<Configure>", lambda _event: self._update_sidebar())
+        tk.Label(side, text="MATÉRIEL", bg=c.bg, fg=c.subtle, font=(FONT, 8, "bold")).pack(
+            anchor="w", padx=self.px(10), pady=(self.px(6), self.px(8))
+        )
         self.nav = {}
         for name, icon in PAGES:
             button = tk.Button(
                 side, text=f"{icon}   {name}", anchor="w", bg=c.bg, fg=c.dim, activebackground=c.alt,
-                activeforeground=c.fg, relief="flat", highlightthickness=0, bd=0, padx=12, pady=7, font=(FONT, 10), cursor="hand2",
+                activeforeground=c.fg, relief="flat", highlightthickness=0, bd=0, padx=self.px(12), pady=self.px(7),
+                font=(FONT, 10), cursor="hand2",
                 command=lambda page=name: self.open_page(page),
             )  # fmt: skip
-            button.pack(fill="x", pady=1)
+            button.pack(fill="x", pady=self.px(1))
             self.nav[name] = button
-        tk.Frame(side, bg=c.line, height=1).pack(fill="x", pady=10)
-        self.button(side, "🖨 Fiche d'intervention", self.open_fiche, accent=True).pack(fill="x", pady=(0, 6))
-        self.button(side, "⇩ Exporter le rapport", self.export).pack(fill="x", pady=(0, 6))
-        self.button(side, "⧉ Copier le rapport", self.copy_report).pack(fill="x", pady=(0, 6))
-        self.button(side, "⇄ Comparer à un rapport", self.compare).pack(fill="x", pady=(0, 6))
+        tk.Frame(side, bg=c.line, height=1).pack(fill="x", pady=self.px(10))
+        self.button(side, "🖨 Fiche d'intervention", self.open_fiche, accent=True).pack(fill="x", pady=(self.px(0), self.px(6)))
+        self.button(side, "⇩ Exporter le rapport", self.export).pack(fill="x", pady=(self.px(0), self.px(6)))
+        self.button(side, "⧉ Copier le rapport", self.copy_report).pack(fill="x", pady=(self.px(0), self.px(6)))
+        self.button(side, "⇄ Comparer à un rapport", self.compare).pack(fill="x", pady=(self.px(0), self.px(6)))
 
         self.admin_button = self.button(side, "⛨ Relancer en administrateur", self.relaunch_as_admin)
 
@@ -234,7 +233,7 @@ class Atlas(tk.Tk):
         self.title_label = tk.Label(pane, text=self.page, bg=c.bg, fg=c.fg, font=(FONT, 23, "bold"))
         self.title_label.pack(anchor="w")
         self.subtitle = tk.Label(pane, bg=c.bg, fg=c.dim, font=(FONT, 10))
-        self.subtitle.pack(anchor="w", pady=(3, 12))
+        self.subtitle.pack(anchor="w", pady=(self.px(3), self.px(12)))
         area = tk.Frame(pane, bg=c.bg)
         area.pack(fill="both", expand=True)
         self.canvas = tk.Canvas(area, bg=c.bg, highlightthickness=0)
@@ -254,7 +253,7 @@ class Atlas(tk.Tk):
         c = self.colors
         style = ttk.Style(self)
         style.theme_use("clam")
-        row_height = tk.font.Font(font=(FONT, 10)).metrics("linespace") + 12
+        row_height = tk.font.Font(font=(FONT, 10)).metrics("linespace") + self.px(12)
         style.configure(
             "Atlas.Treeview", background=c.card, fieldbackground=c.card, foreground=c.fg, bordercolor=c.line,
             lightcolor=c.line, darkcolor=c.line, borderwidth=1, rowheight=row_height, font=(FONT, 10),
@@ -276,7 +275,7 @@ class Atlas(tk.Tk):
         return tk.Button(
             parent, text=text, command=command, relief="flat", highlightthickness=0, bd=0, bg=c.green if accent else c.alt,
             fg=c.bg if accent else c.fg, activebackground=c.line, activeforeground=c.fg,
-            disabledforeground=c.dim, font=(FONT, 9, "bold"), padx=13, pady=8, cursor="hand2",
+            disabledforeground=c.dim, font=(FONT, 9, "bold"), padx=self.px(13), pady=self.px(8), cursor="hand2",
         )  # fmt: skip
 
     # ------------------------------------------------------------------ état et événements
@@ -310,12 +309,32 @@ class Atlas(tk.Tk):
         self.canvas.itemconfigure(self.window, width=event.width)
         for label, share, margin in self.wrapped:
             if label.winfo_exists():
-                label.configure(wraplength=max(120, int(event.width * share) - margin))
+                label.configure(wraplength=max(self.px(120), int(event.width * share) - self.px(margin)))
+
+    def _update_sidebar(self) -> None:
+        """Ajuste la zone défilante et n'affiche l'ascenseur que si le contenu dépasse."""
+        canvas = self.side_canvas
+        overflow = self.side_inner.winfo_reqheight() > canvas.winfo_height() > 1
+        if overflow and not self.side_scrollbar.winfo_manager():
+            self.side_scrollbar.pack(side="right", fill="y", before=canvas)
+        elif not overflow and self.side_scrollbar.winfo_manager():
+            self.side_scrollbar.pack_forget()
+            canvas.yview_moveto(0)
+        canvas.itemconfigure(self.side_window, width=canvas.winfo_width())
+        canvas.configure(scrollregion=(0, 0, canvas.winfo_width(), self.side_inner.winfo_reqheight()))
+
+    def _inside(self, widget, container) -> bool:
+        while widget is not None:
+            if widget is container:
+                return True
+            widget = getattr(widget, "master", None)
+        return False
 
     def _on_wheel(self, event) -> None:
         if not isinstance(event.widget, tk.Misc) or event.widget.winfo_toplevel() is not self:
             return
-        if self.canvas.yview() == (0.0, 1.0):
+        target = self.side_canvas if self._inside(event.widget, self.side_outer) else self.canvas
+        if target.yview() == (0.0, 1.0):
             return
         if event.num in (4, 5):
             steps = -1 if event.num == 4 else 1
@@ -323,7 +342,7 @@ class Atlas(tk.Tk):
             steps = -1 if event.delta > 0 else 1
             if abs(event.delta) >= 120:
                 steps = int(-event.delta / 120)
-        self.canvas.yview_scroll(steps, "units")
+        target.yview_scroll(steps, "units")
 
     def _on_query(self, *_args) -> None:
         if self._search_job:
@@ -420,20 +439,22 @@ class Atlas(tk.Tk):
         self.canvas.yview_moveto(0)
 
     def heading(self, text: str) -> None:
-        tk.Label(self.inner, text=text, bg=self.colors.bg, fg=self.colors.fg, font=(FONT, 12, "bold")).pack(anchor="w", pady=(14, 8))
+        tk.Label(self.inner, text=text, bg=self.colors.bg, fg=self.colors.fg, font=(FONT, 12, "bold")).pack(
+            anchor="w", pady=(self.px(14), self.px(8))
+        )
 
     def note(self, text: str, color: str | None = None) -> None:
         label = tk.Label(
             self.inner, text=text, bg=self.colors.bg, fg=color or self.colors.dim, justify="left", anchor="w", font=(FONT, 9),
         )  # fmt: skip
-        label.pack(fill="x", pady=(5, 0))
+        label.pack(fill="x", pady=(self.px(5), self.px(0)))
         self._wrap(label, 1.0, 10)
 
     def _wrap(self, label: tk.Label, share: float, margin: int) -> None:
         self.wrapped.append((label, share, margin))
         width = self.canvas.winfo_width()
         if width > 1:
-            label.configure(wraplength=max(120, int(width * share) - margin))
+            label.configure(wraplength=max(self.px(120), int(width * share) - self.px(margin)))
 
     def table(self, columns: list[tuple[str, int, bool]], rows: list[tuple], headings: bool = False, parent=None) -> ttk.Treeview:
         """Tableau sélectionnable : Ctrl+C, double-clic ou clic droit pour copier."""
@@ -443,7 +464,7 @@ class Atlas(tk.Tk):
         )  # fmt: skip
         for name, width, stretch in columns:
             tree.heading(name, text=name, anchor="w")
-            tree.column(name, width=width, minwidth=90, stretch=stretch, anchor="w")
+            tree.column(name, width=self.px(width), minwidth=self.px(90), stretch=stretch, anchor="w")
         tree.tag_configure("odd", background=self.colors.row)
         for index, row in enumerate(rows):
             tree.insert("", "end", values=row, tags=("odd",) if index % 2 else ())
@@ -485,7 +506,7 @@ class Atlas(tk.Tk):
             return
         rows = [(f"{page} › {section}", row.label, row.value) for page, section, row in hits]
         columns = [("Emplacement", 340, False), ("Propriété", 210, False), ("Valeur", 240, True)]
-        self.table(columns, rows, headings=True).pack(fill="x", pady=(4, 0))
+        self.table(columns, rows, headings=True).pack(fill="x", pady=(self.px(4), self.px(0)))
 
     def _render_overview(self) -> None:
         c, d = self.colors, self.shown
@@ -494,10 +515,10 @@ class Atlas(tk.Tk):
         memory = d.get("memory") or {}
         top = tk.Frame(self.inner, bg=c.bg)
         top.pack(fill="x")
-        hero = tk.Frame(top, bg=c.card, highlightbackground=c.line, highlightthickness=1, padx=19, pady=17)
-        hero.pack(side="left", fill="both", expand=True, padx=(0, 9))
+        hero = tk.Frame(top, bg=c.card, highlightbackground=c.line, highlightthickness=1, padx=self.px(19), pady=self.px(17))
+        hero.pack(side="left", fill="both", expand=True, padx=(self.px(0), self.px(9)))
         tk.Label(hero, text="VOTRE ORDINATEUR", bg=c.card, fg=c.green, font=(FONT, 8, "bold")).pack(anchor="w")
-        tk.Label(hero, text=host.get("computer", ""), bg=c.card, fg=c.fg, font=(FONT, 20, "bold")).pack(anchor="w", pady=5)
+        tk.Label(hero, text=host.get("computer", ""), bg=c.card, fg=c.fg, font=(FONT, 20, "bold")).pack(anchor="w", pady=self.px(5))
         version = f" {system['DisplayVersion']}" if system.get("DisplayVersion") else ""
         summary = (
             f"{system.get('Caption') or host.get('platform', '')}{version} · {system.get('OSArchitecture') or host.get('architecture', '')}"
@@ -506,7 +527,9 @@ class Atlas(tk.Tk):
         label.pack(anchor="w")
         self._wrap(label, 1.0, 290)
 
-        card = tk.Frame(top, bg=c.card, highlightbackground=c.line, highlightthickness=1, width=215, padx=15, pady=16)
+        card = tk.Frame(
+            top, bg=c.card, highlightbackground=c.line, highlightthickness=1, width=self.px(215), padx=self.px(15), pady=self.px(16)
+        )
         card.pack(side="right", fill="y")
         card.pack_propagate(False)
         tk.Label(card, text="MÉMOIRE UTILISÉE", bg=c.card, fg=c.dim, font=(FONT, 8, "bold")).pack(anchor="w")
@@ -514,8 +537,8 @@ class Atlas(tk.Tk):
         tk.Label(card, text=f"{percent} %" if percent is not None else EMPTY, bg=c.card, fg=c.green, font=(FONT, 24, "bold")).pack(
             anchor="w"
         )
-        bar = tk.Frame(card, bg=c.alt, height=6)
-        bar.pack(fill="x", pady=(2, 6))
+        bar = tk.Frame(card, bg=c.alt, height=self.px(6))
+        bar.pack(fill="x", pady=(self.px(2), self.px(6)))
         if percent:
             tk.Frame(bar, bg=c.amber if percent >= 85 else c.green).place(relwidth=min(percent, 100) / 100, relheight=1)
         usage = f"{fmt_binary(memory.get('used'))} sur {fmt_binary(memory.get('total'))}"
@@ -528,14 +551,20 @@ class Atlas(tk.Tk):
         grid.pack(fill="x")
         accents = (c.green, c.green, c.green, c.blue, c.amber, c.blue)
         for index, (title, value, detail) in enumerate(overview_tiles(d)):
-            tile = tk.Frame(grid, bg=c.card, highlightbackground=c.line, highlightthickness=1, padx=15, pady=13)
+            tile = tk.Frame(grid, bg=c.card, highlightbackground=c.line, highlightthickness=1, padx=self.px(15), pady=self.px(13))
             tk.Label(tile, text=title.upper(), bg=c.card, fg=c.dim, font=(FONT, 8, "bold")).pack(anchor="w")
             text = value if value and value != EMPTY else "Non détecté"
             main = tk.Label(tile, text=text, bg=c.card, fg=c.fg, font=(FONT, 12, "bold"), justify="left")
-            main.pack(anchor="w", pady=(7, 2))
+            main.pack(anchor="w", pady=(self.px(7), self.px(2)))
             self._wrap(main, 1 / 3, 44)
             tk.Label(tile, text=detail, bg=c.card, fg=accents[index % len(accents)], font=(FONT, 9)).pack(anchor="w")
-            tile.grid(row=index // 3, column=index % 3, sticky="nsew", padx=(0, 8) if index % 3 < 2 else 0, pady=(0, 8))
+            tile.grid(
+                row=index // 3,
+                column=index % 3,
+                sticky="nsew",
+                padx=(self.px(0), self.px(8)) if index % 3 < 2 else 0,
+                pady=(self.px(0), self.px(8)),
+            )
         for column in range(3):
             grid.columnconfigure(column, weight=1, uniform="tiles")
 
@@ -549,7 +578,14 @@ class Atlas(tk.Tk):
         fallback = "Aucun capteur exposé par Windows. Une session administrateur ou les pilotes du fabricant peuvent être nécessaires."
         message = " · ".join(readings) or fallback
         label = tk.Label(
-            self.inner, text=message, bg=c.card, fg=c.amber if readings else c.dim, justify="left", anchor="w", padx=14, pady=13
+            self.inner,
+            text=message,
+            bg=c.card,
+            fg=c.amber if readings else c.dim,
+            justify="left",
+            anchor="w",
+            padx=self.px(14),
+            pady=self.px(13),
         )
         label.pack(fill="x")
         self._wrap(label, 1.0, 40)
@@ -589,22 +625,24 @@ class Atlas(tk.Tk):
         level = FIX if counts[FIX] else WATCH if counts[WATCH] else OK
         color = self.level_color(level)
         banner = tk.Frame(self.inner, bg=c.card, highlightbackground=c.line, highlightthickness=1, cursor="hand2")
-        banner.pack(fill="x", pady=(10, 0))
-        tk.Frame(banner, bg=color, width=5).pack(side="left", fill="y")
-        body = tk.Frame(banner, bg=c.card, padx=14, pady=10, cursor="hand2")
+        banner.pack(fill="x", pady=(self.px(10), self.px(0)))
+        tk.Frame(banner, bg=color, width=self.px(5)).pack(side="left", fill="y")
+        body = tk.Frame(banner, bg=c.card, padx=self.px(14), pady=self.px(10), cursor="hand2")
         body.pack(side="left", fill="x", expand=True)
         tk.Label(body, text="CONSTATS", bg=c.card, fg=c.dim, font=(FONT, 8, "bold"), cursor="hand2").pack(anchor="w")
         headline = summary_text(self.findings)
         if level == OK:
             headline = "Rien à corriger ni à surveiller"
-        tk.Label(body, text=headline, bg=c.card, fg=color, font=(FONT, 12, "bold"), cursor="hand2").pack(anchor="w", pady=(3, 0))
+        tk.Label(body, text=headline, bg=c.card, fg=color, font=(FONT, 12, "bold"), cursor="hand2").pack(
+            anchor="w", pady=(self.px(3), self.px(0))
+        )
         urgent = [item.title for item in self.findings if item.level in (FIX, WATCH)][:3]
         if urgent:
             label = tk.Label(body, text=" · ".join(urgent), bg=c.card, fg=c.dim, font=(FONT, 9), justify="left", cursor="hand2")
-            label.pack(anchor="w", pady=(2, 0))
+            label.pack(anchor="w", pady=(self.px(2), self.px(0)))
             self._wrap(label, 1.0, 80)
         link = tk.Label(banner, text="Voir les constats ›", bg=c.card, fg=c.blue, font=(FONT, 9, "bold"), cursor="hand2")
-        link.pack(side="right", padx=14)
+        link.pack(side="right", padx=self.px(14))
         for widget in (banner, body, link, *body.winfo_children()):
             widget.bind("<Button-1>", lambda _event: self.open_page(FINDINGS))
 
@@ -627,22 +665,22 @@ class Atlas(tk.Tk):
             header = tk.Label(
                 self.inner, text=f"{LEVELS[level]} ({len(items)})", bg=c.bg, fg=self.level_color(level), font=(FONT, 12, "bold")
             )
-            header.pack(anchor="w", pady=(14, 6))
+            header.pack(anchor="w", pady=(self.px(14), self.px(6)))
             for item in items:
                 self._finding_card(item)
         tk.Label(
             self.inner,
             text="Seuils et règles : atlas/findings.py. Ce sont des repères d'atelier, pas des normes.",
             bg=c.bg, fg=c.subtle, font=(FONT, 8),
-        ).pack(anchor="w", pady=(14, 0))  # fmt: skip
+        ).pack(anchor="w", pady=(self.px(14), self.px(0)))  # fmt: skip
 
     def _finding_card(self, item: Finding) -> None:
         c = self.colors
         color = self.level_color(item.level)
         card = tk.Frame(self.inner, bg=c.card, highlightbackground=c.line, highlightthickness=1)
-        card.pack(fill="x", pady=(0, 6))
-        tk.Frame(card, bg=color, width=4).pack(side="left", fill="y")
-        body = tk.Frame(card, bg=c.card, padx=14, pady=10)
+        card.pack(fill="x", pady=(self.px(0), self.px(6)))
+        tk.Frame(card, bg=color, width=self.px(4)).pack(side="left", fill="y")
+        body = tk.Frame(card, bg=c.card, padx=self.px(14), pady=self.px(10))
         body.pack(side="left", fill="x", expand=True)
         top = tk.Frame(body, bg=c.card)
         top.pack(fill="x")
@@ -653,15 +691,15 @@ class Atlas(tk.Tk):
             link.pack(side="right")
             link.bind("<Button-1>", lambda _event, page=item.page: self.open_page(page))
         title = tk.Label(body, text=item.title, bg=c.card, fg=c.fg, font=(FONT, 11, "bold"), justify="left", anchor="w")
-        title.pack(fill="x", pady=(4, 0))
+        title.pack(fill="x", pady=(self.px(4), self.px(0)))
         self._wrap(title, 1.0, 60)
         if item.detail:
             detail = tk.Label(body, text=item.detail, bg=c.card, fg=c.fg, font=(FONT, 9), justify="left", anchor="w")
-            detail.pack(fill="x", pady=(3, 0))
+            detail.pack(fill="x", pady=(self.px(3), self.px(0)))
             self._wrap(detail, 1.0, 60)
         if item.advice:
             advice = tk.Label(body, text=f"→ {item.advice}", bg=c.card, fg=c.dim, font=(FONT, 9), justify="left", anchor="w")
-            advice.pack(fill="x", pady=(3, 0))
+            advice.pack(fill="x", pady=(self.px(3), self.px(0)))
             self._wrap(advice, 1.0, 60)
         menu_text = "\n".join(filter(None, [f"[{item.label}] {item.title}", item.detail, item.advice and f"→ {item.advice}"]))
         for widget in (card, body, top, *body.winfo_children()):
@@ -686,16 +724,16 @@ class Atlas(tk.Tk):
         info = self.fiche_info
         if not info.reference:
             info.reference = fiche.default_reference(self.data)
-        window = tk.Toplevel(self, bg=c.bg, padx=20, pady=16)
+        window = tk.Toplevel(self, bg=c.bg, padx=self.px(20), pady=self.px(16))
         window.title("Atlas PC — Fiche d'intervention")
-        window.geometry(f"{min(640, self.winfo_screenwidth() - 80)}x{min(720, self.winfo_screenheight() - 120)}")
+        window.geometry(f"{min(self.px(640), self.winfo_screenwidth() - 80)}x{min(self.px(720), self.winfo_screenheight() - 120)}")
         window.transient(self)
         self.fiche_window = window
         tk.Label(window, text="Fiche d'intervention", bg=c.bg, fg=c.fg, font=(FONT, 15, "bold")).pack(anchor="w")
         tk.Label(
             window, text="Tous les champs sont facultatifs : laissés vides, ils s'impriment comme des zones à remplir à la main.",
-            bg=c.bg, fg=c.dim, font=(FONT, 9), wraplength=580, justify="left",
-        ).pack(anchor="w", pady=(2, 10))  # fmt: skip
+            bg=c.bg, fg=c.dim, font=(FONT, 9), wraplength=self.px(580), justify="left",
+        ).pack(anchor="w", pady=(self.px(2), self.px(10)))  # fmt: skip
 
         grid = tk.Frame(window, bg=c.bg)
         grid.pack(fill="x")
@@ -703,12 +741,12 @@ class Atlas(tk.Tk):
         for row, (key, label) in enumerate(
             (("technician", "Technicien"), ("client", "Client"), ("contact", "Contact"), ("reference", "Référence"))
         ):
-            tk.Label(grid, text=label, bg=c.bg, fg=c.dim, font=(FONT, 9, "bold")).grid(row=row, column=0, sticky="w", pady=3)
+            tk.Label(grid, text=label, bg=c.bg, fg=c.dim, font=(FONT, 9, "bold")).grid(row=row, column=0, sticky="w", pady=self.px(3))
             frame = tk.Frame(grid, bg=c.card, highlightthickness=1, highlightbackground=c.line)
-            frame.grid(row=row, column=1, sticky="ew", padx=(12, 0), pady=3)
+            frame.grid(row=row, column=1, sticky="ew", padx=(self.px(12), self.px(0)), pady=self.px(3))
             entry = tk.Entry(frame, relief="flat", bd=0, bg=c.card, fg=c.fg, insertbackground=c.fg, font=(FONT, 10), highlightthickness=0)
             entry.insert(0, getattr(info, key))
-            entry.pack(fill="x", padx=8, pady=6)
+            entry.pack(fill="x", padx=self.px(8), pady=self.px(6))
             entry.bind("<FocusIn>", lambda _event, box=frame: box.configure(highlightbackground=c.green))
             entry.bind("<FocusOut>", lambda _event, box=frame: box.configure(highlightbackground=c.line))
             entries[key] = entry
@@ -717,11 +755,11 @@ class Atlas(tk.Tk):
         texts: dict[str, tk.Text] = {}
         for key, label in (("request", "Demande du client"), ("work", "Travaux réalisés"), ("recommendations", "Recommandations")):
             head = tk.Frame(window, bg=c.bg)
-            head.pack(fill="x", pady=(10, 3))
+            head.pack(fill="x", pady=(self.px(10), self.px(3)))
             tk.Label(head, text=label, bg=c.bg, fg=c.dim, font=(FONT, 9, "bold")).pack(side="left")
             box = tk.Text(
                 window, height=4, wrap="word", relief="flat", bg=c.card, fg=c.fg, insertbackground=c.fg, font=(FONT, 10),
-                highlightthickness=1, highlightbackground=c.line, highlightcolor=c.green, padx=8, pady=6, undo=True,
+                highlightthickness=1, highlightbackground=c.line, highlightcolor=c.green, padx=self.px(8), pady=self.px(6), undo=True,
             )  # fmt: skip
             box.insert("1.0", getattr(info, key))
             box.pack(fill="both", expand=True)
@@ -742,9 +780,11 @@ class Atlas(tk.Tk):
             return info
 
         bar = tk.Frame(window, bg=c.bg)
-        bar.pack(fill="x", pady=(14, 0))
+        bar.pack(fill="x", pady=(self.px(14), self.px(0)))
         self.button(bar, "🖨 Ouvrir pour imprimer", lambda: self.print_fiche(collect()), accent=True).pack(side="right")
-        self.button(bar, "Enregistrer…", lambda: self.save_fiche(collect(), parent=window)).pack(side="right", padx=(0, 8))
+        self.button(bar, "Enregistrer…", lambda: self.save_fiche(collect(), parent=window)).pack(
+            side="right", padx=(self.px(0), self.px(8))
+        )
 
         def close() -> None:
             collect()
@@ -877,13 +917,15 @@ class Atlas(tk.Tk):
         c = self.colors
         window = tk.Toplevel(self, bg=c.bg)
         window.title("Atlas PC — Comparaison de rapports")
-        window.geometry(f"{min(980, self.winfo_screenwidth() - 80)}x{min(560, self.winfo_screenheight() - 160)}")
+        window.geometry(f"{min(self.px(980), self.winfo_screenwidth() - 80)}x{min(self.px(560), self.winfo_screenheight() - 160)}")
         text = f"{len(changes)} différence(s) entre le rapport du {stamp} et l'inventaire actuel"
         if other and other != (self.data.get("system") or {}).get("computer"):
             text += f" — attention, ce rapport vient d'un autre poste ({other})"
-        tk.Label(window, text=text, bg=c.bg, fg=c.fg, font=(FONT, 11, "bold"), anchor="w").pack(fill="x", padx=18, pady=(16, 10))
+        tk.Label(window, text=text, bg=c.bg, fg=c.fg, font=(FONT, 11, "bold"), anchor="w").pack(
+            fill="x", padx=self.px(18), pady=(self.px(16), self.px(10))
+        )
         frame = tk.Frame(window, bg=c.bg)
-        frame.pack(fill="both", expand=True, padx=18, pady=(0, 18))
+        frame.pack(fill="both", expand=True, padx=self.px(18), pady=(self.px(0), self.px(18)))
         columns = [("Emplacement", 250, False), ("Propriété", 190, False), ("Avant", 230, True), ("Maintenant", 230, True)]
         tree = self.table(columns, changes, headings=True, parent=frame)
         tree.configure(height=12)

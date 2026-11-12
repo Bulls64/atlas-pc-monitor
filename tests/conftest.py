@@ -137,6 +137,8 @@ PAYLOAD = {
     "tpm": [],
     "license": {"Name": "Windows(R), Core edition", "Description": "Windows(R) Operating System, OEM_DM channel", "LicenseStatus": 1},
     "errors": {"secureboot": "Accès refusé.", "tpm": "Accès refusé.", "bitlocker": "Accès refusé."},
+    "timings": {"machine": 120, "os": 210, "disks": 900, "license": 2300, "cpu": 80},
+    "total_ms": 4100,
 }
 
 
