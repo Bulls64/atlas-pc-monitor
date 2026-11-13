@@ -4,6 +4,7 @@ import copy
 import json
 import os
 import time
+from pathlib import Path
 
 import pytest
 
@@ -345,3 +346,91 @@ def test_compare_warns_about_another_machine_without_naming_it_in_sharing_mode(w
     title = win.findChildren(CompareDialog)[-1].findChildren(type(win.status))[1].text()
     assert "autre poste" in title and "PC-VOISIN" not in title
     win.toggle_sharing()
+
+
+def saved_report(tmp_path, **changes) -> Path:
+    """Rapport JSON tel qu'Atlas PC l'exporte sur un PC Windows."""
+    from atlas import collect, export
+
+    on_windows = collect.is_windows
+    collect.is_windows = lambda: True  # comme sur le PC Windows qui a produit le rapport
+    try:
+        data = collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), ""))
+    finally:
+        collect.is_windows = on_windows
+    data.update(changes)
+    path = tmp_path / "poste-client.json"
+    path.write_text(export.to_json(data), encoding="utf-8")
+    return path
+
+
+@pytest.fixture
+def viewer(qtbot, monkeypatch, tmp_path):
+    """Fenêtre hors Windows (autouse not_windows) : visionneuse, sans analyse."""
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    from atlas.gui import theme, window
+
+    theme.load_fonts()
+    theme.set_theme("dark")
+    w = window.MainWindow(scanner=lambda: pytest.fail("aucune analyse hors Windows"))
+    qtbot.addWidget(w)
+    return w
+
+
+def test_viewer_starts_on_welcome_without_scanning(viewer):
+    from PySide6.QtWidgets import QLabel
+
+    texts = [lab.text() for lab in viewer.scroll.widget().findChildren(QLabel)]
+    assert "Ouvrir un rapport Atlas PC" in texts
+    assert viewer.status.text() == "Aucun rapport ouvert"
+    assert not viewer.refresh_button.isVisibleTo(viewer)
+    assert not any(button.isEnabled() for button in viewer.data_actions)
+    viewer.refresh()  # F5 : sans effet hors Windows
+    assert not viewer._scanning and not viewer.data
+
+
+def test_viewer_opens_a_report(viewer, tmp_path):
+    path = saved_report(tmp_path)
+    assert viewer.open_report(str(path))
+    assert viewer.source == "poste-client.json" and viewer.data["system"]["computer"]
+    assert viewer.status.text() == "Rapport ouvert : poste-client.json"
+    assert viewer.findings and all(button.isEnabled() for button in viewer.data_actions)
+    from atlas.pages import PAGES
+
+    for page, _icon in PAGES:
+        viewer.open_page(page)  # chaque page se dessine à partir du rapport
+
+
+def test_viewer_rejects_a_file_that_is_not_a_report(viewer, tmp_path, monkeypatch):
+    from atlas.gui import window
+
+    errors = []
+    monkeypatch.setattr(window.QMessageBox, "critical", lambda *args: errors.append(args[2]))
+    bad = tmp_path / "autre.json"
+    bad.write_text('{"name": "pas un rapport"}', encoding="utf-8")
+    assert not viewer.open_report(str(bad))
+    assert errors and "autre.json" in errors[0] and not viewer.data
+
+
+def test_viewer_accepts_a_dropped_report(viewer, tmp_path):
+    from PySide6.QtCore import QMimeData, QPointF, Qt, QUrl
+    from PySide6.QtGui import QDropEvent
+
+    path = saved_report(tmp_path)
+    mime = QMimeData()
+    mime.setUrls([QUrl.fromLocalFile(str(path))])
+    event = QDropEvent(QPointF(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
+    viewer.dropEvent(event)
+    assert viewer.source == "poste-client.json"
+    mime.setUrls([QUrl.fromLocalFile(str(tmp_path / "photo.png"))])
+    assert viewer._dropped_report(QDropEvent(QPointF(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)) == ""
+
+
+def test_opened_report_on_windows_then_back_to_this_pc(win, qtbot, tmp_path):
+    """Sous Windows, un rapport ouvert ne propose pas « Relancer en administrateur » ; F5 revient au poste."""
+    path = saved_report(tmp_path, admin=False)
+    assert win.open_report(str(path))
+    assert win.refresh_button.text() == "Analyser ce poste" and not win.admin_button.isVisibleTo(win)
+    win.refresh()
+    qtbot.waitUntil(lambda: not win._scanning, timeout=5000)
+    assert win.source == "" and win.refresh_button.text() == "Actualiser"

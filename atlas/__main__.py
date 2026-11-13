@@ -14,6 +14,11 @@ from .collect import scan
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="atlas_pc", description="Atlas PC — inventaire matériel Windows.")
+    parser.add_argument(
+        "rapport",
+        nargs="?",
+        help="rapport JSON d'Atlas PC à ouvrir ou à convertir au lieu d'analyser ce poste (seul usage possible hors Windows)",
+    )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--json", action="store_true", help="imprime l'inventaire en JSON, sans interface")
     group.add_argument("--text", action="store_true", help="imprime le rapport texte, sans interface")
@@ -54,8 +59,15 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 3
-        return run()
-    data = scan()
+        return run(args.rapport)
+    if args.rapport:
+        try:
+            data = export.load(args.rapport)
+        except (OSError, ValueError) as error:
+            print(f"Rapport illisible : {args.rapport} ({error})", file=sys.stderr)
+            return 2
+    else:
+        data = scan()
     if args.anonyme:
         data = privacy.anonymize(data)
     forced = ".txt" if args.text else ".html" if args.html or args.fiche else ".json" if args.json else ""

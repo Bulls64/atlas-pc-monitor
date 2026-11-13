@@ -12,7 +12,8 @@ from . import theme
 from .window import MainWindow
 
 
-def run() -> int:
+def run(report: str | None = None) -> int:
+    """Ouvre la fenêtre : analyse de ce poste, ou le rapport JSON donné (visionneuse)."""
     # Échelle d'affichage exacte (125 %, 150 %…) plutôt qu'arrondie à l'entier.
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication.instance() or QApplication(sys.argv[:1])
@@ -32,4 +33,6 @@ def run() -> int:
             pass
     window = MainWindow()
     window.show()
+    if report:
+        window.open_report(report)
     return app.exec()
