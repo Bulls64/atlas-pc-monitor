@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from . import formatting as f
+from .collect import is_virtual
 
 GIB = 1024**3
 TARGETS_GIB = (8, 16, 32, 48, 64, 96, 128, 192, 256)
@@ -77,6 +78,10 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
     current = f"{installed} Go installés : {layout}{f' {kind}' if kind else ''}{f' {form}' if form else ''}{occupancy}."
     advice = MemoryAdvice(current, installed_gib=installed)
 
+    if is_virtual(data):
+        advice.upgradable = False
+        advice.notes.append("Machine virtuelle : la mémoire se règle dans l'hyperviseur, pas en achetant des barrettes.")
+        return advice
     if kind in SOLDERED_TYPES:
         advice.upgradable = False
         advice.notes.append(f"Mémoire {kind} soudée à la carte mère : aucune évolution possible.")

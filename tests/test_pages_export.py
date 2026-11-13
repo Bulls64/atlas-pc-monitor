@@ -146,3 +146,14 @@ def test_cli_reports_unwritable_output(capsys, tmp_path):
 
     assert main(["--json", "-o", str(tmp_path / "absent" / "rapport.json")]) == 2
     assert "Impossible d'écrire" in capsys.readouterr().err
+
+
+def test_cli_exit_code_on_failed_windows_scan(monkeypatch, capsys):
+    """Code 1 seulement si la collecte a échoué sous Windows ; hors Windows, l'inventaire réduit est normal."""
+    from atlas import collect
+    from atlas.__main__ import main
+
+    assert main(["--json"]) == 0
+    monkeypatch.setattr(collect, "is_windows", lambda: True)
+    monkeypatch.setattr("atlas.__main__.scan", lambda: collect.scan(runner=lambda: (1, "", "accès refusé")))
+    assert main(["--json"]) == 1

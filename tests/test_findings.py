@@ -207,3 +207,41 @@ def test_predictive_failure_from_get_physicaldisk(data):
     failing = copy.deepcopy(data)
     failing["disks"] = [{"Model": "ST1000", "Health": "Warning", "Status": "Predictive Failure", "Size": 10**12}]
     assert "Disque défaillant : ST1000" in titles(F.analyze(failing), F.FIX)
+
+
+def hyperv(data):
+    """Ce que renvoie une vraie VM Hyper-V (relevé de la CI Windows, 13/11/2026)."""
+    vm = copy.deepcopy(data)
+    vm["machine"].update(Manufacturer="Microsoft Corporation", Model="Virtual Machine")
+    vm["ram"] = [
+        {"Capacity": 1 * GIB, "Manufacturer": "Microsoft Corporation", "PartNumber": "None", "SMBIOSMemoryType": 24},
+        {"Capacity": 7 * GIB, "Manufacturer": "Microsoft Corporation", "PartNumber": "None", "SMBIOSMemoryType": 24},
+    ]
+    vm["gpu"] = [{"Name": "Microsoft Hyper-V Video", "DriverDate": "2006-06-21T00:00:00"}]
+    vm["pnp"] = [{"Name": None, "PNPClass": None, "ConfigManagerErrorCode": 28}]
+    return vm
+
+
+def test_real_hyperv_inventory(data):
+    found = F.analyze(hyperv(data))
+    assert not [i for i in found if i.topic == "Mémoire" and i.level != F.OK], "pas de règle de barrettes sur une VM"
+    assert "Pilote graphique ancien" not in titles(found)
+    broken = next(i for i in found if i.title == "1 périphérique(s) en erreur")
+    assert broken.detail == "Périphérique inconnu — code 28 : pilote non installé"
+
+
+def test_inbox_driver_date_is_ignored_on_real_hardware(data):
+    """Le pilote intégré à Windows est daté du 21/06/2006 par convention : pas un pilote vieux de 20 ans."""
+    inbox = copy.deepcopy(data)
+    inbox["gpu"] = [{"Name": "Intel(R) UHD Graphics", "DriverDate": "2006-06-21T00:00:00"}]
+    assert "Pilote graphique ancien" not in titles(F.analyze(inbox))
+    inbox["gpu"][0]["DriverDate"] = "2019-03-01T00:00:00"
+    assert "Pilote graphique ancien" in titles(F.analyze(inbox))
+
+
+def test_smbios_placeholders_do_not_make_sticks_look_different(data):
+    sticks = copy.deepcopy(data)
+    for stick in sticks["ram"]:
+        stick["PartNumber"] = "None"
+    sticks["ram"][1]["PartNumber"] = "To Be Filled By O.E.M."
+    assert "Barrettes dépareillées" not in titles(F.analyze(sticks))

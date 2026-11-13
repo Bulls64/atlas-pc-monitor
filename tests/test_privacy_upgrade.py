@@ -147,3 +147,10 @@ def test_memory_page_section(data):
     rows = {row.label: row.value for row in section.rows}
     assert rows["Barrettes à acheter"] == "DDR4 SO-DIMM 3200 MT/s" and rows["Passer à 32 Go"] == "Remplacer par 2 × 16 Go"
     assert "prudente" in section.tip and not section.note
+
+
+def test_no_memory_upgrade_advice_on_a_virtual_machine(data):
+    vm = copy.deepcopy(data)
+    vm["machine"].update(Manufacturer="VMware, Inc.", Model="VMware20,1")
+    advice = upgrade.memory_advice(vm)
+    assert not advice.upgradable and "hyperviseur" in advice.notes[0]

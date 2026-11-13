@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from datetime import date, datetime
 
 from . import formatting as f
-from .collect import ADMIN_SECTIONS
+from .collect import ADMIN_SECTIONS, is_virtual
 
 log = logging.getLogger("atlas")
 
@@ -43,7 +43,9 @@ SUPPORT_WATCH_DAYS = 365  # fin de prise en charge « proche »
 WIN11_MIN_RAM = 4 * 1024**3
 WIN11_MIN_DISK = 64 * 1000**3
 GENERIC_GPU = ("microsoft basic display", "microsoft basic render")
-VIRTUAL_GPU = ("virtual", "remote display", "indirect display", "parsec", "dummy")
+VIRTUAL_GPU = ("virtual", "hyper-v", "remote display", "indirect display", "parsec", "dummy")
+# Date conventionnelle de tous les pilotes fournis avec Windows : elle ne dit rien de leur âge réel.
+INBOX_DRIVER_DATE = date(2006, 6, 21)
 
 
 @dataclass(frozen=True)
@@ -123,6 +125,8 @@ def rule_memory(data: dict) -> list[Finding]:
     sticks = data.get("ram") or []
     if not sticks:
         return []
+    if is_virtual(data):  # barrettes simulées par l'hyperviseur : seule l'occupation a un sens
+        return _memory_pressure(data)
     found = []
     slots = _int((data.get("memoryarray") or {}).get("MemoryDevices"))
     if len(sticks) == 1:
@@ -160,7 +164,7 @@ def rule_memory(data: dict) -> list[Finding]:
             )
 
     capacities = {_int(s.get("Capacity")) for s in sticks if _int(s.get("Capacity"))}
-    parts = {str(s.get("PartNumber") or "").strip().upper() for s in sticks} - {""}
+    parts = {f.clean(s.get("PartNumber")).upper() for s in sticks} - {f.EMPTY}
     if len(sticks) > 1 and (len(capacities) > 1 or len(parts) > 1):
         found.append(
             Finding(
@@ -191,20 +195,23 @@ def rule_memory(data: dict) -> list[Finding]:
                 )
             )
             break  # la vitesse est commune à toutes les barrettes : un seul constat suffit
+    return found + _memory_pressure(data)
 
+
+def _memory_pressure(data: dict) -> list[Finding]:
     percent = _num((data.get("memory") or {}).get("percent"))
-    if percent is not None and percent >= MEMORY_PRESSURE:
-        found.append(
-            Finding(
-                WATCH,
-                "Mémoire",
-                "Mémoire presque saturée",
-                f"{int(percent)} % utilisés au moment de l'analyse.",
-                "Repérer les programmes gourmands dans le Gestionnaire des tâches ; ajouter de la mémoire si c'est habituel.",
-                "Mémoire",
-            )
+    if percent is None or percent < MEMORY_PRESSURE:
+        return []
+    return [
+        Finding(
+            WATCH,
+            "Mémoire",
+            "Mémoire presque saturée",
+            f"{int(percent)} % utilisés au moment de l'analyse.",
+            "Repérer les programmes gourmands dans le Gestionnaire des tâches ; ajouter de la mémoire si c'est habituel.",
+            "Mémoire",
         )
-    return found
+    ]
 
 
 # ---------------------------------------------------------------------- stockage
@@ -454,6 +461,15 @@ def rule_windows(data: dict) -> list[Finding]:
 # ---------------------------------------------------------------------- pilotes et périphériques
 
 
+def device_name(device: dict) -> str:
+    """Nom du périphérique ; un périphérique sans pilote n'en a souvent pas (« Périphérique inconnu »)."""
+    name = f.clean(device.get("Name"))
+    if name != f.EMPTY:
+        return name
+    kind = f.clean(device.get("PNPClass"))
+    return "Périphérique inconnu" + (f" (classe {kind})" if kind != f.EMPTY else "")
+
+
 def rule_devices(data: dict) -> list[Finding]:
     found = []
     today = _today(data)
@@ -475,7 +491,7 @@ def rule_devices(data: dict) -> list[Finding]:
         if any(word in lowered for word in VIRTUAL_GPU):
             continue
         released = _parse_day(gpu.get("DriverDate"))
-        if released and (today - released).days > DRIVER_AGE_DAYS:
+        if released and released != INBOX_DRIVER_DATE and (today - released).days > DRIVER_AGE_DAYS:
             months = (today - released).days // 30
             found.append(
                 Finding(
@@ -493,7 +509,7 @@ def rule_devices(data: dict) -> list[Finding]:
         code = _int(device.get("ConfigManagerErrorCode"))
         if not code or code == 45:  # 45 : simplement débranché
             continue
-        line = f"{f.clean(device.get('Name'))} — code {code} : {f.PNP_ERRORS.get(code, 'erreur inconnue')}"
+        line = f"{device_name(device)} — code {code} : {f.PNP_ERRORS.get(code, 'erreur inconnue')}"
         (disabled if code == 22 else broken).append(line)
     if broken:
         found.append(

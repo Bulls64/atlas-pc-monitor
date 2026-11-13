@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 
 from . import formatting as f
 from .collect import ADMIN_SECTIONS
-from .findings import battery_wear
+from .findings import battery_wear, device_name
 from .formatting import EMPTY
 from .upgrade import memory_advice
 
@@ -144,7 +144,7 @@ def page_system(data: dict) -> list[Section]:
         code = f.to_number(device.get("ConfigManagerErrorCode"))
         if code and int(code) != 45:
             text = f"Code {int(code)} : {f.PNP_ERRORS.get(int(code), 'erreur inconnue')}"
-            _add(rows, f.clean(device.get("Name")), text)
+            _add(rows, device_name(device), text)
     note = _error_note(data, "pnp")
     if rows or note:
         sections.append(Section("Périphériques en erreur", rows, note))
