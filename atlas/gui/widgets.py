@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import QByteArray, QPointF, QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QByteArray, QPointF, QRectF, QSize, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QGuiApplication, QIcon, QKeySequence, QPainter, QPen, QPixmap, QRadialGradient
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
@@ -263,6 +263,10 @@ class CopyTable(QTableWidget):
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._menu)
         self.cellDoubleClicked.connect(lambda r, _c: self.copy_value(r))
+        # La hauteur dépend de la largeur des colonnes (retours à la ligne) : on la recalcule
+        # après chaque redimensionnement, une fois les colonnes posées.
+        self._fit_timer = QTimer(self, singleShot=True, interval=0, timeout=self._fit)
+        header.sectionResized.connect(lambda *_: self._fit_timer.start())
         self._fit()
 
     def _fit(self) -> None:
@@ -274,7 +278,7 @@ class CopyTable(QTableWidget):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        self._fit()
+        self._fit_timer.start()
 
     def wheelEvent(self, event) -> None:
         event.ignore()  # la page entière défile, pas le tableau

@@ -259,3 +259,19 @@ def test_closing_during_scan_is_clean(qapp, qtbot, monkeypatch, tmp_path):
     w.close()
     w.deleteLater()
     qtbot.wait(700)
+
+
+def test_tables_show_every_row(win, qtbot):
+    """Aucun tableau ne rogne sa dernière ligne, quelle que soit la largeur (retours à la ligne)."""
+    from atlas.gui.widgets import CopyTable
+
+    for width in (1320, 1000, 1600):
+        win.resize(width, 900)
+        for page in ("Mémoire", "Stockage", "Système"):
+            win.open_page(page)
+            qtbot.wait(50)
+            for table in win.scroll.widget().findChildren(CopyTable):
+                needed = sum(table.rowHeight(r) for r in range(table.rowCount()))
+                if table.horizontalHeader().isVisible():
+                    needed += table.horizontalHeader().height()
+                assert table.height() >= needed, (width, page, table.height(), needed)
