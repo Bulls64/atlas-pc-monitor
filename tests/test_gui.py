@@ -434,3 +434,19 @@ def test_opened_report_on_windows_then_back_to_this_pc(win, qtbot, tmp_path):
     win.refresh()
     qtbot.waitUntil(lambda: not win._scanning, timeout=5000)
     assert win.source == "" and win.refresh_button.text() == "Actualiser"
+
+
+def test_make_icon_writes_a_png(qapp, tmp_path):
+    """Icône de l'AppImage (tools/make_icon.py)."""
+    import sys
+
+    from PySide6.QtGui import QImage
+
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+    import make_icon
+
+    target = tmp_path / "atlas-pc.png"
+    assert make_icon.main([str(target), "128"]) == 0
+    image = QImage(str(target))
+    assert (image.width(), image.height()) == (128, 128)
+    assert make_icon.main([]) == 2
