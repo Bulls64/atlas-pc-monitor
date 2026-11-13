@@ -198,7 +198,7 @@ def page_memory(data: dict) -> list[Section]:
         _add(rows, "Emplacement", f.clean(stick.get("DeviceLocator")))
         _add(rows, "Banque", f.clean(stick.get("BankLabel")))
         if f.to_number(stick.get("SMBIOSMemoryType")):
-            _add(rows, "Type", f.fmt_code(stick.get("SMBIOSMemoryType"), f.MEMORY_TYPES))
+            _add(rows, "Type", f.fmt_memory_type(stick.get("SMBIOSMemoryType")))
         if f.to_number(stick.get("FormFactor")):
             _add(rows, "Format", f.fmt_code(stick.get("FormFactor"), f.FORM_FACTORS))
         _add(rows, "Capacité", f.fmt_binary(stick.get("Capacity")))

@@ -212,7 +212,7 @@ def stick_table(data: dict) -> tuple[list[str], list[tuple]]:
     sticks = [s for s in data.get("ram") or [] if isinstance(s, dict)]
     headers = ["Propriété", *[f.clean(s.get("DeviceLocator")) for s in sticks]]
     spec = [
-        ("Type", lambda s: f.fmt_code(s.get("SMBIOSMemoryType"), f.MEMORY_TYPES) if f.to_number(s.get("SMBIOSMemoryType")) else EMPTY),
+        ("Type", lambda s: f.fmt_memory_type(s.get("SMBIOSMemoryType"))),
         ("Format", lambda s: f.fmt_code(s.get("FormFactor"), f.FORM_FACTORS) if f.to_number(s.get("FormFactor")) else EMPTY),
         ("Capacité", lambda s: f.fmt_binary(s.get("Capacity"))),
         ("Vitesse nominale", lambda s: f.fmt_mts(s.get("Speed"))),
