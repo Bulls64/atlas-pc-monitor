@@ -27,8 +27,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__, export, fiche, privacy, settings
-from ..collect import base_report, is_windows, scan
+from .. import __version__, collect, export, fiche, privacy, settings
+from ..collect import base_report, scan
 from ..findings import FIX, WATCH, Finding, analyze, summary
 from ..formatting import fmt_number, fmt_stamp, to_number
 from ..pages import FINDINGS, OVERVIEW, PAGES, diff_reports
@@ -94,6 +94,7 @@ class MainWindow(QMainWindow):
         self.fiche_info = fiche.FicheInfo(technician=str(self.config.get("technician", "")))
         self.fiche_dialog: FicheDialog | None = None
         self._shown: tuple | None = None
+        self.source = ""  # nom du rapport JSON affiché ; vide = inventaire de ce poste
         self._scanning = False
         self._closing = False
         self.bridge = _Bridge(self)
@@ -108,8 +109,14 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(min(980, available.width() - 40), min(620, available.height() - 40))
         QShortcut(QKeySequence.Find, self, activated=self._focus_search)
         QShortcut(QKeySequence("F5"), self, activated=self.refresh)
+        QShortcut(QKeySequence.Open, self, activated=self.open_report)
+        self.setAcceptDrops(True)
         self.build()
-        self.refresh()
+        if collect.is_windows():
+            self.refresh()
+        else:  # rien à analyser ici : visionneuse de rapports faits sur des PC Windows
+            self._update_status()
+            self.render()
 
     def _focus_search(self) -> None:
         self.search.setFocus()
@@ -219,8 +226,8 @@ class MainWindow(QMainWindow):
         self.refresh_button = QPushButton("Actualiser")
         self.refresh_button.setProperty("kind", "primary")
         self.refresh_button.setIcon(icon("refresh", p.primary_text))
-        self.refresh_button.setToolTip("Relancer l'analyse (F5)")
         self.refresh_button.clicked.connect(self.refresh)
+        self.refresh_button.setVisible(collect.is_windows())  # hors Windows, pas de collecte possible
         row.addWidget(self.refresh_button)
         return header
 
@@ -251,11 +258,14 @@ class MainWindow(QMainWindow):
             layout.addWidget(button)
             return button
 
-        action("Fiche d'intervention", "print", self.open_fiche, primary=True)
+        self.data_actions = [action("Fiche d'intervention", "print", self.open_fiche, primary=True)]
         layout.addSpacing(4)
-        action("Exporter le rapport", "export", self.export)
-        action("Copier le rapport", "copy", self.copy_report)
-        action("Comparer à un rapport", "compare", self.compare)
+        self.data_actions += [
+            action("Exporter le rapport", "export", self.export),
+            action("Copier le rapport", "copy", self.copy_report),
+            action("Comparer à un rapport", "compare", self.compare),
+        ]
+        action("Ouvrir un rapport", "open", self.open_report).setToolTip("Afficher un rapport JSON d'Atlas PC (Ctrl+O)")
         self.admin_button = action("Relancer en administrateur", "admin", self.relaunch_as_admin)
         self.admin_button.hide()
         layout.addStretch(1)
@@ -268,22 +278,31 @@ class MainWindow(QMainWindow):
             return
         if self._scanning:
             text, level = "Analyse en cours…", "watch"
+        elif self.source:
+            text, level = f"Rapport ouvert : {self.source}", "info"
         elif self.data.get("note") and not self.data.get("os"):
             text, level = "Inventaire partiel", "watch"
         elif self.data:
             seconds = to_number(self.data.get("scan_seconds"))
             text = "Analyse terminée" + (f" · {fmt_number(seconds, 2)} s" if seconds else "")
             level = "ok"
-        else:
+        elif collect.is_windows():
             text, level = "Analyse en attente", None
+        else:
+            text, level = "Aucun rapport ouvert", None
         self.status.setText(text)
-        self.status.setProperty("role", "status" if level == "ok" else "statusWarn")
+        self.status.setProperty("role", "status" if level in ("ok", "info") else "statusWarn")
         self.status.style().unpolish(self.status)
         self.status.style().polish(self.status)
         self.status_led.level = level
         self.status_led.update()
         self.refresh_button.setEnabled(not self._scanning)
-        self.admin_button.setVisible("admin" in self.data and not self.data["admin"] and is_windows())
+        self.refresh_button.setText("Analyser ce poste" if self.source else "Actualiser")
+        self.refresh_button.setToolTip("Revenir à l'inventaire de ce poste (F5)" if self.source else "Relancer l'analyse (F5)")
+        for button in self.data_actions:
+            button.setEnabled(bool(self.data))
+        live = collect.is_windows() and not self.source  # un rapport ouvert ne se relance pas en administrateur
+        self.admin_button.setVisible(live and "admin" in self.data and not self.data["admin"])
 
     def flash(self, message: str) -> None:
         if self._closing:
@@ -327,8 +346,11 @@ class MainWindow(QMainWindow):
         content.setObjectName("content")
         layout = QVBoxLayout(content)
         layout.setContentsMargins(16, 8, 32, 40)
-        if not self.data:
+        if not self.data and (self._scanning or collect.is_windows()):
             layout.addWidget(screens.heading("Atlas PC", "Analyse en cours…", "L'inventaire du poste est en cours de lecture."))
+            layout.addStretch(1)
+        elif not self.data:
+            layout.addWidget(screens.welcome(self))
             layout.addStretch(1)
         elif self.query:
             layout.addWidget(screens.search_page(self, self.query))
@@ -346,7 +368,7 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ collecte
 
     def refresh(self) -> None:
-        if self._scanning:
+        if self._scanning or not collect.is_windows():
             return
         self._scanning = True
         self._update_status()
@@ -362,11 +384,52 @@ class MainWindow(QMainWindow):
             self.bridge.done.emit(result)
 
     def _on_scanned(self, result: dict) -> None:
-        self.data = result
-        self.findings = analyze(result)
+        self.source = ""
+        self._show(result)
         self._scanning = False
         self._update_status()
+
+    def _show(self, data: dict) -> None:
+        self.data = data
+        self.findings = analyze(data)
+        self.page = OVERVIEW
         self.render()
+
+    # ------------------------------------------------------------------ visionneuse
+
+    def open_report(self, path: str | Path | None = None) -> bool:
+        """Affiche un rapport JSON fait par Atlas PC sur un autre poste (ou plus tôt sur celui-ci)."""
+        if self._scanning:
+            return False
+        if not path:
+            path, _ = QFileDialog.getOpenFileName(self, "Ouvrir un rapport JSON d'Atlas PC", "", "Rapport JSON (*.json)")
+            if not path:
+                return False
+        try:
+            data = export.load(path)
+        except (OSError, ValueError) as error:
+            QMessageBox.critical(self, "Rapport illisible", f"{Path(path).name} : {error}")
+            return False
+        self.source = Path(path).name
+        self._show(data)
+        self._update_status()
+        return True
+
+    @staticmethod
+    def _dropped_report(event) -> str:
+        urls = event.mimeData().urls() if event.mimeData().hasUrls() else []
+        local = [url.toLocalFile() for url in urls if url.isLocalFile()]
+        return local[0] if len(local) == 1 and local[0].lower().endswith(".json") else ""
+
+    def dragEnterEvent(self, event) -> None:
+        if self._dropped_report(event) and not self._scanning:
+            event.acceptProposedAction()
+
+    def dropEvent(self, event) -> None:
+        path = self._dropped_report(event)
+        if path:
+            event.acceptProposedAction()
+            self.open_report(path)
 
     # ------------------------------------------------------------------ thème et partage
 

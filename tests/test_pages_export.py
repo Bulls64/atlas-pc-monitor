@@ -157,3 +157,19 @@ def test_cli_exit_code_on_failed_windows_scan(monkeypatch, capsys):
     monkeypatch.setattr(collect, "is_windows", lambda: True)
     monkeypatch.setattr("atlas.__main__.scan", lambda: collect.scan(runner=lambda: (1, "", "accès refusé")))
     assert main(["--json"]) == 1
+
+
+def test_cli_converts_a_saved_report(tmp_path, capsys, data):
+    """Hors Windows, la ligne de commande transforme un rapport JSON en texte, HTML ou fiche."""
+    from atlas.__main__ import main
+
+    path = tmp_path / "rapport.json"
+    path.write_text(export.to_json(data), encoding="utf-8")
+    assert main(["--text", str(path)]) == 0
+    assert data["system"]["computer"] in capsys.readouterr().out
+    target = tmp_path / "fiche.html"
+    assert main(["--fiche", "--anonyme", "--technicien", "Chris", str(path), "-o", str(target)]) == 0
+    html = target.read_text(encoding="utf-8")
+    assert "Chris" in html and data["system"]["computer"] not in html
+    assert main(["--json", str(tmp_path / "absent.json")]) == 2
+    assert "Rapport illisible" in capsys.readouterr().err

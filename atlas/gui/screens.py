@@ -39,6 +39,35 @@ def heading(eyebrow: str, title: str, sub: str = "") -> QWidget:
     return widget
 
 
+def welcome(win) -> QWidget:
+    """Accueil hors Windows : Atlas PC y sert de visionneuse de rapports."""
+    widget, layout = column(18)
+    layout.addWidget(
+        heading(
+            "Visionneuse",
+            "Ouvrir un rapport Atlas PC",
+            "L'inventaire matériel se fait sous Windows. Ici, Atlas PC affiche, compare et imprime"
+            " les rapports JSON faits sur des PC Windows.",
+        )
+    )
+    box, inner = card(spacing=10)
+    steps = (
+        "Sur le PC Windows : bouton « Exporter le rapport » au format JSON, ou AtlasPC.exe --json -o rapport.json.",
+        "Ici : bouton ci-dessous, Ctrl+O, ou glisser le fichier .json sur la fenêtre.",
+        "Constats, fiche d'intervention, mode partage et comparaison fonctionnent comme sous Windows.",
+    )
+    for number, text in enumerate(steps, 1):
+        inner.addWidget(label(f"{number}.  {text}", "dim", wrap=True))
+    inner.addSpacing(6)
+    button = QPushButton("Ouvrir un rapport")
+    button.setProperty("kind", "primary")
+    button.setIcon(icon("open", theme.P.primary_text))
+    button.clicked.connect(lambda: win.open_report())
+    inner.addWidget(button, 0, Qt.AlignLeft)
+    layout.addWidget(box)
+    return widget
+
+
 def stamp(data: dict) -> str:
     return fmt.fmt_stamp(data.get("captured_at")).replace(" ", " à ", 1)
 

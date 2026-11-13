@@ -132,8 +132,8 @@ def save(data: dict, path: str, chosen_filter: str = "") -> Path:
     return target
 
 
-def load(path: str) -> dict:
-    """Relit un export JSON d'Atlas PC pour la comparaison."""
+def load(path: str | Path) -> dict:
+    """Relit un export JSON d'Atlas PC (comparaison, visionneuse). ValueError si ce n'en est pas un."""
     data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict) or "system" not in data:
         raise ValueError("ce fichier n'est pas un rapport JSON d'Atlas PC")
