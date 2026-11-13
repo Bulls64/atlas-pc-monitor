@@ -107,7 +107,6 @@ Organisation du code
   atlas/export.py      JSON, texte, HTML
   atlas/settings.py    préférences (%APPDATA%\AtlasPC\config.json), relance élevée
   atlas/gui/           interface PySide6 (thème, plan de carte, écrans, fenêtre)
-  atlas/ui.py          ancienne interface Tkinter, plus utilisée par le lanceur
   tests/               tests (pytest)
   tools/check_scan.py  vérification d'un inventaire réel (CI)
 
