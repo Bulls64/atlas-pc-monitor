@@ -44,10 +44,17 @@ def main(argv: list[str] | None = None) -> int:
     if log_path:
         print(f"Journal de débogage : {log_path}", file=sys.stderr)
     if not (args.json or args.text or args.html or args.fiche or args.output):
-        from .ui import run  # Tkinter n'est chargé que pour l'interface
-
-        run()
-        return 0
+        try:
+            from .gui.app import run  # PySide6 n'est chargé que pour l'interface
+        except ImportError as error:
+            print(
+                f"L'interface demande PySide6 ({error}).\n"
+                "Installez-le avec :  python -m pip install -r requirements.txt\n"
+                "(lancer_atlas.bat le fait automatiquement)",
+                file=sys.stderr,
+            )
+            return 3
+        return run()
     data = scan()
     if args.anonyme:
         data = privacy.anonymize(data)

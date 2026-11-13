@@ -1,4 +1,4 @@
-ATLAS PC 2.3
+ATLAS PC 3.0
 ============
 
 Application de bureau en Python pour consulter l'inventaire matériel d'un PC
@@ -7,10 +7,28 @@ Windows, dans l'esprit des utilitaires comme Speccy.
 Lancement
 ---------
 Sous Windows 10 ou 11 avec Python 3.9 ou plus récent : double-cliquez sur
-lancer_atlas.bat, ou lancez  python atlas_pc.py
+lancer_atlas.bat. Au premier lancement, il installe PySide6 (l'interface
+graphique) pour l'utilisateur courant. Sinon :
+  python -m pip install -r requirements.txt
+  python atlas_pc.py
 
-Aucune bibliothèque externe n'est requise : l'application utilise Tkinter et
-une seule requête PowerShell/CIM.
+La collecte n'utilise qu'une requête PowerShell/CIM. Les commandes sans
+interface (--json, --text, --fiche…) ne demandent pas PySide6.
+
+Interface
+---------
+Le look reprend celui du site BAUSTECH PC : l'application est dessinée comme
+une carte électronique.
+- Navigation par repères de sérigraphie : TP Constats, U1 Processeur,
+  J1 Mémoire, BT1 Batterie…
+- Vue d'ensemble : plan de carte mère ; chaque composant est une puce reliée
+  au processeur par une piste qui prend la couleur de son état. Cliquer une
+  puce ouvre sa page.
+- Constats : banc de test avec compteurs et LED.
+- Mémoire : barrettes dessinées, conseiller d'évolution en pistes.
+- Thèmes sombre et clair (bouton soleil/lune), mémorisés.
+- Polices embarquées (licence OFL, dossier atlas/gui/fonts) : Space Grotesk,
+  Inter, IBM Plex Mono. Mise à l'échelle 125 % et 150 % gérée par Qt.
 
 Ce que l'application affiche
 ----------------------------
@@ -22,8 +40,7 @@ Ce que l'application affiche
   pilote graphique générique ou ancien, périphériques en erreur, poste
   jamais redémarré. Les seuils se règlent en tête de atlas/findings.py.
   Un résumé figure sur la vue d'ensemble et en tête des exports.
-- Vue d'ensemble : modèle du poste, processeur, mémoire, carte graphique,
-  carte mère, stockage, températures
+- Vue d'ensemble : poste, constats, mémoire utilisée, plan de la carte
 - Système : fabricant et modèle, Windows (édition, version, activation,
   durée depuis le démarrage), démarrage sécurisé, TPM
 - Processeur : socket, cœurs, fréquences, caches, virtualisation
@@ -58,7 +75,7 @@ Actions
   Format A4, poste diagnostiqué, constats, zones de signature ; les champs
   laissés vides deviennent des lignes à remplir à la main. Le nom du
   technicien est mémorisé.
-- Recherche (Ctrl+F) dans toutes les pages, sans tenir compte des accents ;
+- Actualiser (F5) ; recherche (Ctrl+F) dans toutes les pages, sans tenir compte des accents ;
   Échap pour revenir
 - Copie : Ctrl+C sur les lignes sélectionnées, double-clic pour copier une
   valeur, clic droit pour le menu ; « Copier le rapport » pour tout copier
@@ -88,7 +105,9 @@ Organisation du code
   atlas/privacy.py     mode partage (masquage des identifiants)
   atlas/upgrade.py     conseiller d'évolution mémoire
   atlas/export.py      JSON, texte, HTML
-  atlas/ui.py          interface Tkinter
+  atlas/settings.py    préférences (%APPDATA%\AtlasPC\config.json), relance élevée
+  atlas/gui/           interface PySide6 (thème, plan de carte, écrans, fenêtre)
+  atlas/ui.py          ancienne interface Tkinter, plus utilisée par le lanceur
   tests/               tests (pytest)
   tools/check_scan.py  vérification d'un inventaire réel (CI)
 
