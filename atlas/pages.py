@@ -1,6 +1,6 @@
 """Modèle des pages : transforme l'inventaire en sections de lignes « libellé / valeur ».
 
-Module pur (aucune dépendance à Tkinter) : il sert à l'interface, aux exports,
+Module pur (aucune dépendance graphique) : il sert à l'interface, aux exports,
 à la recherche et à la comparaison de rapports.
 """
 
