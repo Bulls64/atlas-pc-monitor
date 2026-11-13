@@ -18,7 +18,7 @@ from PySide6.QtWidgets import (
 from .. import fiche
 from .. import findings as F
 from . import theme
-from .widgets import CopyTable, card, icon, label, logo_pixmap
+from .widgets import CopyTable, card, icon, label
 
 
 class FicheDialog(QDialog):
@@ -110,16 +110,17 @@ class FicheDialog(QDialog):
         self.win.remember_technician(self.info.technician)
         return self.info
 
-    def closeEvent(self, event) -> None:
+    def hideEvent(self, event) -> None:
+        # Fermer, Échap ou la croix : dans tous les cas la saisie est gardée pour la prochaine ouverture.
         self.collect()
-        super().closeEvent(event)
+        super().hideEvent(event)
 
 
 class CompareDialog(QDialog):
     def __init__(self, win, title: str, changes: list[tuple]):
         super().__init__(win)
         self.setWindowTitle("Atlas PC — Comparaison de rapports")
-        self.setWindowIcon(win.windowIcon() if not win.windowIcon().isNull() else logo_pixmap())
+        self.setWindowIcon(win.windowIcon())
         self.resize(1000, 600)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 22, 24, 22)

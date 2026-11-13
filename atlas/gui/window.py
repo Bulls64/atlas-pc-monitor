@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
 import logging
-import platform
-import socket
 import tempfile
 import threading
 import webbrowser
@@ -29,9 +28,9 @@ from PySide6.QtWidgets import (
 )
 
 from .. import __version__, export, fiche, privacy, settings
-from ..collect import scan
+from ..collect import base_report, is_windows, scan
 from ..findings import FIX, WATCH, Finding, analyze, summary
-from ..formatting import fmt_date
+from ..formatting import fmt_number, fmt_stamp, to_number
 from ..pages import FINDINGS, OVERVIEW, PAGES, diff_reports
 from . import model, screens, theme
 from .dialogs import CompareDialog, FicheDialog
@@ -107,10 +106,14 @@ class MainWindow(QMainWindow):
         available = screen_size()
         self.resize(min(1320, available.width() - 60), min(900, available.height() - 60))
         self.setMinimumSize(min(980, available.width() - 40), min(620, available.height() - 40))
-        QShortcut(QKeySequence.Find, self, activated=lambda: self.search.setFocus())
+        QShortcut(QKeySequence.Find, self, activated=self._focus_search)
         QShortcut(QKeySequence("F5"), self, activated=self.refresh)
         self.build()
         self.refresh()
+
+    def _focus_search(self) -> None:
+        self.search.setFocus()
+        self.search.selectAll()  # Ctrl+F sur une recherche en cours : on retape directement
 
     # ------------------------------------------------------------------ données affichées
 
@@ -155,6 +158,7 @@ class MainWindow(QMainWindow):
         outer.addLayout(body, 1)
         self.setCentralWidget(root)
         self._update_status()
+        self._fit_header(self.width())
         self.render()
         self.scroll.setFocus()  # pas le champ de recherche au démarrage
 
@@ -195,11 +199,10 @@ class MainWindow(QMainWindow):
         escape.triggered.connect(self.search.clear)
         self.search.addAction(escape)
         row.addWidget(self.search)
-        self.sharing_button = QPushButton("Mode partage")
+        self.sharing_button = QPushButton()
         self.sharing_button.setProperty("kind", "sharing")
         self.sharing_button.setCheckable(True)
-        self.sharing_button.setChecked(self.sharing)
-        self.sharing_button.setIcon(icon("share", p.primary_text if self.sharing else p.bright))
+        self._show_sharing()
         self.sharing_button.setToolTip(
             "Masque nom du poste, numéros de série, MAC et IP à l'écran, dans les copies, les exports et la fiche"
         )
@@ -268,8 +271,8 @@ class MainWindow(QMainWindow):
         elif self.data.get("note") and not self.data.get("os"):
             text, level = "Inventaire partiel", "watch"
         elif self.data:
-            seconds = self.data.get("scan_seconds")
-            text = "Analyse terminée" + (f" · {str(seconds).replace('.', ',')} s" if seconds else "")
+            seconds = to_number(self.data.get("scan_seconds"))
+            text = "Analyse terminée" + (f" · {fmt_number(seconds, 2)} s" if seconds else "")
             level = "ok"
         else:
             text, level = "Analyse en attente", None
@@ -280,7 +283,7 @@ class MainWindow(QMainWindow):
         self.status_led.level = level
         self.status_led.update()
         self.refresh_button.setEnabled(not self._scanning)
-        self.admin_button.setVisible(bool(self.data) and "admin" in self.data and not self.data.get("admin") and settings.os.name == "nt")
+        self.admin_button.setVisible("admin" in self.data and not self.data["admin"] and is_windows())
 
     def flash(self, message: str) -> None:
         if self._closing:
@@ -354,15 +357,9 @@ class MainWindow(QMainWindow):
             result = self.scanner()
         except Exception as error:  # la collecte ne doit jamais faire tomber l'interface
             log.exception("Collecte interrompue")
-            result = {
-                "captured_at": datetime.now().astimezone().isoformat(timespec="seconds"),
-                "system": {"computer": socket.gethostname(), "platform": platform.platform(), "architecture": platform.machine()},
-                "note": f"Erreur inattendue pendant la collecte : {error}",
-            }
-        try:
+            result = base_report(f"Erreur inattendue pendant la collecte : {error}")
+        with contextlib.suppress(RuntimeError):  # fenêtre déjà fermée
             self.bridge.done.emit(result)
-        except RuntimeError:  # fenêtre déjà fermée
-            pass
 
     def _on_scanned(self, result: dict) -> None:
         self.data = result
@@ -385,13 +382,16 @@ class MainWindow(QMainWindow):
         self.sharing = not self.sharing
         self.config["sharing"] = self.sharing
         settings.save_config(self.config)
-        self.sharing_button.setChecked(self.sharing)
-        p = theme.P
-        self.sharing_button.setIcon(icon("share", p.primary_text if self.sharing else p.bright))
-        self.sharing_button.setText("Partage activé" if self.sharing else "Mode partage")
+        self._show_sharing()
         self.flash("Identifiants masqués" if self.sharing else "Identifiants affichés")
         if self.data:
             self.render()
+
+    def _show_sharing(self) -> None:
+        p = theme.P
+        self.sharing_button.setChecked(self.sharing)
+        self.sharing_button.setIcon(icon("share", p.primary_text if self.sharing else p.bright))
+        self.sharing_button.setText("Partage activé" if self.sharing else "Mode partage")
 
     # ------------------------------------------------------------------ copie, export, comparaison
 
@@ -433,18 +433,20 @@ class MainWindow(QMainWindow):
         except (OSError, ValueError) as error:
             QMessageBox.critical(self, "Rapport illisible", str(error))
             return
+        other = (previous.get("system") or {}).get("computer") or ""
+        # Un rapport anonymisé ne dit plus de quel poste il vient : on ne peut pas prévenir.
+        elsewhere = not previous.get("anonymized") and other != (self.data.get("system") or {}).get("computer")
         current = self.data
         if self.sharing or previous.get("anonymized"):  # comparer à masquage égal
             previous, current = privacy.anonymize(previous), privacy.anonymize(current)
         changes = diff_reports(previous, current)
-        when = fmt_date(str(previous.get("captured_at", ""))[:19])
+        when = fmt_stamp(previous.get("captured_at"))
         if not changes:
             QMessageBox.information(self, "Comparaison", f"Aucune différence matérielle avec le rapport du {when}.")
             return
         title = f"{len(changes)} différence(s) entre le rapport du {when} et l'inventaire actuel"
-        other = (previous.get("system") or {}).get("computer", "")
-        if other and other != (current.get("system") or {}).get("computer"):
-            title += f" — attention, ce rapport vient d'un autre poste ({other})"
+        if other and elsewhere:
+            title += " — attention, ce rapport vient d'un autre poste" + ("" if self.sharing else f" ({other})")
         CompareDialog(self, title, changes).show()
 
     # ------------------------------------------------------------------ fiche d'intervention
@@ -511,14 +513,16 @@ class MainWindow(QMainWindow):
         else:
             self.flash("Élévation annulée")
 
-    def resizeEvent(self, event) -> None:
+    def _fit_header(self, width: int) -> None:
         """En fenêtre étroite, l'en-tête se resserre : le message d'état cède la place en premier."""
+        self.status.setVisible(width >= 1180)
+        self.status_led.setVisible(width >= 1180)
+        self.brand_sub.setText(f"INVENTAIRE · DIAGNOSTIC{' · v' + __version__ if width >= 1100 else ''}")
+
+    def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        width = event.size().width()
-        if hasattr(self, "status"):
-            self.status.setVisible(width >= 1180)
-            self.status_led.setVisible(width >= 1180)
-            self.brand_sub.setText(f"INVENTAIRE · DIAGNOSTIC{' · v' + __version__ if width >= 1100 else ''}")
+        if hasattr(self, "status"):  # un redimensionnement peut précéder la construction
+            self._fit_header(event.size().width())
 
     def closeEvent(self, event) -> None:
         self._closing = True

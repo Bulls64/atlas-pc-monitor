@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+from html import escape
+
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QPainter, QPen
 from PySide6.QtWidgets import QFrame, QGridLayout, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget
 
 from .. import findings as F
 from .. import formatting as fmt
+from ..collect import ADMIN_SECTIONS
 from ..formatting import EMPTY
-from ..pages import FINDINGS, build_page, search
+from ..pages import FINDINGS, SOURCE_LABELS, build_page, search
 from . import model, theme
 from .boardmap import BoardMap
 from .dimm import DimmStick, RouteTrace
@@ -36,7 +40,7 @@ def heading(eyebrow: str, title: str, sub: str = "") -> QWidget:
 
 
 def stamp(data: dict) -> str:
-    return fmt.fmt_date(str(data.get("captured_at", ""))[:19]).replace(" ", " à ", 1)
+    return fmt.fmt_stamp(data.get("captured_at")).replace(" ", " à ", 1)
 
 
 def legend(level: str, text: str, off: bool = False) -> QWidget:
@@ -94,8 +98,6 @@ def overview(win) -> QWidget:
 
     errors = data.get("errors") or {}
     if errors:
-        from ..pages import SOURCE_LABELS
-
         names = sorted({SOURCE_LABELS.get(key, key) for key in errors})
         hint = "" if data.get("admin") else " Certaines exigent une session administrateur."
         layout.addWidget(note(f"Sources indisponibles : {', '.join(names)}.{hint} Le détail figure sur chaque page."))
@@ -109,12 +111,7 @@ def _findings_card(win, found) -> QFrame:
     frame, layout = card("result")
     layout.addWidget(label("BANC DE TEST · CONSTATS", "eyebrow"))
     counts = F.summary(found)
-    if not found:
-        big = "Diagnostic indisponible"
-    elif counts[F.FIX] or counts[F.WATCH]:
-        big = F.summary_text(found)
-    else:
-        big = "Rien à corriger"
+    big = F.summary_text(found) if found else "Diagnostic indisponible"
     level = F.FIX if counts[F.FIX] else F.WATCH if counts[F.WATCH] else F.OK
     big_label = label(big, "big", wrap=True)
     if level != F.WATCH:
@@ -147,7 +144,7 @@ def _memory_card(data: dict) -> QFrame:
     if memory:
         text = (f'<span style="color:{theme.P.silk}">{fmt.fmt_binary(memory.get("used"))}</span> utilisés sur '
                 f'{fmt.fmt_binary(memory.get("total"))} · {fmt.fmt_binary(memory.get("free"))} disponibles')  # fmt: skip
-        layout.addWidget(label(text, "dim", wrap=True))
+        layout.addWidget(label(text, "dim", wrap=True, rich=True))
     layout.addStretch(1)
     return frame
 
@@ -166,7 +163,7 @@ def findings_page(win) -> QWidget:
     else:
         title = "Rien à corriger" if found else "Constats indisponibles"
     sub = "Diagnostic automatique de l'inventaire."
-    if found and not data.get("admin") and any(k in (data.get("errors") or {}) for k in ("tpm", "secureboot", "bitlocker")):
+    if found and not data.get("admin") and any(k in (data.get("errors") or {}) for k in ADMIN_SECTIONS):
         sub += " L'inventaire a été lu sans droits administrateur : quelques sources manquent."
     if not found:
         sub = "L'inventaire Windows n'a pas pu être lu."
@@ -235,9 +232,6 @@ class _RingLed(QWidget):
         lay.addWidget(Led(level, 14), 0, Qt.AlignCenter)
 
     def paintEvent(self, _event) -> None:
-        from PySide6.QtCore import QPointF
-        from PySide6.QtGui import QPainter, QPen
-
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setPen(QPen(theme.qcolor(theme.level_color(self.level)), 1.5))
@@ -250,7 +244,8 @@ def _finding_card(win, item: F.Finding) -> QFrame:
     row.setSpacing(18)
     row.addWidget(_RingLed(item.level), 0, Qt.AlignTop)
     text, tl = column(6)
-    tag = label(f'{item.label.upper()}<span style="color:{theme.P.dim}; font-weight:400"> · {item.topic.upper()}</span>', "level")
+    topic = f'<span style="color:{theme.P.dim}; font-weight:400"> · {escape(item.topic.upper())}</span>'
+    tag = label(escape(item.label.upper()) + topic, "level", rich=True)
     tag.setProperty("level", item.level)
     top = QHBoxLayout()
     top.addWidget(tag)
@@ -262,7 +257,7 @@ def _finding_card(win, item: F.Finding) -> QFrame:
     if item.detail:
         tl.addWidget(label(item.detail, "body", wrap=True, selectable=True))
     if item.advice:
-        tl.addWidget(label(f'<span style="color:{theme.P.link}">→</span> {item.advice}', "dim", wrap=True))
+        tl.addWidget(label(f'<span style="color:{theme.P.link}">→</span> {escape(item.advice)}', "dim", wrap=True, rich=True))
     row.addWidget(text, 1)
     layout.addLayout(row)
     text_copy = "\n".join(filter(None, [f"[{item.label}] {item.title}", item.detail, item.advice and f"→ {item.advice}"]))
@@ -352,7 +347,7 @@ def _memory_extras(win, layout: QVBoxLayout) -> None:
     stats = [
         ("Installée", fmt.fmt_binary(memory.get("installed")), f"{len(data.get('ram') or [])} barrette(s)"),
         ("Utilisable", fmt.fmt_binary(memory.get("total")), "vue par Windows"),
-        ("Utilisée", fmt.fmt_binary(memory.get("used")), f"{memory.get('percent', '?')} % au moment de l'analyse"),
+        ("Utilisée", fmt.fmt_binary(memory.get("used")), f"{fmt.fmt_percent(memory.get('percent'))} au moment de l'analyse"),
         ("Max. déclaré", fmt.fmt_binary(max_kb * 1024) if max_kb else EMPTY, "par la carte mère"),
     ]
     layout.addWidget(Responsive([_stat(*item) for item in stats], ((680, 4), (0, 2)), spacing=14))
@@ -385,9 +380,10 @@ def _memory_extras(win, layout: QVBoxLayout) -> None:
         if advice.upgradable:
             fl.addWidget(
                 label(
-                    f'Barrettes à acheter : <span style="color:{theme.P.silk}; font-family:{theme.MONO}">{advice.spec}</span>',
+                    f'Barrettes à acheter : <span style="color:{theme.P.silk}; font-family:{theme.MONO}">{escape(advice.spec)}</span>',
                     "dim",
                     wrap=True,
+                    rich=True,
                 )
             )
             grid = QGridLayout()

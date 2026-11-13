@@ -16,9 +16,9 @@ DESIGNATORS = {
 }  # fmt: skip
 
 
-def worst(found: list[Finding], *topics: str, page: str | None = None) -> str:
-    """Niveau à afficher pour un composant : à corriger, à surveiller, sinon OK."""
-    levels = {item.level for item in found if item.topic in topics or (page and item.page == page and item.topic == "Pilotes")}
+def worst(found: list[Finding], *topics: str, page: str = "") -> str:
+    """Niveau à afficher pour un composant (constats d'un thème, ou d'une page) : à corriger, à surveiller, sinon OK."""
+    levels = {item.level for item in found if item.topic in topics or (page and item.page == page)}
     return FIX if FIX in levels else WATCH if WATCH in levels else "ok"
 
 
@@ -56,8 +56,7 @@ def board_chips(data: dict, found: list[Finding]) -> dict[str, Chip]:
     chips: dict[str, Chip] = {}
     memory = data.get("memory") or {}
     sticks = data.get("ram") or []
-    types = sorted({f.fmt_code(s.get("SMBIOSMemoryType"), f.MEMORY_TYPES) for s in sticks if f.to_number(s.get("SMBIOSMemoryType"))})
-    forms = sorted({f.fmt_code(s.get("FormFactor"), f.FORM_FACTORS) for s in sticks if f.to_number(s.get("FormFactor")) in (8, 12)})
+    types, forms = f.memory_types(sticks), f.memory_forms(sticks)
     sizes = sorted({f.fmt_binary(s.get("Capacity")) for s in sticks})
     layout = f"{len(sticks)} × {sizes[0]}" if len(sizes) == 1 and sticks else f"{len(sticks)} barrette(s)"
     chips["ram"] = Chip("ram", "J1 · MÉMOIRE", " ".join([f.fmt_binary(memory.get("installed")), *types[:1]]),
@@ -84,8 +83,7 @@ def board_chips(data: dict, found: list[Finding]) -> dict[str, Chip]:
             for x in (vram_text(gpu), f"pilote du {f.fmt_date(gpu.get('DriverDate'))}" if gpu.get("DriverDate") else "")
             if x and x != EMPTY
         )
-        levels = {i.level for i in found if i.page == "Graphiques"}
-        level = FIX if FIX in levels else WATCH if WATCH in levels else "ok"
+        level = worst(found, page="Graphiques")
         chips["gpu"] = Chip("gpu", "U2 · GRAPHIQUES", _short_gpu(f.clean(gpu.get("Name"))), [sub] if sub else [], "", level, "Graphiques")
     else:
         chips["gpu"] = Chip("gpu", "U2 · GRAPHIQUES", "Non détectée", [], "", None, "Graphiques")
@@ -106,7 +104,7 @@ def board_chips(data: dict, found: list[Finding]) -> dict[str, Chip]:
     if batteries:
         battery = batteries[0]
         wear = battery_wear(battery)
-        parts = [f.fmt_percent(battery.get("Charge"))] + ([f"usure {int(round(wear))} %"] if wear is not None else [])
+        parts = [f.fmt_percent(battery.get("Charge")), f"usure {round(wear)} %" if wear is not None else EMPTY]
         chips["battery"] = Chip(
             "battery", "BT1 · BATTERIE", " · ".join(p for p in parts if p != EMPTY), [], "", worst(found, "Batterie"), "Batterie"
         )
@@ -154,10 +152,9 @@ def page_heading(data: dict, page: str) -> tuple[str, str]:
         sub = f"{cpu.get('NumberOfCores', '?')} cœurs · {cpu.get('NumberOfLogicalProcessors', '?')} threads" if cpu else ""
     elif page == "Mémoire":
         sticks = data.get("ram") or []
-        forms = sorted({f.fmt_code(s.get("FormFactor"), f.FORM_FACTORS) for s in sticks if f.to_number(s.get("FormFactor")) in (8, 12)})
-        title = " ".join([board_chips(data, [])["ram"].title, *forms[:1]])
+        title = " ".join([board_chips(data, [])["ram"].title, *f.memory_forms(sticks)[:1]])
         slots = f.to_number((data.get("memoryarray") or {}).get("MemoryDevices"))
-        n = len(data.get("ram") or [])
+        n = len(sticks)
         sub = f"{n} emplacement(s) sur {int(slots)} occupé(s)" if slots else f"{n} barrette(s)"
     elif page == "Carte mère":
         board = data.get("board") or {}
@@ -234,8 +231,5 @@ def upgrade_routes(data: dict):
     advice = memory_advice(data)
     if not advice:
         return None
-    start = f"{sum(int(round((f.to_number(s.get('Capacity')) or 0) / 1024**3)) for s in data.get('ram') or [])} Go"
-    routes = []
-    for goal, way in advice.options:
-        routes.append((start, goal.replace("Passer à ", ""), way[:1].upper() + way[1:]))
-    return advice, routes
+    start = f"{advice.installed_gib} Go"
+    return advice, [(start, goal.replace("Passer à ", ""), way[:1].upper() + way[1:]) for goal, way in advice.options]

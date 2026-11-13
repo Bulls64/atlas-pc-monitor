@@ -68,8 +68,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.output:
         target = Path(args.output) if forced else export.resolve_path(args.output)
-        target.write_text(content(forced or target.suffix), encoding="utf-8")
-        print(f"{'Fiche' if args.fiche else 'Rapport'} enregistré(e) : {target}", file=sys.stderr)
+        try:
+            target.write_text(content(forced or target.suffix), encoding="utf-8")
+        except OSError as error:
+            print(f"Impossible d'écrire {target} : {error.strerror or error}", file=sys.stderr)
+            return 2
+        print(f"{'Fiche enregistrée' if args.fiche else 'Rapport enregistré'} : {target}", file=sys.stderr)
     else:
         if sys.stdout is None:  # exécutable sans console : il faut passer par -o
             return 2

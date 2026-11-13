@@ -102,8 +102,15 @@ def load_fonts() -> list[str]:
     return sorted(families)
 
 
-def qss(p: Palette | None = None) -> str:
-    p = p or P
+def qss() -> str:
+    """Feuille de style Qt du thème courant."""
+    p = P
+    # Cartes surmontées d'un filet de couleur : résultat, puis un par niveau de constat.
+    accents = {"result": p.bright, "fix": p.led, "watch": p.bright, "info": p.silk, "ok": p.solder}
+    cards = "\n".join(
+        f'QFrame[card="{kind}"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {color}; border-radius: 10px; }}'
+        for kind, color in accents.items()
+    )
     return f"""
 * {{ font-family: "{BODY}", "Segoe UI", sans-serif; font-size: 14px; color: {p.silk}; }}
 QMainWindow, QDialog {{ background: {p.board}; }}
@@ -141,12 +148,7 @@ QLabel[role="level"] {{ font-family: "{MONO}"; font-size: 11px; font-weight: 600
 QLabel[role="counter"] {{ font-family: "{DISPLAY}"; font-size: 40px; font-weight: 700; }}
 
 QFrame[card="true"] {{ background: {p.panel}; border: 1px solid {p.border}; border-radius: 10px; }}
-QFrame[card="raised"] {{ background: {p.panel2}; border: 1px solid {p.border}; border-radius: 10px; }}
-QFrame[card="result"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {p.bright}; border-radius: 10px; }}
-QFrame[card="fix"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {p.led}; border-radius: 10px; }}
-QFrame[card="watch"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {p.bright}; border-radius: 10px; }}
-QFrame[card="info"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {p.silk}; border-radius: 10px; }}
-QFrame[card="ok"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {p.solder}; border-radius: 10px; }}
+{cards}
 QFrame[card="map"] {{ background: {p.board2}; border: 1px solid {p.border}; border-radius: 12px; }}
 QFrame[card] QLabel, QFrame[card] QWidget#inner {{ background: transparent; border: none; }}
 QLabel[level="fix"] {{ color: {p.led}; }}

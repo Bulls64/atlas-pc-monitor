@@ -47,3 +47,12 @@ def test_other_formatters():
     assert f.fmt_diagonal(34, 19).startswith("15,3 pouces")
     assert f.fmt_bool(True) == "Oui"
     assert f.fmt_bool(None) == f.EMPTY
+
+
+def test_memory_helpers_and_stamp():
+    sticks = [{"SMBIOSMemoryType": 26, "FormFactor": 12}, {"SMBIOSMemoryType": 26, "FormFactor": 0}, {"SMBIOSMemoryType": 34}]
+    assert f.memory_types(sticks) == ["DDR4", "DDR5"]
+    assert f.memory_forms(sticks) == ["SO-DIMM"]
+    assert f.fmt_stamp("2026-11-13T10:30:00+01:00") == "13/11/2026 10:30"
+    assert f.fmt_stamp(None) == f.EMPTY
+    assert f.fmt_binary(1024**6 * 3) == "3072 Po"  # au-delà de la dernière unité, on reste en Po

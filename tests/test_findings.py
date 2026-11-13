@@ -182,3 +182,28 @@ def test_findings_in_exports_and_system_page(data):
     security = {r.label: r.value for r in next(s for s in system if s.title == "Sécurité").rows}
     assert security["Mode de démarrage"] == "UEFI"
     assert pages.FINDINGS not in pages.DETAIL_PAGES
+
+
+@pytest.mark.parametrize(
+    ("caption", "build", "when", "level", "title"),
+    [
+        ("Microsoft Windows 10 Entreprise LTSC", "17763", "2026-11-13", F.INFO, "Windows 10 pris en charge jusqu'en 2029"),
+        ("Microsoft Windows 10 IoT Entreprise LTSC", "19044", "2026-11-13", F.INFO, "Windows 10 pris en charge jusqu'en 2032"),
+        ("Microsoft Windows 10 Entreprise LTSC", "19044", "2026-11-13", F.WATCH, "Fin de prise en charge de Windows 10 proche"),
+        ("Microsoft Windows 10 Entreprise 2016 LTSB", "14393", "2026-11-13", F.FIX, "Windows 10 n'est plus pris en charge"),
+        ("Microsoft Windows 10 Professionnel", "19045", "2026-11-13", F.FIX, "Windows 10 n'est plus pris en charge"),
+    ],
+)
+def test_windows10_ltsc_has_its_own_calendar(data, caption, build, when, level, title):
+    """Les éditions LTSC ne s'arrêtent pas en octobre 2025 : pas d'alerte rouge sur un poste encore suivi."""
+    ltsc = copy.deepcopy(data)
+    ltsc["captured_at"] = f"{when}T10:00:00+01:00"
+    ltsc["os"].update(Caption=caption, BuildNumber=build, LastBootUpTime=f"{when}T08:00:00")
+    assert title in titles(F.analyze(ltsc), level)
+
+
+def test_predictive_failure_from_get_physicaldisk(data):
+    """Get-PhysicalDisk écrit « Predictive Failure » en toutes lettres, Win32_DiskDrive « Pred Fail »."""
+    failing = copy.deepcopy(data)
+    failing["disks"] = [{"Model": "ST1000", "Health": "Warning", "Status": "Predictive Failure", "Size": 10**12}]
+    assert "Disque défaillant : ST1000" in titles(F.analyze(failing), F.FIX)
