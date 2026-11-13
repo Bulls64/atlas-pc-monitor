@@ -25,6 +25,8 @@ l'application est dessinée comme une carte électronique.
 - **Mode partage** : masque les identifiants du poste avant une capture ou un export.
 - **Comparaison** avec un ancien rapport : ce qui a changé sur le poste.
 - **Exports** JSON, texte et HTML, et une **ligne de commande** pour tout faire sans interface.
+- **Visionneuse de rapports**, sous Windows comme sous Linux (AppImage) : ouvrir un rapport JSON fait
+  sur un autre PC, avec ses constats, sa fiche d'intervention et la comparaison.
 
 ## Aperçu
 
@@ -100,6 +102,9 @@ python atlas_pc.py -o rapport.html           rapport dans un fichier (.json, .tx
 python atlas_pc.py --fiche -o fiche.html --client "Mme Dupont" --technicien Chris
                                              fiche d'intervention
 python atlas_pc.py --json --anonyme          inventaire sans identifiants
+python atlas_pc.py rapport.json              ouvre un rapport JSON dans l'interface
+python atlas_pc.py --fiche rapport.json -o fiche.html
+                                             fiche d'un rapport déjà fait, sans analyser ce poste
 python atlas_pc.py --debug                   journal détaillé dans le dossier temporaire
 python atlas_pc.py --help
 ```
@@ -116,6 +121,34 @@ pyinstaller atlas_pc.spec --noconfirm
 Le dossier `dist/AtlasPC/` est à distribuer entier (zippé). Le mode « onedir » est préféré au fichier
 unique, plus souvent bloqué par les antivirus et SmartScreen.
 
+## Linux : AppImage
+
+L'inventaire se fait sous Windows. Sous Linux, Atlas PC est une **visionneuse** : il ouvre les rapports
+JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPC.exe --json -o rapport.json`)
+et en tire constats, fiche d'intervention, exports et comparaison.
+
+```
+chmod +x AtlasPC-3.0.0-x86_64.AppImage
+./AtlasPC-3.0.0-x86_64.AppImage                    interface
+./AtlasPC-3.0.0-x86_64.AppImage rapport.json       ouvre directement un rapport
+./AtlasPC-3.0.0-x86_64.AppImage --fiche rapport.json -o fiche.html
+```
+
+Un rapport s'ouvre aussi par glisser-déposer sur la fenêtre, ou avec Ctrl+O. Si l'AppImage ne démarre
+pas faute de FUSE, installer `libfuse2` (ou lancer avec `--appimage-extract-and-run`).
+
+L'AppImage de la CI (job « AppImage Linux ») est construite sur Ubuntu 22.04 : elle tourne sur les
+distributions dont la glibc vaut 2.35 ou plus. Pour la construire soi-même :
+
+```
+sudo apt install libxcb-cursor0 squashfs-tools
+python -m pip install -r requirements-dev.txt
+tools/build_appimage.sh                            → dist/AtlasPC-<version>-x86_64.AppImage
+```
+
+Le script assemble l'AppImage sans appimagetool : image squashfs du dossier PyInstaller, précédée du
+runtime AppImage officiel, épinglé à une version datée et vérifié par son empreinte SHA-256.
+
 ## Développement
 
 ```
@@ -128,7 +161,8 @@ python tools/check_scan.py scan.json
 ```
 
 La CI GitHub ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) lance les tests sous Linux et
-Windows, fait un vrai inventaire sur Windows, le vérifie, puis construit et lance l'exécutable.
+Windows, fait un vrai inventaire sur Windows, le vérifie, construit et lance l'exécutable Windows, puis
+construit et essaie l'AppImage Linux.
 Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-WINDOWS.md`](docs/ESSAIS-WINDOWS.md).
 
 ### Organisation du code
@@ -147,7 +181,8 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 | `atlas/settings.py` | préférences, relance en administrateur |
 | `atlas/gui/` | interface PySide6 : thème, plan de carte, barrettes, écrans, fenêtre |
 | `tests/` | tests (pytest, pytest-qt) |
-| `tools/` | vérification d'un inventaire réel, génération des captures |
+| `tools/` | vérification d'un inventaire réel, captures, icône, construction de l'AppImage |
+| `packaging/linux/` | lanceur et raccourci `.desktop` de l'AppImage |
 
 ## Licence
 

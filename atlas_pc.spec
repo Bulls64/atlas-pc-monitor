@@ -1,4 +1,5 @@
-# Recette PyInstaller : produit le dossier dist/AtlasPC/ (mode « onedir »).
+# Recette PyInstaller : produit le dossier dist/AtlasPC/ (mode « onedir »), sous Windows comme
+# sous Linux (où tools/build_appimage.sh en fait une AppImage).
 #   pip install -r requirements-dev.txt
 #   pyinstaller atlas_pc.spec --noconfirm
 # Distribuer le dossier entier (zippé). Le mode onedir est préféré au fichier unique
@@ -15,9 +16,10 @@ a = Analysis(
     excludes=["pytest", "pytestqt", "tkinter"],
 )
 
-# Modules Qt tirés par des greffons mais inutiles ici (QML, Quick, clavier virtuel, PDF) :
-# les retirer allège nettement le dossier. Seule la traduction française de Qt est gardée.
-UNUSED = ("qt6qml", "qt6quick", "virtualkeyboard", "qt6pdf", "qpdf", "/qml/", "webengine", "qt6wayland", "eglfs")
+# Modules Qt tirés par des greffons mais inutiles ici (QML, Quick, clavier virtuel, PDF, Wayland :
+# sous Linux l'AppImage passe par X11/XWayland) : les retirer allège nettement le dossier.
+# Seule la traduction française de Qt est gardée.
+UNUSED = ("qt6qml", "qt6quick", "virtualkeyboard", "qt6pdf", "qpdf", "/qml/", "webengine", "wayland", "eglfs")
 
 
 def keep(entry):

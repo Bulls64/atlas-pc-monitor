@@ -39,8 +39,8 @@ ICONS = {
 }
 
 
-def svg_pixmap(svg: str, size: int) -> QPixmap:
-    ratio = 2.0
+def svg_pixmap(svg: str, size: int, ratio: float = 2.0) -> QPixmap:
+    """Image d'un SVG, en double résolution par défaut (nette sur les écrans HiDPI ; 1.0 pour un fichier)."""
     pixmap = QPixmap(int(size * ratio), int(size * ratio))
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
@@ -57,14 +57,14 @@ def icon(name: str, color: str, size: int = 16) -> QIcon:
     return QIcon(svg_pixmap(svg, size))
 
 
-def logo_pixmap(size: int = 40) -> QPixmap:
+def logo_pixmap(size: int = 40, ratio: float = 2.0) -> QPixmap:
     p = theme.P
     pins = "".join(f'<path d="M{x} 3v4M{x} 33v4M3 {x}h4M33 {x}h4"/>' for x in (13, 20, 27))
     svg = (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" fill="none">'
            f'<g stroke="{p.copper}" stroke-width="2" stroke-linecap="round">{pins}</g>'
            f'<rect x="8" y="8" width="24" height="24" rx="4" fill="{p.panel2}" stroke="{p.bright}" stroke-width="2"/>'
            f'<path d="M20 13l7 7-7 7-7-7z" fill="{p.solder}"/><circle cx="12.5" cy="12.5" r="1.6" fill="{p.bright}"/></svg>')  # fmt: skip
-    return svg_pixmap(svg, size)
+    return svg_pixmap(svg, size, ratio)
 
 
 def label(text: str = "", role: str = "body", wrap: bool = False, selectable: bool = False, rich: bool = False) -> QLabel:
