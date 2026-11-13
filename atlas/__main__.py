@@ -8,7 +8,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from . import __version__, export, fiche, privacy
+from . import __version__, collect, export, fiche, privacy
 from .collect import scan
 
 
@@ -80,7 +80,8 @@ def main(argv: list[str] | None = None) -> int:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
         sys.stdout.write(content(forced).rstrip("\n") + "\n")
-    return 1 if data.get("note") and "os" not in data and sys.platform == "win32" else 0
+    # Sous Windows, un inventaire sans section « os » est un échec de collecte : code 1 pour les scripts.
+    return 1 if data.get("note") and "os" not in data and collect.is_windows() else 0
 
 
 if __name__ == "__main__":

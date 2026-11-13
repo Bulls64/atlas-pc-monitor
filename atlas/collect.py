@@ -92,6 +92,16 @@ def is_windows() -> bool:
     return os.name == "nt"
 
 
+VIRTUAL_MACHINES = ("virtual machine", "vmware", "virtualbox", "qemu", "kvm", "parallels", "xen", "bochs")
+
+
+def is_virtual(data: dict) -> bool:
+    """Inventaire d'une machine virtuelle (Hyper-V, VMware…) : sa « mémoire » n'est pas faite de vraies barrettes."""
+    machine = data.get("machine") or {}
+    text = f"{machine.get('Manufacturer') or ''} {machine.get('Model') or ''}".lower()
+    return any(word in text for word in VIRTUAL_MACHINES)
+
+
 def powershell_path() -> str:
     """Chemin absolu de Windows PowerShell, sans dépendre du PATH."""
     root = os.environ.get("SystemRoot", r"C:\Windows")

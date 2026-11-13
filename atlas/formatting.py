@@ -234,9 +234,15 @@ def memory_forms(sticks: list[dict]) -> list[str]:
     return sorted({FORM_FACTORS[int(n)] for s in sticks if (n := to_number(s.get("FormFactor"))) in FORM_FACTORS})
 
 
+# Valeurs bouche-trou du SMBIOS et de WMI : affichées comme une valeur absente.
+PLACEHOLDERS = frozenset(
+    {"none", "null", "n/a", "not specified", "not available", "not applicable", "to be filled by o.e.m.", "default string", "undefined"}
+)
+
+
 def clean(value) -> str:
-    """Texte brut nettoyé, ou tiret si vide."""
+    """Texte brut nettoyé, ou tiret si vide ou si c'est une valeur bouche-trou (« None », « To Be Filled By O.E.M. »)."""
     if value is None:
         return EMPTY
     text = str(value).strip()
-    return text or EMPTY
+    return text if text and text.lower() not in PLACEHOLDERS else EMPTY
