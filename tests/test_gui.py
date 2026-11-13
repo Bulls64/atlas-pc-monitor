@@ -275,3 +275,73 @@ def test_tables_show_every_row(win, qtbot):
                 if table.horizontalHeader().isVisible():
                     needed += table.horizontalHeader().height()
                 assert table.height() >= needed, (width, page, table.height(), needed)
+
+
+def test_escape_in_fiche_dialog_keeps_the_input(win, qtbot):
+    """Échap ferme le dialogue sans passer par closeEvent : la saisie doit quand même être gardée."""
+    from PySide6.QtCore import Qt
+
+    from atlas import settings
+
+    win.open_fiche()
+    dialog = win.fiche_dialog
+    dialog.entries["technician"].setText("Chris")
+    dialog.entries["client"].setText("M. Martin")
+    qtbot.keyClick(dialog, Qt.Key_Escape)
+    assert not dialog.isVisible()
+    assert win.fiche_info.client == "M. Martin" and settings.load_config()["technician"] == "Chris"
+
+
+def test_saved_sharing_mode_is_shown_at_startup(qtbot, monkeypatch, tmp_path):
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    from atlas import collect, settings
+    from atlas.gui import window
+
+    settings.save_config({"sharing": True})
+    w = window.MainWindow(scanner=lambda: collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), "")))
+    qtbot.addWidget(w)
+    assert w.sharing_button.isChecked() and w.sharing_button.text() == "Partage activé"
+
+
+def test_theme_switch_keeps_narrow_header(win, qtbot):
+    """Changer de thème reconstruit l'en-tête : en fenêtre étroite, l'état doit rester masqué."""
+    win.resize(1000, 640)
+    qtbot.wait(50)
+    assert not win.status.isVisible()
+    win.toggle_theme()
+    qtbot.wait(50)
+    assert not win.status.isVisible() and "v3" not in win.brand_sub.text()
+    win.toggle_theme()
+
+
+def test_inventory_text_is_never_rendered_as_html(win):
+    """Un nom de périphérique contenant une balise s'affiche tel quel, pas interprété en HTML."""
+    from PySide6.QtCore import Qt
+    from PySide6.QtWidgets import QLabel
+
+    from atlas.findings import analyze
+
+    win.data = copy.deepcopy(win.data)
+    win.data["pnp"] = [{"Name": "Carte <b>son</b>", "ConfigManagerErrorCode": 28}]
+    win.findings = analyze(win.data)
+    win.open_page("Constats")
+    shown = [lab for lab in win.scroll.widget().findChildren(QLabel) if "<b>son</b>" in lab.text()]
+    assert shown and all(lab.textFormat() == Qt.PlainText for lab in shown)
+
+
+def test_compare_warns_about_another_machine_without_naming_it_in_sharing_mode(win, monkeypatch, tmp_path):
+    from atlas import export
+    from atlas.gui import window
+    from atlas.gui.dialogs import CompareDialog
+
+    other = copy.deepcopy(win.data)
+    other["system"]["computer"] = "PC-VOISIN"
+    other["gpu"][0]["DriverVersion"] = "31.0"
+    path = tmp_path / "autre.json"
+    path.write_text(export.to_json(other), encoding="utf-8")
+    monkeypatch.setattr(window.QFileDialog, "getOpenFileName", lambda *a, **k: (str(path), ""))
+    win.toggle_sharing()
+    win.compare()
+    title = win.findChildren(CompareDialog)[-1].findChildren(type(win.status))[1].text()
+    assert "autre poste" in title and "PC-VOISIN" not in title
+    win.toggle_sharing()

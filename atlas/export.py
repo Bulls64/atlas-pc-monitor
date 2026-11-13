@@ -7,7 +7,7 @@ import json
 from pathlib import Path
 
 from .findings import analyze, summary_text
-from .formatting import fmt_date
+from .formatting import fmt_stamp
 from .pages import build_all
 
 FORMATS = {".json": "Rapport JSON", ".txt": "Fichier texte", ".html": "Page HTML"}
@@ -18,8 +18,8 @@ def to_json(data: dict) -> str:
 
 
 def _header(data: dict) -> tuple[str, str]:
-    computer = (data.get("system") or {}).get("computer", "")
-    stamp = fmt_date(data.get("captured_at", "")[:19])
+    computer = (data.get("system") or {}).get("computer") or ""
+    stamp = fmt_stamp(data.get("captured_at"))
     masked = " · identifiants masqués (mode partage)" if data.get("anonymized") else ""
     return f"Atlas PC — rapport système de {computer}", f"Généré le {stamp} · Atlas PC {data.get('atlas_version', '')}{masked}"
 

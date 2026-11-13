@@ -156,9 +156,7 @@ def normalize(payload: dict) -> dict:
     errors = payload.get("errors")
     data["errors"] = {str(k): str(v) for k, v in errors.items()} if isinstance(errors, dict) else {}
     # Une zone ACPI absente ou à 0 K renvoie des valeurs absurdes : on ne garde que le plausible.
-    data["temperatures"] = [
-        t for t in data["temperatures"] if (to_number(t.get("Celsius")) or 0) > 0 and to_number(t.get("Celsius")) <= 120
-    ]
+    data["temperatures"] = [t for t in data["temperatures"] if 0 < (to_number(t.get("Celsius")) or 0) <= 120]
     return data
 
 
@@ -182,8 +180,8 @@ def compute_memory(data: dict) -> dict:
     }
 
 
-def scan(runner=run_powershell) -> dict:
-    """Inventaire complet. Ne lève jamais : un échec est décrit dans data['note']."""
+def base_report(note: str = "") -> dict:
+    """Ce que l'on sait sans PowerShell : version, horodatage, nom du poste, plateforme."""
     data: dict = {
         "atlas_version": __version__,
         "captured_at": datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -193,6 +191,14 @@ def scan(runner=run_powershell) -> dict:
             "architecture": platform.machine(),
         },
     }
+    if note:
+        data["note"] = note
+    return data
+
+
+def scan(runner=run_powershell) -> dict:
+    """Inventaire complet. Ne lève jamais : un échec est décrit dans data['note']."""
+    data = base_report()
     if not is_windows():
         data["note"] = "Informations matérielles détaillées disponibles sous Windows."
         return data
@@ -221,8 +227,8 @@ def scan(runner=run_powershell) -> dict:
     data["scan_seconds"] = round(time.perf_counter() - started, 2)
     timings = payload.get("timings")
     if isinstance(timings, dict):
-        data["timings"] = {str(k): int(v) for k, v in timings.items() if isinstance(v, (int, float))}
-        data["powershell_ms"] = int(payload.get("total_ms") or 0)
+        data["timings"] = {str(k): int(n) for k, v in timings.items() if (n := to_number(v)) is not None}
+        data["powershell_ms"] = int(to_number(payload.get("total_ms")) or 0)
         slowest = sorted(data["timings"].items(), key=lambda item: -item[1])[:5]
         log.debug("Durée : %.2f s ; PowerShell %s ms ; plus lentes : %s", data["scan_seconds"], data["powershell_ms"], slowest)
     return data

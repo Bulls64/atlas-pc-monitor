@@ -32,11 +32,16 @@ class MemoryAdvice:
     options: list[tuple[str, str]] = field(default_factory=list)  # (objectif, comment l'atteindre)
     notes: list[str] = field(default_factory=list)
     upgradable: bool = True
+    installed_gib: int = 0
 
 
 def _gib(stick: dict) -> int:
     value = f.to_number(stick.get("Capacity")) or 0
     return int(round(value / GIB))
+
+
+def _form(stick: dict) -> int:
+    return int(f.to_number(stick.get("FormFactor")) or 0)
 
 
 def _type(stick: dict) -> str:
@@ -60,17 +65,17 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
     installed = sum(_gib(s) for s in sticks)
 
     types = {_type(s) for s in sticks} - {""}
-    kind = sorted(types)[0] if len(types) == 1 else ""
-    forms = {int(f.to_number(s.get("FormFactor")) or 0) for s in sticks}
-    socketed = [s for s in sticks if int(f.to_number(s.get("FormFactor")) or 0) in SOCKETED_FORMS]
-    socket_forms = {int(f.to_number(s.get("FormFactor")) or 0) for s in socketed} or forms
+    kind = next(iter(types)) if len(types) == 1 else ""
+    forms = {_form(s) for s in sticks}
+    socketed = [s for s in sticks if _form(s) in SOCKETED_FORMS]
+    socket_forms = {_form(s) for s in socketed} or forms
     form = "SO-DIMM" if socket_forms == {12} else "DIMM" if socket_forms == {8} else ""
     speed = max((int(f.to_number(s.get("Speed")) or 0) for s in sticks), default=0)
     sizes = sorted({_gib(s) for s in sticks})
     layout = " + ".join(_plural(sum(1 for s in sticks if _gib(s) == size), size) for size in sorted(sizes, reverse=True))
     occupancy = f" ; emplacements occupés : {len(sticks)} sur {slots}" if slots >= len(sticks) else ""
     current = f"{installed} Go installés : {layout}{f' {kind}' if kind else ''}{f' {form}' if form else ''}{occupancy}."
-    advice = MemoryAdvice(current)
+    advice = MemoryAdvice(current, installed_gib=installed)
 
     if kind in SOLDERED_TYPES:
         advice.upgradable = False
@@ -88,9 +93,8 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
 
     spec = " ".join(p for p in (kind, form, f"{speed} MT/s" if speed else "") if p)
     advice.spec = spec or "même type et même format que les barrettes actuelles"
-    usable_slots = slots - (len(sticks) - len(socketed)) if slots else 0
-    if usable_slots < len(socketed):  # SMBIOS incohérent : on s'en tient aux barrettes vues
-        usable_slots = len(socketed)
+    # Un SMBIOS incohérent (moins d'emplacements que de barrettes) : on s'en tient aux barrettes vues.
+    usable_slots = max(slots - (len(sticks) - len(socketed)) if slots else 0, len(socketed))
     free = usable_slots - len(socketed)
     available = STICK_SIZES.get(kind, (4, 8, 16, 32))
     if form == "SO-DIMM" and kind in SODIMM_MAX:

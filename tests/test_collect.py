@@ -96,3 +96,11 @@ def test_timings(data):
     rows = {row.label: row.value for row in analysis.rows}
     assert rows["Source la plus lente"] == "activation Windows (2,3 s)"
     assert all(row.volatile for row in analysis.rows)
+
+
+def test_timings_tolerate_odd_values(monkeypatch):
+    monkeypatch.setattr(collect, "is_windows", lambda: True)
+    payload = {"os": {"Caption": "Windows"}, "timings": {"os": "12.5", "cpu": None, "ram": 3}, "total_ms": "40"}
+    data = collect.scan(runner=lambda: (0, json.dumps(payload), ""))
+    assert data["timings"] == {"os": 12, "ram": 3} and data["powershell_ms"] == 40
+    assert collect.base_report("x")["note"] == "x" and "note" not in collect.base_report()

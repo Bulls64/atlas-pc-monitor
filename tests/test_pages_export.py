@@ -23,7 +23,6 @@ def test_every_page_builds_without_data():
     minimal = {"system": {"computer": "pc", "platform": "Linux", "architecture": "x86_64"}, "note": "x"}
     for sections in pages.build_all(minimal).values():
         assert sections
-    assert pages.overview_tiles(minimal)
     assert export.to_text(minimal) and export.to_html(minimal)
 
 
@@ -131,3 +130,19 @@ def test_cli(capsys, tmp_path):
     target = tmp_path / "r.html"
     assert main(["-o", str(target)]) == 0
     assert target.read_text(encoding="utf-8").startswith("<!DOCTYPE html>")
+
+
+def test_diff_keeps_devices_with_the_same_name(data):
+    """Deux périphériques audio du même nom : le changement du second n'est pas écrasé par le premier."""
+    before = copy.deepcopy(data)
+    before["audio"] = [{"Name": "Périphérique audio HD", "Status": "OK"}, {"Name": "Périphérique audio HD", "Status": "OK"}]
+    after = copy.deepcopy(before)
+    after["audio"][1]["Status"] = "Error"
+    assert pages.diff_reports(before, after) == [("Audio › Périphériques audio", "Périphérique audio HD (2)", "OK", "Error")]
+
+
+def test_cli_reports_unwritable_output(capsys, tmp_path):
+    from atlas.__main__ import main
+
+    assert main(["--json", "-o", str(tmp_path / "absent" / "rapport.json")]) == 2
+    assert "Impossible d'écrire" in capsys.readouterr().err

@@ -19,7 +19,7 @@ log = logging.getLogger("atlas")
 
 FIX, WATCH, INFO, OK = "fix", "watch", "info", "ok"
 LEVELS = {FIX: "À corriger", WATCH: "À surveiller", INFO: "À noter", OK: "OK"}
-ORDER = {FIX: 0, WATCH: 1, INFO: 2, OK: 3}
+ORDER = {level: rank for rank, level in enumerate(LEVELS)}
 
 # Seuils : ce sont des choix d'atelier, pas des normes. Les ajuster ici.
 DISK_WEAR_FIX = 80  # % d'usure SSD
@@ -36,6 +36,10 @@ MEMORY_PRESSURE = 90  # % utilisé au moment de l'analyse
 SPEED_TOLERANCE = 0.95  # vitesse configurée / nominale
 
 WIN10_END = date(2025, 10, 14)
+# Les éditions LTSB/LTSC ont leur propre calendrier (source : Microsoft, « Windows release health »).
+WIN10_LTSC_END = {10240: date(2025, 10, 14), 14393: date(2026, 10, 13), 17763: date(2029, 1, 9), 19044: date(2027, 1, 12)}
+WIN10_IOT_LTSC_2021_END = date(2032, 1, 13)
+SUPPORT_WATCH_DAYS = 365  # fin de prise en charge « proche »
 WIN11_MIN_RAM = 4 * 1024**3
 WIN11_MIN_DISK = 64 * 1000**3
 GENERIC_GPU = ("microsoft basic display", "microsoft basic render")
@@ -81,6 +85,16 @@ def _parse_day(value) -> date | None:
 
 def _build(data: dict) -> int | None:
     return _int((data.get("os") or {}).get("BuildNumber"))
+
+
+def windows10_end(caption: str, build: int | None) -> date:
+    """Fin de prise en charge de cette édition de Windows 10 (les LTSC durent plus longtemps)."""
+    lowered = caption.lower()
+    if "ltsc" not in lowered and "ltsb" not in lowered:
+        return WIN10_END
+    if build == 19044 and "iot" in lowered:
+        return WIN10_IOT_LTSC_2021_END
+    return WIN10_LTSC_END.get(build or 0, WIN10_END)
 
 
 # ---------------------------------------------------------------------- mémoire
@@ -202,7 +216,7 @@ def rule_storage(data: dict) -> list[Finding]:
         name = f.clean(disk.get("Model"))
         health = str(disk.get("Health") or "").strip().lower()
         status = str(disk.get("Status") or "").strip().lower()
-        if health == "unhealthy" or "pred fail" in status:
+        if health == "unhealthy" or "pred fail" in status or "predictive failure" in status:
             found.append(
                 Finding(
                     FIX,
@@ -255,7 +269,7 @@ def rule_storage(data: dict) -> list[Finding]:
             continue
         percent = free * 100 / size
         letter = f.clean(volume.get("DeviceID"))
-        detail = f"{f.fmt_decimal(free)} libres sur {f.fmt_decimal(size)} ({f._decimal(percent)} %)."
+        detail = f"{f.fmt_decimal(free)} libres sur {f.fmt_decimal(size)} ({f.fmt_number(percent)} %)."
         if percent < VOLUME_FREE_FIX or free < VOLUME_FREE_FIX_BYTES:
             found.append(
                 Finding(
@@ -332,13 +346,20 @@ def rule_windows(data: dict) -> list[Finding]:
     caption = str(system.get("Caption") or "")
     build = _build(data)
     if build and build < 22000 and "windows 10" in caption.lower():
-        ended = _today(data) >= WIN10_END
+        end = windows10_end(caption, build)
+        left = (end - _today(data)).days
+        if left <= 0:
+            level, title = FIX, "Windows 10 n'est plus pris en charge"
+        elif left <= SUPPORT_WATCH_DAYS:
+            level, title = WATCH, "Fin de prise en charge de Windows 10 proche"
+        else:
+            level, title = INFO, f"Windows 10 pris en charge jusqu'en {end.year}"
         found.append(
             Finding(
-                FIX if ended else WATCH,
+                level,
                 "Windows",
-                "Windows 10 n'est plus pris en charge" if ended else "Fin de prise en charge de Windows 10 proche",
-                f"Fin du support le {WIN10_END:%d/%m/%Y} : plus de correctifs de sécurité hors programme ESU.",
+                title,
+                f"Fin du support le {end:%d/%m/%Y} : ensuite, plus de correctifs de sécurité hors programme ESU.",
                 "Passer à Windows 11 si la machine est éligible, sinon envisager le programme ESU ou un remplacement.",
                 "Système",
             )
@@ -567,8 +588,9 @@ def _all_clear(data: dict, found: list[Finding]) -> list[Finding]:
     disks = data.get("disks") or []
     clear = []
     if sticks and "Mémoire" not in flagged:
-        types = sorted({f.fmt_code(s.get("SMBIOSMemoryType"), f.MEMORY_TYPES) for s in sticks if _num(s.get("SMBIOSMemoryType"))})
-        detail = " · ".join([f.fmt_binary((data.get("memory") or {}).get("installed")), f"{len(sticks)} barrette(s)", *types])
+        detail = " · ".join(
+            [f.fmt_binary((data.get("memory") or {}).get("installed")), f"{len(sticks)} barrette(s)", *f.memory_types(sticks)]
+        )
         clear.append(Finding(OK, "Mémoire", "Mémoire : rien à signaler", detail, page="Mémoire"))
     if disks and "Stockage" not in flagged:
         clear.append(
@@ -606,7 +628,7 @@ def analyze(data: dict) -> list[Finding]:
 
 
 def summary(found: list[Finding]) -> dict[str, int]:
-    counts = {level: 0 for level in LEVELS}
+    counts = dict.fromkeys(LEVELS, 0)
     for item in found:
         counts[item.level] += 1
     return counts

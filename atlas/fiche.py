@@ -12,7 +12,7 @@ from datetime import datetime
 
 from . import __version__
 from . import formatting as f
-from .findings import FIX, INFO, OK, WATCH, Finding, analyze, battery_wear
+from .findings import FIX, INFO, OK, WATCH, Finding, analyze, battery_wear, summary, summary_text
 from .formatting import EMPTY
 
 
@@ -39,7 +39,9 @@ def default_reference(data: dict) -> str:
 
 
 def _join(*parts) -> str:
-    return " · ".join(p for p in (str(x).strip() for x in parts if x not in (None, EMPTY)) if p and p != EMPTY)
+    """Valeurs renseignées séparées par « · » (vides, None et tirets ignorés)."""
+    texts = (str(part).strip() for part in parts if part is not None)
+    return " · ".join(text for text in texts if text and text != EMPTY)
 
 
 def machine_rows(data: dict) -> list[tuple[str, str]]:
@@ -62,14 +64,13 @@ def machine_rows(data: dict) -> list[tuple[str, str]]:
     windows = _join(
         system.get("Caption"), system.get("DisplayVersion"), f"build {system['BuildNumber']}" if system.get("BuildNumber") else ""
     )
-    for product in data.get("license") or []:
+    product = next(iter(data.get("license") or []), None)
+    if product:
         windows = _join(windows, f.fmt_code(product.get("LicenseStatus"), f.LICENSE_STATUS))
-        break
     add("Windows", windows or f.clean(host.get("platform")))
     for cpu in (data.get("cpu") or [])[:1]:
         add("Processeur", _join(cpu.get("Name"), f"{cpu['NumberOfCores']} cœurs" if cpu.get("NumberOfCores") else ""))
-    types = sorted({f.fmt_code(s.get("SMBIOSMemoryType"), f.MEMORY_TYPES) for s in sticks if f.to_number(s.get("SMBIOSMemoryType"))})
-    add("Mémoire", _join(f.fmt_binary(memory.get("installed")), f"{len(sticks)} barrette(s)" if sticks else "", *types))
+    add("Mémoire", _join(f.fmt_binary(memory.get("installed")), f"{len(sticks)} barrette(s)" if sticks else "", *f.memory_types(sticks)))
     for disk in data.get("disks") or []:
         kind = f.fmt_media(disk.get("MediaType")) if disk.get("MediaType") not in (None, "") else ""
         health = {"healthy": "sain", "warning": "en alerte", "unhealthy": "défaillant"}.get(str(disk.get("Health") or "").lower(), "")
@@ -147,7 +148,7 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
     info = info or FicheInfo()
     found = analyze(data) if found is None else found
     esc = html.escape
-    stamp = f.fmt_date(str(data.get("captured_at", ""))[:19])
+    stamp = f.fmt_stamp(data.get("captured_at"))
     reference = info.reference.strip() or default_reference(data)
     computer = (data.get("system") or {}).get("computer", "")
 
@@ -170,13 +171,8 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
     if oks:
         findings_html += f'<p class="ok-line">✓ {esc(" · ".join(oks))}</p>'
 
-    counts = {level: sum(1 for i in found if i.level == level) for level in (FIX, WATCH)}
-    verdict = []
-    if counts[FIX]:
-        verdict.append(f"{counts[FIX]} à corriger")
-    if counts[WATCH]:
-        verdict.append(f"{counts[WATCH]} à surveiller")
-    verdict_text = " · ".join(verdict) or ("Rien à signaler" if found else "")
+    counts = summary(found)
+    verdict_text = summary_text(found) if counts[FIX] or counts[WATCH] else ("Rien à signaler" if found else "")
     note = f'<p class="ok-line" style="color:#98620a">{esc(data["note"])}</p>' if data.get("note") else ""
 
     masked = "<br>Identifiants masqués" if data.get("anonymized") else ""

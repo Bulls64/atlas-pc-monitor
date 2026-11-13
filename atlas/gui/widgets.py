@@ -66,8 +66,10 @@ def logo_pixmap(size: int = 40) -> QPixmap:
     return svg_pixmap(svg, size)
 
 
-def label(text: str = "", role: str = "body", wrap: bool = False, selectable: bool = False) -> QLabel:
+def label(text: str = "", role: str = "body", wrap: bool = False, selectable: bool = False, rich: bool = False) -> QLabel:
+    """Libellé du thème. En texte brut sauf `rich` : une valeur lue sur le poste n'est jamais interprétée comme du HTML."""
     widget = QLabel(text)
+    widget.setTextFormat(Qt.RichText if rich else Qt.PlainText)
     widget.setProperty("role", role)
     widget.setWordWrap(wrap)
     if selectable:
@@ -76,7 +78,7 @@ def label(text: str = "", role: str = "body", wrap: bool = False, selectable: bo
 
 
 def card(kind: str = "true", margins=(22, 20, 22, 20), spacing: int = 12) -> tuple[QFrame, QVBoxLayout]:
-    """Carte du thème (« true », « raised », « result » ou un niveau : fix, watch, info, ok)."""
+    """Carte du thème (« true », « result », « map » ou un niveau : fix, watch, info, ok)."""
     frame = QFrame()
     frame.setProperty("card", kind)
     layout = QVBoxLayout(frame)
@@ -114,16 +116,16 @@ def draw_via(painter: QPainter, center: QPointF, color: QColor, filled: bool, ra
 class Led(QWidget):
     """LED d'état. `level` : fix, watch, info, ok ; `off` : simple anneau (compteur à zéro)."""
 
-    def __init__(self, level: str | None = "ok", size: int = 10, off: bool = False, color: str | None = None):
+    def __init__(self, level: str | None = "ok", size: int = 10, off: bool = False):
         super().__init__()
-        self.level, self.diameter, self.off, self.color = level, size, off, color
+        self.level, self.diameter, self.off = level, size, off
         self.setFixedSize(size + 10, size + 10)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
     def paintEvent(self, _event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        color = theme.qcolor(self.color or theme.level_color(self.level))
+        color = theme.qcolor(theme.level_color(self.level))
         center = QPointF(self.width() / 2, self.height() / 2)
         r = self.diameter / 2
         if self.off:
@@ -131,7 +133,7 @@ class Led(QWidget):
             painter.setBrush(Qt.NoBrush)
             painter.drawEllipse(center, r - 1, r - 1)
             return
-        if self.level in ("ok", "watch", "fix") and not self.color:
+        if self.level in ("ok", "watch", "fix"):
             draw_glow(painter, center, r + 5, color)
         painter.setPen(Qt.NoPen)
         painter.setBrush(color)
@@ -164,11 +166,10 @@ class BusLine(QWidget):
 class TraceMeter(QWidget):
     """Jauge en piste : un point de soudure s'allume à chaque palier franchi (25, 50, 75 %)."""
 
-    def __init__(self, percent: float | None, ticks: bool = True):
+    def __init__(self, percent: float | None):
         super().__init__()
         self.percent = max(0.0, min(100.0, percent or 0.0))
-        self.ticks = ticks
-        self.setFixedHeight(42 if ticks else 22)
+        self.setFixedHeight(42)
         self.setMinimumWidth(160)
         self.setAttribute(Qt.WA_TransparentForMouseEvents)
 
@@ -195,15 +196,14 @@ class TraceMeter(QWidget):
             if on:
                 draw_glow(painter, center, 11, solder, 0.5)
             draw_via(painter, center, solder if on else theme.qcolor(p.via_off), on)
-        if self.ticks:
-            painter.setPen(theme.qcolor(p.dim))
-            font = painter.font()
-            font.setFamily(theme.MONO)
-            font.setPixelSize(10)
-            painter.setFont(font)
-            painter.drawText(QRectF(0, 26, 60, 14), Qt.AlignLeft, "0")
-            painter.drawText(QRectF(w / 2 - 30, 26, 60, 14), Qt.AlignCenter, "50 %")
-            painter.drawText(QRectF(w - 60, 26, 60, 14), Qt.AlignRight, "100 %")
+        painter.setPen(theme.qcolor(p.dim))
+        font = painter.font()
+        font.setFamily(theme.MONO)
+        font.setPixelSize(10)
+        painter.setFont(font)
+        painter.drawText(QRectF(0, 26, 60, 14), Qt.AlignLeft, "0")
+        painter.drawText(QRectF(w / 2 - 30, 26, 60, 14), Qt.AlignCenter, "50 %")
+        painter.drawText(QRectF(w - 60, 26, 60, 14), Qt.AlignRight, "100 %")
 
 
 class DotBackground(QWidget):
@@ -226,7 +226,7 @@ class CopyTable(QTableWidget):
 
     copied = Signal(str)
 
-    def __init__(self, headers: list[str], rows: list[tuple], show_header: bool = False, first_dim: bool = True):
+    def __init__(self, headers: list[str], rows: list[tuple], show_header: bool = False):
         super().__init__(len(rows), len(headers))
         self.setHorizontalHeaderLabels([h.upper() for h in headers])
         self.horizontalHeader().setVisible(show_header)
@@ -254,11 +254,10 @@ class CopyTable(QTableWidget):
         for r, row in enumerate(rows):
             for c, value in enumerate(row):
                 item = QTableWidgetItem(str(value))
-                if c == 0 and first_dim:
+                if c == 0:
                     item.setForeground(dim)
-                elif len(headers) > 2 or c > 0:
-                    if c > 0 and _looks_technical(str(value)):
-                        item.setFont(mono)
+                elif _looks_technical(item.text()):
+                    item.setFont(mono)
                 self.setItem(r, c, item)
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self._menu)
@@ -351,7 +350,7 @@ class Responsive(QWidget):
         self.grid.setContentsMargins(0, 0, 0, 0)
         self.grid.setSpacing(spacing)
         self.columns = 0
-        self._layout(self.breakpoints[0][1])
+        self._layout(min(self.breakpoints[0][1], len(widgets)))
 
     def _layout(self, columns: int) -> None:
         if columns == self.columns:

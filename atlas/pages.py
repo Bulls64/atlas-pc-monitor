@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from . import formatting as f
 from .collect import ADMIN_SECTIONS
+from .findings import battery_wear
 from .formatting import EMPTY
 from .upgrade import memory_advice
 
@@ -109,10 +110,10 @@ def page_system(data: dict) -> list[Section]:
     _add(rows, "Installé le", f.fmt_date(system.get("InstallDate")))
     _add(rows, "Dernier démarrage", f.fmt_date(system.get("LastBootUpTime")), volatile=True)
     _add(rows, "Allumé depuis", f.fmt_uptime(system.get("LastBootUpTime"), data.get("captured_at")), volatile=True)
-    for product in data.get("license") or []:
+    product = next(iter(data.get("license") or []), None)
+    if product:
         _add(rows, "Activation", f.fmt_code(product.get("LicenseStatus"), f.LICENSE_STATUS))
         _add(rows, "Licence", f.clean(product.get("Description")))
-        break
     if rows or data.get("errors"):
         sections.append(Section("Windows", rows, _error_note(data, "os", "license")))
 
@@ -132,11 +133,11 @@ def page_system(data: dict) -> list[Section]:
         sections.append(Section("Sécurité", rows, _error_note(data, "secureboot", "tpm")))
     seconds = f.to_number(data.get("scan_seconds"))
     if seconds is not None:
-        rows = [Row("Durée de l'analyse", f"{f._decimal(seconds)} s", volatile=True)]
+        rows = [Row("Durée de l'analyse", f"{f.fmt_number(seconds)} s", volatile=True)]
         timings = data.get("timings") or {}
         if timings:
             name, ms = max(timings.items(), key=lambda item: item[1])
-            rows.append(Row("Source la plus lente", f"{SOURCE_LABELS.get(name, name)} ({f._decimal(ms / 1000)} s)", volatile=True))
+            rows.append(Row("Source la plus lente", f"{SOURCE_LABELS.get(name, name)} ({f.fmt_number(ms / 1000)} s)", volatile=True))
         sections.append(Section("Analyse", rows))
     rows = []
     for device in data.get("pnp") or []:
@@ -327,6 +328,11 @@ def page_storage(data: dict) -> list[Section]:
     return sections
 
 
+def _add_ip(rows: list[Row], ip: dict) -> None:
+    for label, key in (("Adresse IPv4", "IPv4"), ("Adresse IPv6", "IPv6"), ("Passerelle", "Gateway"), ("Serveurs DNS", "DNS")):
+        _add(rows, label, f.clean(ip.get(key)), volatile=True)
+
+
 def page_network(data: dict) -> list[Section]:
     adapters = data.get("adapters") or []
     config = {str(item.get("Name")): item for item in data.get("network") or []}
@@ -339,18 +345,11 @@ def page_network(data: dict) -> list[Section]:
         _add(rows, "État", NET_STATUS.get(status.lower(), status), volatile=True)
         _add(rows, "Débit", f.clean(adapter.get("LinkSpeed")), volatile=True)
         _add(rows, "Adresse MAC", f.clean(adapter.get("MacAddress")))
-        ip = config.pop(name, {})
-        _add(rows, "Adresse IPv4", f.clean(ip.get("IPv4")), volatile=True)
-        _add(rows, "Adresse IPv6", f.clean(ip.get("IPv6")), volatile=True)
-        _add(rows, "Passerelle", f.clean(ip.get("Gateway")), volatile=True)
-        _add(rows, "Serveurs DNS", f.clean(ip.get("DNS")), volatile=True)
+        _add_ip(rows, config.pop(name, {}))
         sections.append(Section(name, rows))
     for name, ip in config.items():  # interfaces actives non physiques (VPN, virtuelles)
         rows = []
-        _add(rows, "Adresse IPv4", f.clean(ip.get("IPv4")), volatile=True)
-        _add(rows, "Adresse IPv6", f.clean(ip.get("IPv6")), volatile=True)
-        _add(rows, "Passerelle", f.clean(ip.get("Gateway")), volatile=True)
-        _add(rows, "Serveurs DNS", f.clean(ip.get("DNS")), volatile=True)
+        _add_ip(rows, ip)
         if rows:
             sections.append(Section(f"{name} (interface virtuelle)", rows))
     return sections or [Section("Interfaces réseau", [], _error_note(data, "adapters", "network"))]
@@ -378,8 +377,9 @@ def page_battery(data: dict) -> list[Section]:
             _add(rows, "Capacité d'origine", f"{int(design)} mWh")
         if full:
             _add(rows, "Capacité à pleine charge", f"{int(full)} mWh", volatile=True)
-        if full and design:
-            _add(rows, "Usure", f.fmt_percent(max(0.0, 100 - full * 100 / design)), volatile=True)
+        wear = battery_wear(battery)
+        if wear is not None:
+            _add(rows, "Usure", f.fmt_percent(wear), volatile=True)
         sections.append(Section(_numbered("Batterie", index, len(batteries)), rows))
     if not sections:
         note = _error_note(data, "battery") or ("Aucune batterie détectée." if data.get("os") else "")
@@ -444,64 +444,24 @@ def diff_reports(before: dict, after: dict) -> list[tuple[str, str, str, str]]:
     """Différences stables entre deux inventaires : (page › section, libellé, avant, après)."""
 
     def index(data: dict) -> dict[tuple[str, str, str], str]:
-        found = {}
+        found: dict[tuple[str, str, str], str] = {}
         for page, sections in build_all(data).items():
             for section in sections:
                 for row in section.rows:
-                    if not row.volatile:
-                        found[(page, section.title, row.label)] = row.value
+                    if row.volatile:
+                        continue
+                    # Deux périphériques du même nom (audio, points jaunes) : numérotés, sinon le second écrase le premier.
+                    key, rank = (page, section.title, row.label), 1
+                    while key in found:
+                        rank += 1
+                        key = (page, section.title, f"{row.label} ({rank})")
+                    found[key] = row.value
         return found
 
     old, new = index(before), index(after)
     changes = []
-    for key in list(old) + [k for k in new if k not in old]:
+    for key in [*old, *(k for k in new if k not in old)]:
         if old.get(key) != new.get(key):
             page, section, label = key
             changes.append((f"{page} › {section}", label, old.get(key, EMPTY), new.get(key, EMPTY)))
     return changes
-
-
-def overview_tiles(data: dict) -> list[tuple[str, str, str]]:
-    """Tuiles de la vue d'ensemble : (titre, valeur, détail)."""
-    cpu = (data.get("cpu") or [{}])[0]
-    gpus = data.get("gpu") or []
-    board = data.get("board") or {}
-    machine = data.get("machine") or {}
-    memory = data.get("memory") or {}
-    sticks = data.get("ram") or []
-    disks = data.get("disks") or []
-    kinds = [f.fmt_media(d.get("MediaType")) for d in disks if d.get("MediaType") not in (None, "")]
-    total = sum(f.to_number(d.get("Size")) or 0 for d in disks)
-    types = sorted({f.fmt_code(s.get("SMBIOSMemoryType"), f.MEMORY_TYPES) for s in sticks if f.to_number(s.get("SMBIOSMemoryType"))})
-    return [
-        (
-            "Modèle",
-            " ".join(p for p in (f.clean(machine.get("Manufacturer")), f.clean(machine.get("Model"))) if p != EMPTY),
-            f.clean(machine.get("SystemFamily")) if machine.get("SystemFamily") else "Ordinateur",
-        ),
-        (
-            "Processeur",
-            f.clean(cpu.get("Name")),
-            f"{f.clean(cpu.get('NumberOfCores'))} cœurs · {f.clean(cpu.get('NumberOfLogicalProcessors'))} threads",
-        ),
-        (
-            "Mémoire vive",
-            f.fmt_binary(memory.get("installed")),
-            " · ".join([f"{len(sticks)} barrette(s)", *types]),
-        ),
-        (
-            "Carte graphique",
-            f.clean(gpus[0].get("Name")) if gpus else EMPTY,
-            vram_text(gpus[0]) if gpus and vram_text(gpus[0]) != EMPTY else f"{len(gpus)} adaptateur(s)",
-        ),
-        (
-            "Carte mère",
-            " ".join(p for p in (f.clean(board.get("Manufacturer")), f.clean(board.get("Product"))) if p != EMPTY),
-            f"BIOS {f.clean((data.get('bios') or {}).get('Version'))}",
-        ),
-        (
-            "Stockage",
-            f.fmt_decimal(total) if total else EMPTY,
-            " · ".join([f"{len(disks)} disque(s)", *sorted(set(kinds))]),
-        ),
-    ]

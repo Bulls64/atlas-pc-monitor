@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 
 EMPTY = "—"
@@ -94,12 +95,10 @@ def to_number(value) -> float | None:
         number = float(value)
     except (TypeError, ValueError):
         return None
-    if number != number or number in (float("inf"), float("-inf")):
-        return None
-    return number
+    return number if math.isfinite(number) else None
 
 
-def _decimal(number: float, digits: int = 1) -> str:
+def fmt_number(number: float, digits: int = 1) -> str:
     """Nombre à la française : virgule décimale, sans « ,0 » inutile."""
     text = f"{number:.{digits}f}"
     if "." in text:
@@ -111,11 +110,11 @@ def _fmt_bytes(value, base: int) -> str:
     number = to_number(value)
     if number is None or number < 0:
         return EMPTY
-    for unit in _UNITS:
-        if number < base or unit == _UNITS[-1]:
-            return f"{_decimal(number, 0 if unit == 'o' else 1)} {unit}"
+    unit = 0
+    while number >= base and unit < len(_UNITS) - 1:
         number /= base
-    return EMPTY
+        unit += 1
+    return f"{fmt_number(number, 1 if unit else 0)} {_UNITS[unit]}"
 
 
 def fmt_binary(value) -> str:
@@ -133,8 +132,8 @@ def fmt_mhz(value) -> str:
     if number is None or number <= 0:
         return EMPTY
     if number >= 1000:
-        return f"{_decimal(number / 1000, 2)} GHz"
-    return f"{_decimal(number, 0)} MHz"
+        return f"{fmt_number(number / 1000, 2)} GHz"
+    return f"{fmt_number(number, 0)} MHz"
 
 
 def fmt_mts(value) -> str:
@@ -145,12 +144,12 @@ def fmt_mts(value) -> str:
 
 def fmt_percent(value) -> str:
     number = to_number(value)
-    return EMPTY if number is None else f"{_decimal(number, 0)} %"
+    return EMPTY if number is None else f"{fmt_number(number, 0)} %"
 
 
 def fmt_celsius(value) -> str:
     number = to_number(value)
-    return EMPTY if number is None else f"{_decimal(number)} °C"
+    return EMPTY if number is None else f"{fmt_number(number)} °C"
 
 
 def fmt_bool(value) -> str:
@@ -217,7 +216,22 @@ def fmt_diagonal(width_cm, height_cm) -> str:
     if not width or not height:
         return EMPTY
     inches = (width**2 + height**2) ** 0.5 / 2.54
-    return f"{_decimal(inches)} pouces ({_decimal(width, 0)} × {_decimal(height, 0)} cm)"
+    return f"{fmt_number(inches)} pouces ({fmt_number(width, 0)} × {fmt_number(height, 0)} cm)"
+
+
+def fmt_stamp(value) -> str:
+    """Horodatage ISO d'un inventaire (« captured_at ») en JJ/MM/AAAA HH:MM, fuseau ignoré."""
+    return fmt_date(str(value or "")[:19])
+
+
+def memory_types(sticks: list[dict]) -> list[str]:
+    """Types de mémoire distincts des barrettes (DDR4, DDR5…), triés."""
+    return sorted({fmt_code(s.get("SMBIOSMemoryType"), MEMORY_TYPES) for s in sticks if to_number(s.get("SMBIOSMemoryType"))})
+
+
+def memory_forms(sticks: list[dict]) -> list[str]:
+    """Formats amovibles distincts des barrettes (DIMM, SO-DIMM), triés."""
+    return sorted({FORM_FACTORS[int(n)] for s in sticks if (n := to_number(s.get("FormFactor"))) in FORM_FACTORS})
 
 
 def clean(value) -> str:
