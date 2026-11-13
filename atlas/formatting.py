@@ -224,9 +224,17 @@ def fmt_stamp(value) -> str:
     return fmt_date(str(value or "")[:19])
 
 
+def fmt_memory_type(value) -> str:
+    """Type d'une barrette (DDR4…). 0, 1 et 2 (« inconnu », « autre ») = non renseigné, fréquent sur une VM."""
+    number = to_number(value)
+    if number is None or int(number) <= 2:
+        return EMPTY
+    return fmt_code(number, MEMORY_TYPES)
+
+
 def memory_types(sticks: list[dict]) -> list[str]:
-    """Types de mémoire distincts des barrettes (DDR4, DDR5…), triés."""
-    return sorted({fmt_code(s.get("SMBIOSMemoryType"), MEMORY_TYPES) for s in sticks if to_number(s.get("SMBIOSMemoryType"))})
+    """Types de mémoire distincts des barrettes (DDR4, DDR5…), triés ; les types non renseignés sont ignorés."""
+    return sorted({fmt_memory_type(s.get("SMBIOSMemoryType")) for s in sticks} - {EMPTY})
 
 
 def memory_forms(sticks: list[dict]) -> list[str]:

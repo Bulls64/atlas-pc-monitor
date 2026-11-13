@@ -65,3 +65,10 @@ def test_clean_hides_placeholders(value):
 
 def test_clean_keeps_real_values():
     assert f.clean(" Kingston ") == "Kingston" and f.clean(0) == "0"
+
+
+@pytest.mark.parametrize(("code", "shown"), [(26, "DDR4"), (34, "DDR5"), (2, f.EMPTY), ("0", f.EMPTY), (None, f.EMPTY), (99, "Code 99")])
+def test_memory_type(code, shown):
+    """Hyper-V déclare ses barrettes en type 2 (« inconnu ») : rien plutôt que « Code 2 »."""
+    assert f.fmt_memory_type(code) == shown
+    assert f.memory_types([{"SMBIOSMemoryType": 2}, {"SMBIOSMemoryType": 26}]) == ["DDR4"]

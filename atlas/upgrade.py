@@ -46,8 +46,8 @@ def _form(stick: dict) -> int:
 
 
 def _type(stick: dict) -> str:
-    code = f.to_number(stick.get("SMBIOSMemoryType"))
-    return f.MEMORY_TYPES.get(int(code), "") if code else ""
+    kind = f.fmt_memory_type(stick.get("SMBIOSMemoryType"))
+    return kind if kind in f.MEMORY_TYPES.values() else ""
 
 
 def _plural(count: int, size: int) -> str:
