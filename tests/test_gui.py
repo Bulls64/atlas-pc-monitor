@@ -450,3 +450,19 @@ def test_make_icon_writes_a_png(qapp, tmp_path):
     image = QImage(str(target))
     assert (image.width(), image.height()) == (128, 128)
     assert make_icon.main([]) == 2
+
+
+def test_make_icon_writes_a_windows_ico(qapp, tmp_path):
+    """Icône de l'exécutable Windows : une image par taille, de 16 à 256 px."""
+    image_module = pytest.importorskip("PIL.Image")
+    sys_path = str(Path(__file__).resolve().parent.parent / "tools")
+    import sys
+
+    if sys_path not in sys.path:
+        sys.path.insert(0, sys_path)
+    import make_icon
+
+    target = tmp_path / "icones" / "atlas-pc.ico"
+    assert make_icon.main([str(target)]) == 0
+    sizes = image_module.open(target).info["sizes"]
+    assert {(16, 16), (32, 32), (48, 48), (256, 256)} <= set(sizes)

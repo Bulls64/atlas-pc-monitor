@@ -76,7 +76,12 @@ goes through every page and ignores accents.
 
 ### Installation and launch
 
-Windows 10 or 11, with Python 3.9 or later.
+- **Without Python**: download `AtlasPC.exe` from the
+  [Releases](https://github.com/Bulls64/atlas-pc/releases) page and run it (Windows 10 or 11).
+  `AtlasPC-windows.zip` holds the same application as a folder: it starts faster and triggers
+  fewer antivirus warnings.
+
+With Python 3.9 or later:
 
 - **Easiest**: double-click `lancer_atlas.bat`. On first launch, it installs PySide6
   (the graphical interface) for the current user.
@@ -118,12 +123,16 @@ The `--debug` log contains the raw inventory, **not masked**.
 ### Standalone executable
 
 ```
-python -m pip install -r requirements-dev.txt
-pyinstaller atlas_pc.spec --noconfirm
+python -m pip install -r requirements-dev.txt pillow
+set "QT_QPA_PLATFORM=offscreen" && python tools/make_icon.py build/atlas-pc.ico
+pyinstaller atlas_pc.spec --noconfirm                           → dist/AtlasPC/ folder
+set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → single file dist/AtlasPC.exe
 ```
 
-Distribute the whole `dist/AtlasPC/` folder (zipped). The « onedir » mode is preferred to a single
-file, which antivirus software and SmartScreen block more often.
+The folder (« onedir ») is distributed whole, zipped: it starts faster and antivirus software and
+SmartScreen flag it less often. The single file is easier to carry around, but unpacks itself to the
+temporary folder on every launch. Pushing a `v*` tag makes the CI publish both, along with the AppImage,
+as a GitHub release.
 
 ### Linux: AppImage
 
@@ -269,7 +278,12 @@ parcourt toutes les pages sans tenir compte des accents.
 
 ### Installation et lancement
 
-Windows 10 ou 11, avec Python 3.9 ou plus récent.
+- **Sans Python** : télécharger `AtlasPC.exe` sur la page
+  [Releases](https://github.com/Bulls64/atlas-pc/releases) et le lancer (Windows 10 ou 11).
+  `AtlasPC-windows.zip` contient la même application en dossier : elle démarre plus vite et alerte moins
+  les antivirus.
+
+Avec Python 3.9 ou plus récent :
 
 - **Le plus simple** : double-cliquer sur `lancer_atlas.bat`. Au premier lancement, il installe PySide6
   (l'interface graphique) pour l'utilisateur courant.
@@ -311,12 +325,16 @@ Le journal `--debug` contient l'inventaire brut, **non masqué**.
 ### Exécutable autonome
 
 ```
-python -m pip install -r requirements-dev.txt
-pyinstaller atlas_pc.spec --noconfirm
+python -m pip install -r requirements-dev.txt pillow
+set "QT_QPA_PLATFORM=offscreen" && python tools/make_icon.py build/atlas-pc.ico
+pyinstaller atlas_pc.spec --noconfirm                           → dossier dist/AtlasPC/
+set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → fichier unique dist/AtlasPC.exe
 ```
 
-Le dossier `dist/AtlasPC/` est à distribuer entier (zippé). Le mode « onedir » est préféré au fichier
-unique, plus souvent bloqué par les antivirus et SmartScreen.
+Le dossier (« onedir ») se distribue entier, zippé : il démarre plus vite et les antivirus comme
+SmartScreen le signalent moins souvent. Le fichier unique se transporte plus facilement, mais se
+décompresse dans le dossier temporaire à chaque lancement. Un tag `v*` poussé fait publier les deux par
+la CI, avec l'AppImage, dans une release GitHub.
 
 ### Linux : AppImage
 
