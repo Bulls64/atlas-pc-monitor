@@ -80,7 +80,7 @@ goes through every page and ignores accents.
 ### Installation and launch
 
 - **Without Python**: download `AtlasPCMonitor.exe` from the
-  [Releases](https://github.com/Bulls64/atlas-pc/releases) page and run it (Windows 10 or 11).
+  [Releases](https://github.com/Bulls64/atlas-pc-monitor/releases) page and run it (Windows 10 or 11).
   `AtlasPCMonitor-windows.zip` holds the same application as a folder: it starts faster and triggers
   fewer antivirus warnings. Changes from one version to the next are listed in [CHANGELOG.md](CHANGELOG.md).
 
@@ -311,7 +311,7 @@ parcourt toutes les pages sans tenir compte des accents.
 ### Installation et lancement
 
 - **Sans Python** : télécharger `AtlasPCMonitor.exe` sur la page
-  [Releases](https://github.com/Bulls64/atlas-pc/releases) et le lancer (Windows 10 ou 11).
+  [Releases](https://github.com/Bulls64/atlas-pc-monitor/releases) et le lancer (Windows 10 ou 11).
   `AtlasPCMonitor-windows.zip` contient la même application en dossier : elle démarre plus vite et alerte moins
   les antivirus. Les changements d'une version à l'autre sont décrits dans [CHANGELOG.md](CHANGELOG.md).
 

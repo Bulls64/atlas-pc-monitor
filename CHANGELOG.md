@@ -48,4 +48,4 @@ Première version publique. Atlas PC Monitor prend la suite d'Atlas PC, un outil
 - Exécutables Windows (fichier unique et dossier) avec leurs propriétés de fichier, et AppImage Linux, construits et vérifiés par la CI sur un vrai inventaire Windows.
 - Mentions tierces et textes de licence livrés avec chaque version (Qt et PySide6 sous LGPL-3.0).
 
-[1.0.0]: https://github.com/Bulls64/atlas-pc/releases/tag/v1.0.0
+[1.0.0]: https://github.com/Bulls64/atlas-pc-monitor/releases/tag/v1.0.0
