@@ -1,8 +1,10 @@
 #!/bin/sh
 # Lanceur de l'AppImage : démarre l'exécutable PyInstaller embarqué.
+# AppImage launcher: starts the embedded PyInstaller executable.
 HERE="$(dirname "$(readlink -f "$0")")"
 
 # Seul le greffon X11 (xcb) est embarqué : sous Wayland, Qt passe par XWayland.
+# Only the X11 (xcb) plugin is embedded: under Wayland, Qt goes through XWayland.
 case "${QT_QPA_PLATFORM:-}" in
     xcb | offscreen | minimal | vnc*) ;;
     *) export QT_QPA_PLATFORM=xcb ;;

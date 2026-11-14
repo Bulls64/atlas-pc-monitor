@@ -1,2 +1,3 @@
 # Interface graphique (les commandes --json, --text, --fiche... n'en ont pas besoin)
+# Graphical interface (the --json, --text, --fiche... commands do not need it)
 PySide6>=6.5

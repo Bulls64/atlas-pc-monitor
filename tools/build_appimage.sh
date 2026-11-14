@@ -12,6 +12,17 @@
 #
 # Une AppImage tourne sur les distributions dont la glibc est au moins celle de la machine
 # de construction : la CI la construit sur Ubuntu 22.04 (glibc 2.35) pour en couvrir le plus.
+#
+# Builds dist/AtlasPCMonitor-<version>-x86_64.AppImage: Atlas PC Monitor as a report viewer for Linux
+# (commands above).
+#
+# An AppImage = the AppImage "runtime" (a small launcher that mounts the image) followed by a
+# squashfs image of the application folder. It is assembled here without appimagetool: mksquashfs
+# comes from the distribution's packages, and the official runtime is pinned to a dated version
+# whose SHA-256 fingerprint is checked. It is never run during the build.
+#
+# An AppImage runs on distributions whose glibc is at least that of the build machine: the CI
+# builds it on Ubuntu 22.04 (glibc 2.35) to cover as many as possible.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -50,7 +61,7 @@ echo "1/3 PyInstaller…"
 pyinstaller atlas_pc.spec --noconfirm --log-level WARN
 
 echo "2/3 Dossier de l'application…"
-rm -rf -- "$APPDIR"  # dossier de construction de ce script uniquement
+rm -rf -- "$APPDIR"  # dossier de construction de ce script uniquement — this script's build folder only
 mkdir -p "$APPDIR/usr/lib" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp -a dist/AtlasPCMonitor "$APPDIR/usr/lib/atlas-pc-monitor"
 install -m 755 packaging/linux/AppRun "$APPDIR/AppRun"
