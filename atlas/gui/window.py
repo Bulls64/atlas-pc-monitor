@@ -30,14 +30,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__, collect, export, fiche, i18n, privacy, settings, update
+from .. import __version__, changelog, collect, export, fiche, i18n, privacy, settings, update
 from ..collect import base_report, scan
 from ..findings import FIX, WATCH, Finding, analyze, summary
 from ..formatting import fmt_number, fmt_stamp, to_number
 from ..i18n import _
 from ..pages import FINDINGS, OVERVIEW, PAGES, diff_reports
 from . import model, qtlang, screens, theme
-from .dialogs import CompareDialog, FicheDialog, SettingsDialog
+from .dialogs import CompareDialog, FicheDialog, SettingsDialog, WhatsNewDialog
 from .widgets import BusLine, DotBackground, Led, icon, label, logo_pixmap, screen_size, separator
 
 log = logging.getLogger("atlas")
@@ -104,6 +104,7 @@ class MainWindow(QMainWindow):
         self.fiche_info = fiche.FicheInfo(technician=str(self.config.get("technician", "")))
         self.fiche_dialog: FicheDialog | None = None
         self.settings_dialog: SettingsDialog | None = None
+        self.whats_new_dialog: WhatsNewDialog | None = None
         # module de mise à jour (remplaçable dans les tests) et dernière release trouvée
         # update module (replaceable in tests) and latest release found
         self.updater = update
@@ -140,6 +141,11 @@ class MainWindow(QMainWindow):
             self.render()
         if self.config.get("check_updates"):
             threading.Thread(target=self._check_update_work, daemon=True).start()
+        # Premier lancement après une mise à jour : la fenêtre « Nouveautés », une seule fois.
+        # First launch after an update: the "What's new" window, once.
+        if changelog.should_show(self.config):
+            QTimer.singleShot(0, self.open_whats_new)
+        settings.save_config(self.config)
 
     def _focus_search(self) -> None:
         self.search.setFocus()
@@ -667,6 +673,16 @@ class MainWindow(QMainWindow):
         self.settings_dialog.show()
         self.settings_dialog.raise_()
         self.settings_dialog.activateWindow()
+
+    def open_whats_new(self) -> None:
+        if self.whats_new_dialog is not None:
+            self.whats_new_dialog.close()
+        # Toujours reconstruite : la langue a pu changer depuis la dernière ouverture.
+        # Always rebuilt: the language may have changed since the last opening.
+        self.whats_new_dialog = WhatsNewDialog(self)
+        self.whats_new_dialog.show()
+        self.whats_new_dialog.raise_()
+        self.whats_new_dialog.activateWindow()
 
     def _check_update_work(self) -> None:
         """Recherche au démarrage (option des paramètres) : silencieuse en cas d'échec.

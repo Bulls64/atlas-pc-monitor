@@ -16,6 +16,7 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 
 - Settings window (⚙ button in the header): language, theme and updates.
 - Updates from the GitHub releases: check, then install and restart in one click; the download is checked against `SHA256SUMS.txt`. Works for the single file, the folder and the AppImage; optional check at startup, off by default.
+- "What's new in vX" window at the first launch after an update, with this version's changes from the changelog; it can be reopened from the settings.
 
 ### Français
 
@@ -23,6 +24,7 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 
 - Fenêtre Paramètres (bouton ⚙ de l'en-tête) : langue, thème et mises à jour.
 - Mises à jour depuis les releases GitHub : recherche, puis installation et redémarrage en un clic ; le téléchargement est vérifié avec `SHA256SUMS.txt`. Fonctionne pour le fichier unique, le dossier et l'AppImage ; recherche au démarrage en option, désactivée par défaut.
+- Fenêtre « Nouveautés de la vX » au premier lancement après une mise à jour, avec les changements de la version tirés du CHANGELOG ; elle se rouvre depuis les paramètres.
 
 ## [1.0.0] - 2026-11-14
 

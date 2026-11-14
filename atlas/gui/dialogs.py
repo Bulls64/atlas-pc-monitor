@@ -1,6 +1,6 @@
-"""Fenêtres secondaires : fiche d'intervention, comparaison de rapports et paramètres.
+"""Fenêtres secondaires : fiche d'intervention, comparaison de rapports, paramètres et nouveautés.
 
-Secondary windows: intervention sheet, report comparison and settings.
+Secondary windows: intervention sheet, report comparison, settings and what's new.
 """
 
 from __future__ import annotations
@@ -26,7 +26,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__, fiche, i18n, settings, update
+from .. import __version__, changelog, fiche, i18n, settings, update
 from .. import findings as F
 from ..i18n import N_, _
 from . import theme
@@ -265,6 +265,10 @@ class SettingsDialog(QDialog):
         buttons.addWidget(self.page_button)
         buttons.addStretch(1)
         ul.addLayout(buttons)
+        self.whats_new_button = QPushButton(_("Nouveautés de cette version"))
+        self.whats_new_button.setProperty("kind", "link")
+        self.whats_new_button.clicked.connect(self.win.open_whats_new)
+        ul.addWidget(self.whats_new_button, 0, Qt.AlignLeft)
         self.auto_check = QCheckBox(_("Rechercher une mise à jour au démarrage"))
         self.auto_check.setChecked(bool(self.win.config.get("check_updates", False)))
         self.auto_check.toggled.connect(self._set_auto_check)
@@ -410,3 +414,33 @@ class SettingsDialog(QDialog):
     def open_page(self) -> None:
         release = self.win.available_release
         webbrowser.open(release.page if release is not None else update.RELEASES_PAGE)
+
+
+class WhatsNewDialog(QDialog):
+    """« Nouveautés de la vX » : la section de la version dans le CHANGELOG, dans la langue de l'interface.
+
+    "What's new in vX": the version's section of the CHANGELOG, in the interface language.
+    """
+
+    def __init__(self, win):
+        super().__init__(win)
+        self.setWindowIcon(win.windowIcon())
+        self.setWindowTitle(_("Atlas PC Monitor — Nouveautés"))
+        self.resize(620, 520)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(24, 22, 24, 22)
+        layout.setSpacing(12)
+        layout.addWidget(label(_("NOUVEAUTÉS"), "eyebrow"))
+        layout.addWidget(label(_("Nouveautés de la v{0}", __version__), "h2"))
+        self.text = QTextBrowser()
+        self.text.setOpenExternalLinks(True)
+        notes = changelog.notes(i18n.language())
+        if notes:
+            self.text.setMarkdown(notes)
+        else:
+            self.text.setPlainText(_("Aucune note de version pour cette version."))
+        layout.addWidget(self.text, 1)
+        close = QPushButton(_("Fermer"))
+        close.setProperty("kind", "primary")
+        close.clicked.connect(self.close)
+        layout.addWidget(close, 0, Qt.AlignRight)

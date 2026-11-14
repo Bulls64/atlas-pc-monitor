@@ -620,4 +620,9 @@ EN: dict[str, str] = {
     "Aucune version publiée trouvée sur GitHub (dépôt privé ou sans release).": "No published version found on GitHub (private repository or no release).",
     "GitHub limite le nombre de requêtes : réessayez dans quelques minutes.": "GitHub is limiting requests: try again in a few minutes.",
     "Réponse de GitHub illisible.": "Unreadable answer from GitHub.",
+    "Atlas PC Monitor — Nouveautés": "Atlas PC Monitor — What's new",
+    "NOUVEAUTÉS": "WHAT'S NEW",
+    "Nouveautés de la v{0}": "What's new in v{0}",
+    "Aucune note de version pour cette version.": "No release notes for this version.",
+    "Nouveautés de cette version": "What's new in this version",
 }

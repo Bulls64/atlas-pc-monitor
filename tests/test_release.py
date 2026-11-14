@@ -23,6 +23,6 @@ def test_license_texts_are_shipped_with_every_build():
     notices = (ROOT / "THIRD-PARTY-NOTICES.md").read_text(encoding="utf-8")
     assert all(f"licenses/{name}" in notices for name in LICENSES)
     spec = (ROOT / "atlas_pc.spec").read_text(encoding="utf-8")
-    assert all(f'"{name}"' in spec for name in ("LICENSE", "THIRD-PARTY-NOTICES.md", "licenses"))
+    assert all(f'"{name}"' in spec for name in ("LICENSE", "THIRD-PARTY-NOTICES.md", "licenses", "CHANGELOG.md"))
     script = (ROOT / "tools" / "build_appimage.sh").read_text(encoding="utf-8")
     assert "cp -a LICENSE THIRD-PARTY-NOTICES.md licenses" in script

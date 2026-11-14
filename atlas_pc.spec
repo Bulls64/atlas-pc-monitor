@@ -30,6 +30,7 @@ a = Analysis(
         ("atlas/gui/fonts", "atlas/gui/fonts"),
         ("LICENSE", "."),
         ("THIRD-PARTY-NOTICES.md", "."),
+        ("CHANGELOG.md", "."),
         ("licenses", "licenses"),
     ],  # polices OFL et leurs licences — OFL fonts and their licenses
     hiddenimports=["atlas.locale_en"],  # catalogue anglais, importé seulement à la demande — English catalog, imported only on demand

@@ -122,6 +122,9 @@ replaces the application and restarts it:
 - AppImage: replaced by the new AppImage;
 - run from source (`python atlas_pc.py`): nothing is replaced, use `git pull` or download the new version.
 
+At the first launch after an update, a *What's new in vX* window lists the changes of the version
+(from [CHANGELOG.md](CHANGELOG.md)); it can be reopened from the settings.
+
 In a folder you cannot write to (Program Files), restart as administrator before installing. Checking at
 startup is an option, off by default. While the repository is private, GitHub only answers with a token:
 set the `ATLAS_GITHUB_TOKEN` environment variable (a token with read access to the repository).
@@ -236,6 +239,7 @@ The manual checks to run on real PCs are listed (in French) in [`docs/ESSAIS-WIN
 | `atlas/i18n.py`, `atlas/locale_en.py` | language choice and English catalog |
 | `atlas/settings.py` | preferences, restart as administrator |
 | `atlas/update.py` | updates from the GitHub releases (check, verified download, replacement) |
+| `atlas/changelog.py` | "What's new" notes of a version, read from the shipped CHANGELOG.md |
 | `atlas/gui/` | PySide6 interface: theme, board map, memory modules, screens, window |
 | `tests/` | tests (pytest, pytest-qt) |
 | `tools/` | real inventory check, screenshots, icon, AppImage build |
@@ -373,6 +377,9 @@ avec `SHA256SUMS.txt`, remplace l'application et la relance :
 - lancement depuis les sources (`python atlas_pc.py`) : rien n'est remplacé, faites `git pull` ou
   téléchargez la nouvelle version.
 
+Au premier lancement après une mise à jour, une fenêtre *Nouveautés de la vX* liste les changements de
+la version (tirés de [CHANGELOG.md](CHANGELOG.md)) ; elle se rouvre depuis les paramètres.
+
 Dans un dossier où vous n'avez pas le droit d'écrire (Program Files), relancez en administrateur avant
 d'installer. La recherche au démarrage est une option, désactivée par défaut. Tant que le dépôt est privé,
 GitHub ne répond qu'avec un jeton : définissez la variable d'environnement `ATLAS_GITHUB_TOKEN` (un jeton
@@ -488,6 +495,7 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 | `atlas/i18n.py`, `atlas/locale_en.py` | choix de la langue et catalogue anglais |
 | `atlas/settings.py` | préférences, relance en administrateur |
 | `atlas/update.py` | mises à jour depuis les releases GitHub (recherche, téléchargement vérifié, remplacement) |
+| `atlas/changelog.py` | « Nouveautés » d'une version, lues dans le CHANGELOG.md livré avec l'application |
 | `atlas/gui/` | interface PySide6 : thème, plan de carte, barrettes, écrans, fenêtre |
 | `tests/` | tests (pytest, pytest-qt) |
 | `tools/` | vérification d'un inventaire réel, captures, icône, construction de l'AppImage |
