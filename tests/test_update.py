@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import subprocess
 import sys
 import urllib.error
@@ -188,7 +189,8 @@ def test_replace_appimage_takes_the_new_versioned_name(tmp_path):
     command = update.replace_appimage(new, current, "AtlasPCMonitor-9.1.0-x86_64.AppImage")
     target = tmp_path / "AtlasPCMonitor-9.1.0-x86_64.AppImage"
     assert command == [str(target)] and target.read_bytes() == b"nouvelle" and not current.exists()
-    assert target.stat().st_mode & 0o111
+    if os.name != "nt":  # pas de bit d'exécution sous Windows — no execute bit on Windows
+        assert target.stat().st_mode & 0o111
 
 
 def _fake_release_zip(path: Path) -> None:
