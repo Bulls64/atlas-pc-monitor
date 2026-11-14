@@ -6,12 +6,12 @@ target-version = "py39"
 select = ["E", "F", "W", "B", "UP", "I"]
 
 [tool.ruff.lint.per-file-ignores]
-"atlas/collect.py" = ["E501"]  # le script PowerShell embarqué garde ses longues lignes
+"atlas/collect.py" = ["E501"]  # le script PowerShell embarqué garde ses longues lignes — the embedded PowerShell script keeps its long lines
 "atlas/findings.py" = ["E501"]
 "tools/check_scan.py" = ["E501"]
-"atlas/gui/widgets.py" = ["E501"]  # tracés SVG des icônes
-"atlas/gui/theme.py" = ["E501"]  # feuille de style Qt
-"atlas/locale_en.py" = ["E501"]  # catalogue de traduction : une phrase par ligne, plus lisible
+"atlas/gui/widgets.py" = ["E501"]  # tracés SVG des icônes — SVG paths of the icons
+"atlas/gui/theme.py" = ["E501"]  # feuille de style Qt — Qt style sheet
+"atlas/locale_en.py" = ["E501"]  # catalogue de traduction : une phrase par ligne, plus lisible — translation catalog: one sentence per line, easier to read
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

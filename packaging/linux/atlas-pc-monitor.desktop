@@ -1,12 +1,15 @@
 [Desktop Entry]
 Type=Application
 Name=Atlas PC Monitor
-GenericName=Visionneuse d'inventaire matériel
-Comment=Affiche, compare et imprime les rapports d'inventaire Atlas PC Monitor faits sous Windows
+GenericName=Hardware inventory viewer
+GenericName[fr]=Visionneuse d'inventaire matériel
+Comment=Shows, compares and prints Atlas PC Monitor inventory reports made on Windows
+Comment[fr]=Affiche, compare et imprime les rapports d'inventaire Atlas PC Monitor faits sous Windows
 Exec=AtlasPCMonitor %f
 Icon=atlas-pc-monitor
 Terminal=false
 Categories=Utility;System;
 MimeType=application/json;
-Keywords=inventaire;matériel;diagnostic;fiche;rapport;
+Keywords=inventory;hardware;diagnostics;sheet;report;
+Keywords[fr]=inventaire;matériel;diagnostic;fiche;rapport;
 StartupWMClass=AtlasPCMonitor

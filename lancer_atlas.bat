@@ -2,6 +2,9 @@
 rem Lance Atlas PC Monitor avec le Python disponible sur ce poste.
 rem Au premier lancement, installe PySide6 (interface graphique) pour l'utilisateur courant.
 rem Les arguments sont transmis : lancer_atlas.bat --json, lancer_atlas.bat --help...
+rem Starts Atlas PC Monitor with the Python available on this computer.
+rem On the first launch, installs PySide6 (graphical interface) for the current user.
+rem Arguments are passed on: lancer_atlas.bat --json, lancer_atlas.bat --help...
 cd /d "%~dp0"
 set "PY="
 where py >nul 2>nul && set "PY=py -3"
