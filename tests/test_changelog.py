@@ -71,7 +71,7 @@ def test_window_after_an_update(qtbot, monkeypatch, tmp_path):
     dialog = w.whats_new_dialog
     labels = [child.text() for child in dialog.findChildren(type(w.status))]
     assert f"Nouveautés de la v{__version__}" in labels
-    assert "Mode partage" in dialog.text.toPlainText() or "Inventaire" in dialog.text.toPlainText()
+    assert dialog.text.toPlainText().startswith("Ajouts")
     assert settings.load_config()["last_version"] == __version__
 
     # Relancée dans la même version : plus de fenêtre.
@@ -91,4 +91,4 @@ def test_window_from_the_settings_in_english(win, qtbot):
     dialog = win.whats_new_dialog
     labels = [child.text() for child in dialog.findChildren(type(win.settings_dialog.update_status))]
     assert f"What's new in v{__version__}" in labels
-    assert "Sharing mode" in dialog.text.toPlainText()
+    assert dialog.text.toPlainText().startswith("Added")
