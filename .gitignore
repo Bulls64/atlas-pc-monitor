@@ -11,3 +11,4 @@ atlas-pc-monitor-*.html
 atlas-pc-*.json
 atlas-pc-*.txt
 atlas-pc-*.html
+.coverage
