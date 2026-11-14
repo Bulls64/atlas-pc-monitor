@@ -200,7 +200,8 @@ QPushButton[kind="primary"]:focus {{ border: 2px solid {p.silk}; }}
 QPushButton[kind="icon"] {{ padding: 0; min-width: 40px; max-width: 40px; min-height: 40px; max-height: 40px; text-align: center; }}
 QPushButton[kind="language"] {{ padding: 0 10px; min-height: 40px; max-height: 40px; text-align: center; font-family: "{MONO}";
     font-size: 12px; font-weight: 600; letter-spacing: 1px; }}
-QPushButton[kind="sharing"]:checked {{ background: {p.bright}; color: {p.primary_text}; border-color: {p.bright}; }}
+QPushButton[kind="sharing"]:checked, QPushButton[kind="choice"]:checked {{ background: {p.bright}; color: {p.primary_text}; border-color: {p.bright}; }}
+QPushButton[kind="choice"] {{ text-align: center; min-width: 96px; }}
 QPushButton[kind="link"] {{ background: transparent; border: none; color: {p.link}; padding: 2px 0; font-family: "{MONO}";
     font-size: 12px; letter-spacing: 1px; }}
 QPushButton[kind="link"]:hover {{ color: {p.silk}; }}
@@ -214,9 +215,15 @@ QLabel[role="designator"][active="true"] {{ color: {p.bright}; }}
 QLineEdit {{ background: {p.panel2}; border: 1px solid {p.border2}; border-radius: 8px; padding: 0 10px; min-height: 38px;
     selection-background-color: {p.solder}; selection-color: {p.board}; }}
 QLineEdit:focus {{ border-color: {p.link}; }}
-QPlainTextEdit {{ background: {p.panel2}; border: 1px solid {p.border2}; border-radius: 8px; padding: 6px 8px;
+QPlainTextEdit, QTextBrowser {{ background: {p.panel2}; border: 1px solid {p.border2}; border-radius: 8px; padding: 6px 8px;
     selection-background-color: {p.solder}; selection-color: {p.board}; }}
 QPlainTextEdit:focus {{ border-color: {p.link}; }}
+QCheckBox {{ font-size: 14px; spacing: 10px; }}
+QCheckBox::indicator {{ width: 18px; height: 18px; border: 1px solid {p.border2}; border-radius: 4px; background: {p.panel2}; }}
+QCheckBox::indicator:checked {{ background: {p.bright}; border-color: {p.bright}; }}
+QCheckBox::indicator:focus {{ border-color: {p.link}; }}
+QProgressBar {{ background: {p.panel2}; border: 1px solid {p.border2}; border-radius: 6px; max-height: 10px; text-align: center; }}
+QProgressBar::chunk {{ background: {p.solder}; border-radius: 5px; }}
 
 QTableWidget {{ background: transparent; border: none; gridline-color: transparent; font-size: 13px;
     selection-background-color: {p.badge}; selection-color: {p.silk}; outline: none; }}

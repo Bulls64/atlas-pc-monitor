@@ -8,6 +8,22 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les numéros de version suivent
 [le versionnage sémantique](https://semver.org/lang/fr/).
 
+## [Unreleased]
+
+### English
+
+#### Added
+
+- Settings window (⚙ button in the header): language, theme and updates.
+- Updates from the GitHub releases: check, then install and restart in one click; the download is checked against `SHA256SUMS.txt`. Works for the single file, the folder and the AppImage; optional check at startup, off by default.
+
+### Français
+
+#### Ajouts
+
+- Fenêtre Paramètres (bouton ⚙ de l'en-tête) : langue, thème et mises à jour.
+- Mises à jour depuis les releases GitHub : recherche, puis installation et redémarrage en un clic ; le téléchargement est vérifié avec `SHA256SUMS.txt`. Fonctionne pour le fichier unique, le dossier et l'AppImage ; recherche au démarrage en option, désactivée par défaut.
+
 ## [1.0.0] - 2026-11-14
 
 ### English

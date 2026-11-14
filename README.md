@@ -105,14 +105,32 @@ administrator session: the “Restart as administrator” button appears
 when it helps, and each page explains why a piece of information is missing.
 
 Shortcuts: **F5** to refresh, **Ctrl+F** to search, **Esc** to leave the search.
-The language, theme (dark or light), sharing mode and technician name are saved in
+The **⚙ Settings** button in the header gathers the language, the theme and the updates. The language,
+theme (dark or light), sharing mode, technician name and update option are saved in
 `%APPDATA%\AtlasPC\config.json`. On first launch, the language follows the Windows display language
 (French if Windows is in French, English otherwise).
 
+### Updates
+
+In **⚙ Settings**, *Check for updates* looks up the latest release on GitHub. *Install and restart*
+downloads the file that matches your installation, checks its SHA-256 fingerprint against `SHA256SUMS.txt`,
+replaces the application and restarts it:
+
+- single file `AtlasPCMonitor.exe`: replaced in place (the old one is kept as `.old` until the next launch);
+- folder (`AtlasPCMonitor-windows.zip`): `_internal` and the exe are swapped once the application has closed;
+  your own files in the folder are left alone;
+- AppImage: replaced by the new AppImage;
+- run from source (`python atlas_pc.py`): nothing is replaced, use `git pull` or download the new version.
+
+In a folder you cannot write to (Program Files), restart as administrator before installing. Checking at
+startup is an option, off by default. While the repository is private, GitHub only answers with a token:
+set the `ATLAS_GITHUB_TOKEN` environment variable (a token with read access to the repository).
+
 ### Privacy
 
-Atlas PC Monitor works entirely offline: it sends nothing over the network, has no telemetry and does not
-check for updates. The inventory is read on the computer itself (PowerShell/CIM) and only leaves it if you
+Atlas PC Monitor has no telemetry and sends no inventory data over the network. It only goes online to
+check for updates, when you ask for it or at startup if you turned that option on: it then queries
+`api.github.com` and downloads the new version from GitHub. The inventory is read on the computer itself (PowerShell/CIM) and only leaves it if you
 export, copy or print it.
 
 - Saved on the computer: only the preferences above, in `%APPDATA%\AtlasPC\config.json`.
@@ -217,6 +235,7 @@ The manual checks to run on real PCs are listed (in French) in [`docs/ESSAIS-WIN
 | `atlas/formatting.py` | value formatting (numbers, units and dates follow the language) |
 | `atlas/i18n.py`, `atlas/locale_en.py` | language choice and English catalog |
 | `atlas/settings.py` | preferences, restart as administrator |
+| `atlas/update.py` | updates from the GitHub releases (check, verified download, replacement) |
 | `atlas/gui/` | PySide6 interface: theme, board map, memory modules, screens, window |
 | `tests/` | tests (pytest, pytest-qt) |
 | `tools/` | real inventory check, screenshots, icon, AppImage build |
@@ -336,14 +355,35 @@ demandent une session administrateur : le bouton « Relancer en administrateur �
 et chaque page indique pourquoi une information manque.
 
 Raccourcis : **F5** pour actualiser, **Ctrl+F** pour rechercher, **Échap** pour sortir de la recherche.
-La langue, le thème (sombre ou clair), le mode partage et le nom du technicien sont mémorisés dans
-`%APPDATA%\AtlasPC\config.json`. Au premier lancement, la langue suit celle de l'affichage de Windows
+Le bouton **⚙ Paramètres** de l'en-tête regroupe la langue, le thème et les mises à jour. La langue, le
+thème (sombre ou clair), le mode partage, le nom du technicien et l'option de mise à jour sont mémorisés
+dans `%APPDATA%\AtlasPC\config.json`. Au premier lancement, la langue suit celle de l'affichage de Windows
 (français si Windows est en français, anglais sinon).
+
+### Mises à jour
+
+Dans **⚙ Paramètres**, *Rechercher une mise à jour* interroge la dernière release sur GitHub. *Installer
+et redémarrer* télécharge le fichier qui correspond à votre installation, vérifie son empreinte SHA-256
+avec `SHA256SUMS.txt`, remplace l'application et la relance :
+
+- fichier unique `AtlasPCMonitor.exe` : remplacé sur place (l'ancien reste en `.old` jusqu'au lancement suivant) ;
+- dossier (`AtlasPCMonitor-windows.zip`) : `_internal` et l'exe sont échangés une fois l'application fermée ;
+  vos propres fichiers rangés dans le dossier ne sont pas touchés ;
+- AppImage : remplacée par la nouvelle AppImage ;
+- lancement depuis les sources (`python atlas_pc.py`) : rien n'est remplacé, faites `git pull` ou
+  téléchargez la nouvelle version.
+
+Dans un dossier où vous n'avez pas le droit d'écrire (Program Files), relancez en administrateur avant
+d'installer. La recherche au démarrage est une option, désactivée par défaut. Tant que le dépôt est privé,
+GitHub ne répond qu'avec un jeton : définissez la variable d'environnement `ATLAS_GITHUB_TOKEN` (un jeton
+avec accès en lecture au dépôt).
 
 ### Confidentialité
 
-Atlas PC Monitor fonctionne entièrement hors ligne : il n'envoie rien sur le réseau, ne contient aucune
-télémétrie et ne cherche pas de mise à jour. L'inventaire est lu sur le poste lui-même (PowerShell/CIM) et
+Atlas PC Monitor ne contient aucune télémétrie et n'envoie aucune donnée de l'inventaire sur le réseau. Il
+ne se connecte que pour chercher une mise à jour, quand vous le demandez ou au démarrage si vous avez coché
+cette option : il interroge alors `api.github.com` et télécharge la nouvelle version depuis GitHub.
+L'inventaire est lu sur le poste lui-même (PowerShell/CIM) et
 ne le quitte que si vous l'exportez, le copiez ou l'imprimez.
 
 - Enregistré sur le poste : seulement les préférences ci-dessus, dans `%APPDATA%\AtlasPC\config.json`.
@@ -447,6 +487,7 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 | `atlas/formatting.py` | mise en forme des valeurs (nombres, unités et dates suivent la langue) |
 | `atlas/i18n.py`, `atlas/locale_en.py` | choix de la langue et catalogue anglais |
 | `atlas/settings.py` | préférences, relance en administrateur |
+| `atlas/update.py` | mises à jour depuis les releases GitHub (recherche, téléchargement vérifié, remplacement) |
 | `atlas/gui/` | interface PySide6 : thème, plan de carte, barrettes, écrans, fenêtre |
 | `tests/` | tests (pytest, pytest-qt) |
 | `tools/` | vérification d'un inventaire réel, captures, icône, construction de l'AppImage |

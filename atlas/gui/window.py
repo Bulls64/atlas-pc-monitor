@@ -30,17 +30,20 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__, collect, export, fiche, i18n, privacy, settings
+from .. import __version__, collect, export, fiche, i18n, privacy, settings, update
 from ..collect import base_report, scan
 from ..findings import FIX, WATCH, Finding, analyze, summary
 from ..formatting import fmt_number, fmt_stamp, to_number
 from ..i18n import _
 from ..pages import FINDINGS, OVERVIEW, PAGES, diff_reports
 from . import model, qtlang, screens, theme
-from .dialogs import CompareDialog, FicheDialog
+from .dialogs import CompareDialog, FicheDialog, SettingsDialog
 from .widgets import BusLine, DotBackground, Led, icon, label, logo_pixmap, screen_size, separator
 
 log = logging.getLogger("atlas")
+# Largeur à partir de laquelle l'en-tête affiche le nom complet et les libellés des boutons.
+# Width from which the header shows the full name and the button labels.
+WIDE = 1010
 
 
 class _Bridge(QObject):
@@ -100,6 +103,11 @@ class MainWindow(QMainWindow):
         self.query = ""
         self.fiche_info = fiche.FicheInfo(technician=str(self.config.get("technician", "")))
         self.fiche_dialog: FicheDialog | None = None
+        self.settings_dialog: SettingsDialog | None = None
+        # module de mise à jour (remplaçable dans les tests) et dernière release trouvée
+        # update module (replaceable in tests) and latest release found
+        self.updater = update
+        self.available_release: update.Release | None = None
         self._shown: tuple | None = None
         # nom du rapport JSON affiché ; vide = inventaire de ce poste
         # name of the JSON report shown; empty = inventory of this computer
@@ -108,6 +116,8 @@ class MainWindow(QMainWindow):
         self._closing = False
         self.bridge = _Bridge(self)
         self.bridge.done.connect(self._on_scanned)
+        self.update_bridge = _Bridge(self)
+        self.update_bridge.done.connect(self._on_update_checked)
         self._flash_timer = QTimer(self, singleShot=True, interval=2500, timeout=self._update_status)
         self._search_timer = QTimer(self, singleShot=True, interval=200, timeout=self._run_search)
 
@@ -128,6 +138,8 @@ class MainWindow(QMainWindow):
             # nothing to analyze here: viewer for reports made on Windows PCs
             self._update_status()
             self.render()
+        if self.config.get("check_updates"):
+            threading.Thread(target=self._check_update_work, daemon=True).start()
 
     def _focus_search(self) -> None:
         self.search.setFocus()
@@ -213,7 +225,7 @@ class MainWindow(QMainWindow):
         self.search.setPlaceholderText(_("Rechercher…   Ctrl+F"))
         self.search.setClearButtonEnabled(True)
         self.search.addAction(icon("search", p.dim), QLineEdit.LeadingPosition)
-        self.search.setMinimumWidth(170)
+        self.search.setMinimumWidth(205)
         self.search.setMaximumWidth(260)
         self.search.setAccessibleName(_("Rechercher dans l'inventaire"))
         self.search.textChanged.connect(lambda _text: self._search_timer.start())
@@ -247,6 +259,11 @@ class MainWindow(QMainWindow):
         self.language_button.setAccessibleName(self.language_button.toolTip())
         self.language_button.clicked.connect(self.toggle_language)
         row.addWidget(self.language_button)
+        self.settings_button = QPushButton()
+        self.settings_button.setIcon(icon("settings", p.silk, 18))
+        self.settings_button.clicked.connect(self.open_settings)
+        row.addWidget(self.settings_button)
+        self._show_update_badge()
         self.refresh_button = QPushButton(_("Actualiser"))
         self.refresh_button.setProperty("kind", "primary")
         self.refresh_button.setIcon(icon("refresh", p.primary_text))
@@ -477,6 +494,8 @@ class MainWindow(QMainWindow):
         settings.save_config(self.config)
         self.query = self.search.text().strip()
         self.build()
+        if self.settings_dialog is not None:
+            self.settings_dialog.build()
 
     def toggle_language(self) -> None:
         """Bascule français ↔ anglais : tout est reconstruit, constats compris (ils sont rédigés à l'analyse).
@@ -498,6 +517,8 @@ class MainWindow(QMainWindow):
         self.findings = analyze(self.data) if self.data else []
         self.query = self.search.text().strip()
         self.build()
+        if self.settings_dialog is not None:
+            self.settings_dialog.build()
         self.flash(_("Interface en français") if code == "fr" else _("Interface en anglais"))
 
     def toggle_sharing(self) -> None:
@@ -513,7 +534,7 @@ class MainWindow(QMainWindow):
         p = theme.P
         self.sharing_button.setChecked(self.sharing)
         self.sharing_button.setIcon(icon("share", p.primary_text if self.sharing else p.bright))
-        wide = self.width() >= 960  # en fenêtre étroite, icône seule (voir _fit_header) — in a narrow window, icon only (see _fit_header)
+        wide = self.width() >= WIDE  # en fenêtre étroite, icône seule (voir _fit_header) — in a narrow window, icon only (see _fit_header)
         self.sharing_button.setText((_("Partage activé") if self.sharing else _("Mode partage")) if wide else "")
 
     # ------------------------------------------------------------------ copie, export, comparaison / copy, export, comparison
@@ -638,6 +659,60 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------------ élévation et fermeture / elevation and closing
 
+    # ------------------------------------------------------------------ paramètres et mises à jour / settings and updates
+
+    def open_settings(self) -> None:
+        if self.settings_dialog is None:
+            self.settings_dialog = SettingsDialog(self)
+        self.settings_dialog.show()
+        self.settings_dialog.raise_()
+        self.settings_dialog.activateWindow()
+
+    def _check_update_work(self) -> None:
+        """Recherche au démarrage (option des paramètres) : silencieuse en cas d'échec.
+
+        Check at startup (settings option): silent on failure.
+        """
+        try:
+            result = self.updater.check()
+        except Exception as error:
+            log.info("Recherche de mise à jour au démarrage : %s", error)
+            return
+        with contextlib.suppress(RuntimeError):  # fenêtre déjà fermée — window already closed
+            self.update_bridge.done.emit(result)
+
+    def _on_update_checked(self, release) -> None:
+        self.set_available_release(release)
+        if release.is_newer:
+            self.flash(_("Mise à jour disponible : version {0}", release.version))
+
+    def set_available_release(self, release) -> None:
+        self.available_release = release
+        self._show_update_badge()
+
+    def _show_update_badge(self) -> None:
+        """Bouton des paramètres : roue seule, ou « v1.1.0 » quand une mise à jour attend.
+
+        Settings button: gear only, or "v1.1.0" when an update is waiting.
+        """
+        release = self.available_release
+        waiting = release is not None and release.is_newer
+        self.settings_button.setProperty("kind", "language" if waiting else "icon")
+        self.settings_button.setText(f"v{release.version}" if waiting else "")
+        tip = _("Paramètres · mise à jour {0} disponible", release.version) if waiting else _("Paramètres")
+        self.settings_button.setToolTip(tip)
+        self.settings_button.setAccessibleName(tip)
+        self.settings_button.style().unpolish(self.settings_button)
+        self.settings_button.style().polish(self.settings_button)
+
+    def quit_for_update(self) -> None:
+        """Ferme l'application pour laisser la nouvelle version démarrer.
+
+        Closes the application so the new version can start.
+        """
+        self.close()
+        QApplication.quit()
+
     def relaunch_as_admin(self) -> None:
         if settings.relaunch_as_admin():
             self.close()
@@ -651,9 +726,9 @@ class MainWindow(QMainWindow):
         In a narrow window, the header tightens: the status message gives way first,
         then the subtitle, then the name moves onto two lines ("ATLAS PC" / "MONITOR").
         """
-        self.status.setVisible(width >= 1180)
-        self.status_led.setVisible(width >= 1180)
-        wide = width >= 960
+        self.status.setVisible(width >= WIDE + 220)
+        self.status_led.setVisible(width >= WIDE + 220)
+        wide = width >= WIDE
         # Bouton « Mode partage » réduit à son icône (l'info-bulle reste) quand la place manque.
         # "Sharing mode" button reduced to its icon (the tooltip remains) when space runs short.
         self.sharing_button.setText((_("Partage activé") if self.sharing else _("Mode partage")) if wide else "")
@@ -661,7 +736,7 @@ class MainWindow(QMainWindow):
         if not wide:
             self.brand_sub.setText("MONITOR")
         else:
-            self.brand_sub.setText(_("INVENTAIRE · DIAGNOSTIC{0}", " · v" + __version__ if width >= 1100 else ""))
+            self.brand_sub.setText(_("INVENTAIRE · DIAGNOSTIC{0}", " · v" + __version__ if width >= WIDE + 140 else ""))
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

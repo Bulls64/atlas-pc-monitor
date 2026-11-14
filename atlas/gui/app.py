@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
-from .. import i18n
+from .. import i18n, update
 from . import qtlang, theme
 from .window import MainWindow
 
@@ -28,6 +28,7 @@ def run(report: str | None = None) -> int:
     app.setApplicationName("Atlas PC Monitor")
     app.setOrganizationName("Bulls64")
     theme.load_fonts()
+    update.cleanup()
     # boutons des dialogues Qt (Enregistrer, Annuler…) dans la langue choisie
     # Qt dialog buttons (Save, Cancel…) in the chosen language
     qtlang.apply(i18n.language())
