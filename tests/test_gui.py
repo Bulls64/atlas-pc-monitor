@@ -118,7 +118,7 @@ def test_copy_and_search(win, qtbot):
     table.copy_value(0)
     assert QGuiApplication.clipboard().text() == "SAMSUNG MZVLB512HBJQ"
     win.copy_report()
-    assert QGuiApplication.clipboard().text().startswith("ATLAS PC")
+    assert QGuiApplication.clipboard().text().startswith("ATLAS PC MONITOR")
     win.search.setText("nvme")
     qtbot.waitUntil(lambda: win.query == "nvme", timeout=2000)
     assert "NVMe" in table_values(win.scroll.widget())
@@ -185,7 +185,7 @@ def test_export_follows_chosen_filter(win, monkeypatch, tmp_path):
 
     monkeypatch.setattr(window.QFileDialog, "getSaveFileName", lambda *a, **k: (str(tmp_path / "rapport"), "Fichier texte (*.txt)"))
     win.export()
-    assert (tmp_path / "rapport.txt").read_text(encoding="utf-8").startswith("ATLAS PC")
+    assert (tmp_path / "rapport.txt").read_text(encoding="utf-8").startswith("ATLAS PC MONITOR")
 
 
 def test_compare_shows_differences(win, monkeypatch, tmp_path):
@@ -349,7 +349,7 @@ def test_compare_warns_about_another_machine_without_naming_it_in_sharing_mode(w
 
 
 def saved_report(tmp_path, **changes) -> Path:
-    """Rapport JSON tel qu'Atlas PC l'exporte sur un PC Windows."""
+    """Rapport JSON tel qu'Atlas PC Monitor l'exporte sur un PC Windows."""
     from atlas import collect, export
 
     on_windows = collect.is_windows
@@ -381,7 +381,7 @@ def test_viewer_starts_on_welcome_without_scanning(viewer):
     from PySide6.QtWidgets import QLabel
 
     texts = [lab.text() for lab in viewer.scroll.widget().findChildren(QLabel)]
-    assert "Ouvrir un rapport Atlas PC" in texts
+    assert "Ouvrir un rapport Atlas PC Monitor" in texts
     assert viewer.status.text() == "Aucun rapport ouvert"
     assert not viewer.refresh_button.isVisibleTo(viewer)
     assert not any(button.isEnabled() for button in viewer.data_actions)
@@ -445,7 +445,7 @@ def test_make_icon_writes_a_png(qapp, tmp_path):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
     import make_icon
 
-    target = tmp_path / "atlas-pc.png"
+    target = tmp_path / "atlas-pc-monitor.png"
     assert make_icon.main([str(target), "128"]) == 0
     image = QImage(str(target))
     assert (image.width(), image.height()) == (128, 128)
@@ -462,7 +462,17 @@ def test_make_icon_writes_a_windows_ico(qapp, tmp_path):
         sys.path.insert(0, sys_path)
     import make_icon
 
-    target = tmp_path / "icones" / "atlas-pc.ico"
+    target = tmp_path / "icones" / "atlas-pc-monitor.ico"
     assert make_icon.main([str(target)]) == 0
     sizes = image_module.open(target).info["sizes"]
     assert {(16, 16), (32, 32), (48, 48), (256, 256)} <= set(sizes)
+
+
+def test_brand_is_never_cut(win, qtbot):
+    """Le nom « Atlas PC Monitor » reste lisible en entier, de la largeur minimale à la pleine largeur."""
+    for width in (win.minimumWidth(), 960, 1100, 1400):
+        win.resize(width, 700)
+        qtbot.wait(30)
+        for part in (win.brand, win.brand_sub):
+            assert part.width() >= part.fontMetrics().horizontalAdvance(part.text()), (width, part.text())
+        assert "MONITOR" in win.brand.text() + win.brand_sub.text()

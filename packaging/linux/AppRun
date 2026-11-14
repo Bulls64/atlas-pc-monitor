@@ -8,4 +8,4 @@ case "${QT_QPA_PLATFORM:-}" in
     *) export QT_QPA_PLATFORM=xcb ;;
 esac
 
-exec "$HERE/usr/lib/atlas-pc/AtlasPC" "$@"
+exec "$HERE/usr/lib/atlas-pc-monitor/AtlasPCMonitor" "$@"

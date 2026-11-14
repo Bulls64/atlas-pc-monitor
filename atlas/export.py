@@ -21,7 +21,8 @@ def _header(data: dict) -> tuple[str, str]:
     computer = (data.get("system") or {}).get("computer") or ""
     stamp = fmt_stamp(data.get("captured_at"))
     masked = " · identifiants masqués (mode partage)" if data.get("anonymized") else ""
-    return f"Atlas PC — rapport système de {computer}", f"Généré le {stamp} · Atlas PC {data.get('atlas_version', '')}{masked}"
+    version = data.get("atlas_version", "")
+    return f"Atlas PC Monitor — rapport système de {computer}", f"Généré le {stamp} · Atlas PC Monitor {version}{masked}"
 
 
 def to_text(data: dict) -> str:
@@ -133,8 +134,8 @@ def save(data: dict, path: str, chosen_filter: str = "") -> Path:
 
 
 def load(path: str | Path) -> dict:
-    """Relit un export JSON d'Atlas PC (comparaison, visionneuse). ValueError si ce n'en est pas un."""
+    """Relit un export JSON d'Atlas PC Monitor (comparaison, visionneuse). ValueError si ce n'en est pas un."""
     data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict) or "system" not in data:
-        raise ValueError("ce fichier n'est pas un rapport JSON d'Atlas PC")
+        raise ValueError("ce fichier n'est pas un rapport JSON d'Atlas PC Monitor")
     return data

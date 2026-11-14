@@ -106,7 +106,7 @@ def test_exports(data, tmp_path):
     assert export.resolve_path("pc.v2", "Page HTML").name == "pc.v2.html"
 
     saved = export.save(data, str(tmp_path / "poste"), "Fichier texte")
-    assert saved.suffix == ".txt" and saved.read_text(encoding="utf-8").startswith("ATLAS PC")
+    assert saved.suffix == ".txt" and saved.read_text(encoding="utf-8").startswith("ATLAS PC MONITOR")
     saved = export.save(data, str(tmp_path / "poste.json"))
     assert export.load(str(saved))["machine"]["Model"] == "82JU"
 
@@ -126,7 +126,7 @@ def test_cli(capsys, tmp_path):
     assert main(["--json"]) == 0
     assert json.loads(capsys.readouterr().out)["atlas_version"]
     assert main(["--text"]) == 0
-    assert capsys.readouterr().out.startswith("ATLAS PC")
+    assert capsys.readouterr().out.startswith("ATLAS PC MONITOR")
     target = tmp_path / "r.html"
     assert main(["-o", str(target)]) == 0
     assert target.read_text(encoding="utf-8").startswith("<!DOCTYPE html>")

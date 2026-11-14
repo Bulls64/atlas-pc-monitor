@@ -1,5 +1,5 @@
 @echo off
-rem Lance Atlas PC avec le Python disponible sur ce poste.
+rem Lance Atlas PC Monitor avec le Python disponible sur ce poste.
 rem Au premier lancement, installe PySide6 (interface graphique) pour l'utilisateur courant.
 rem Les arguments sont transmis : lancer_atlas.bat --json, lancer_atlas.bat --help...
 cd /d "%~dp0"
@@ -9,7 +9,7 @@ if not defined PY where python >nul 2>nul && set "PY=python"
 if not defined PY goto nopython
 %PY% -c "import PySide6" >nul 2>nul
 if not errorlevel 1 goto run
-echo Premier lancement : installation de PySide6, l'interface graphique d'Atlas PC...
+echo Premier lancement : installation de PySide6, l'interface graphique d'Atlas PC Monitor...
 %PY% -m pip install --user -r requirements.txt
 if errorlevel 1 goto pipfail
 :run
