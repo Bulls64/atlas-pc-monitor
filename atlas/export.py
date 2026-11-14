@@ -1,4 +1,7 @@
-"""Exports du rapport : JSON (réimportable), texte et HTML autonome."""
+"""Exports du rapport : JSON (réimportable), texte et HTML autonome.
+
+Report exports: JSON (re-importable), text and standalone HTML.
+"""
 
 from __future__ import annotations
 
@@ -108,7 +111,10 @@ def to_html(data: dict) -> str:
 
 
 def render(data: dict, suffix: str) -> str:
-    """Contenu du rapport pour une extension donnée (.json par défaut)."""
+    """Contenu du rapport pour une extension donnée (.json par défaut).
+
+    Report content for a given extension (.json by default).
+    """
     suffix = suffix.lower()
     if suffix == ".txt":
         return to_text(data)
@@ -118,7 +124,10 @@ def render(data: dict, suffix: str) -> str:
 
 
 def resolve_path(path: str, chosen_filter: str = "") -> Path:
-    """Complète l'extension d'après le type choisi dans la boîte de dialogue."""
+    """Complète l'extension d'après le type choisi dans la boîte de dialogue.
+
+    Completes the extension from the type chosen in the dialog box.
+    """
     target = Path(path)
     if target.suffix.lower() in (*FORMATS, ".htm"):
         return target
@@ -135,7 +144,10 @@ def save(data: dict, path: str, chosen_filter: str = "") -> Path:
 
 
 def load(path: str | Path) -> dict:
-    """Relit un export JSON d'Atlas PC Monitor (comparaison, visionneuse). ValueError si ce n'en est pas un."""
+    """Relit un export JSON d'Atlas PC Monitor (comparaison, visionneuse). ValueError si ce n'en est pas un.
+
+    Reads back an Atlas PC Monitor JSON export (comparison, viewer). ValueError if it is not one.
+    """
     data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict) or "system" not in data:
         raise ValueError(_("ce fichier n'est pas un rapport JSON d'Atlas PC Monitor"))

@@ -1,4 +1,7 @@
-"""Collecte de l'inventaire : un seul appel PowerShell/CIM, normalisé en dictionnaire."""
+"""Collecte de l'inventaire : un seul appel PowerShell/CIM, normalisé en dictionnaire.
+
+Inventory collection: a single PowerShell/CIM call, normalized into a dictionary.
+"""
 
 from __future__ import annotations
 
@@ -22,6 +25,7 @@ TIMEOUT_SECONDS = 60
 MARKER = "ATLAS:"
 
 # Sections renvoyant un seul objet ; toutes les autres sont des listes.
+# Sections that return a single object; all the others are lists.
 SINGLE_SECTIONS = ("machine", "bios", "secureboot", "os", "board", "memoryarray", "tpm")
 LIST_SECTIONS = (
     "cpu",
@@ -40,6 +44,7 @@ LIST_SECTIONS = (
     "pnp",
 )
 # Sources que Windows ne livre en général qu'à un processus élevé.
+# Sources that Windows usually only provides to an elevated process.
 ADMIN_SECTIONS = ("secureboot", "tpm", "bitlocker", "temperatures")
 
 PS_SCRIPT = r"""
@@ -85,6 +90,7 @@ $license=Q 'license' {Get-CimInstance SoftwareLicensingProduct -Filter "Applicat
 
 $json=[ordered]@{admin=$admin;machine=$machine;bios=$bios;secureboot=$secureboot;os=$os;cpu=$cpu;board=$board;ram=$ram;memoryarray=$memoryarray;gpu=$gpu;disks=$disks;volumes=$volumes;bitlocker=$bitlocker;adapters=$adapters;network=$network;temperatures=$temperatures;battery=$battery;monitors=$monitors;audio=$audio;tpm=$tpm;license=$license;pnp=$pnp;errors=$err;timings=$time;total_ms=$total.ElapsedMilliseconds}|ConvertTo-Json -Depth 6 -Compress
 # Sortie en base64 : le JSON traverse intact n'importe quelle page de code console.
+# Base64 output: the JSON passes intact through any console code page.
 'ATLAS:'+[Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($json))
 """
 
@@ -97,16 +103,23 @@ VIRTUAL_MACHINES = ("virtual machine", "vmware", "virtualbox", "qemu", "kvm", "p
 
 
 def is_virtual(data: dict) -> bool:
-    """Inventaire d'une machine virtuelle (Hyper-V, VMware…) : sa « mémoire » n'est pas faite de vraies barrettes."""
+    """Inventaire d'une machine virtuelle (Hyper-V, VMware…) : sa « mémoire » n'est pas faite de vraies barrettes.
+
+    Inventory of a virtual machine (Hyper-V, VMware…): its "memory" is not made of real modules.
+    """
     machine = data.get("machine") or {}
     text = f"{machine.get('Manufacturer') or ''} {machine.get('Model') or ''}".lower()
     return any(word in text for word in VIRTUAL_MACHINES)
 
 
 def powershell_path() -> str:
-    """Chemin absolu de Windows PowerShell, sans dépendre du PATH."""
+    """Chemin absolu de Windows PowerShell, sans dépendre du PATH.
+
+    Absolute path of Windows PowerShell, without relying on PATH.
+    """
     root = os.environ.get("SystemRoot", r"C:\Windows")
     # « Sysnative » donne le PowerShell 64 bits à un Python 32 bits.
+    # "Sysnative" gives a 32-bit Python the 64-bit PowerShell.
     for folder in ("Sysnative", "System32"):
         candidate = os.path.join(root, folder, "WindowsPowerShell", "v1.0", "powershell.exe")
         if os.path.isfile(candidate):
@@ -115,7 +128,10 @@ def powershell_path() -> str:
 
 
 def run_powershell(script: str = PS_SCRIPT, timeout: int = TIMEOUT_SECONDS) -> tuple[int, str, str]:
-    """Exécute le script et renvoie (code retour, sortie standard, sortie d'erreur)."""
+    """Exécute le script et renvoie (code retour, sortie standard, sortie d'erreur).
+
+    Runs the script and returns (exit code, standard output, standard error).
+    """
     encoded = base64.b64encode(script.encode("utf-16le")).decode("ascii")
     result = subprocess.run(
         [powershell_path(), "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", encoded],
@@ -130,7 +146,10 @@ def run_powershell(script: str = PS_SCRIPT, timeout: int = TIMEOUT_SECONDS) -> t
 
 
 def as_rows(value) -> list[dict]:
-    """Normalise une valeur CIM (objet seul, tableau, ou enveloppe {value, Count}) en liste."""
+    """Normalise une valeur CIM (objet seul, tableau, ou enveloppe {value, Count}) en liste.
+
+    Normalizes a CIM value (single object, array, or {value, Count} wrapper) into a list.
+    """
     if isinstance(value, dict) and "value" in value and "Count" in value:
         value = value["value"]
     if isinstance(value, list):
@@ -141,7 +160,10 @@ def as_rows(value) -> list[dict]:
 
 
 def parse_inventory(stdout: str) -> dict:
-    """Extrait l'inventaire de la sortie PowerShell (ligne « ATLAS:<base64> », ou JSON brut)."""
+    """Extrait l'inventaire de la sortie PowerShell (ligne « ATLAS:<base64> », ou JSON brut).
+
+    Extracts the inventory from the PowerShell output ("ATLAS:<base64>" line, or raw JSON).
+    """
     text = stdout
     for line in stdout.splitlines():
         if line.strip().startswith(MARKER):
@@ -157,7 +179,10 @@ def parse_inventory(stdout: str) -> dict:
 
 
 def normalize(payload: dict) -> dict:
-    """Met les sections dans une forme stable : un dict pour les objets seuls, une liste sinon."""
+    """Met les sections dans une forme stable : un dict pour les objets seuls, une liste sinon.
+
+    Puts the sections into a stable shape: a dict for single objects, a list otherwise.
+    """
     data: dict = {"admin": bool(payload.get("admin"))}
     for key in SINGLE_SECTIONS:
         rows = as_rows(payload.get(key))
@@ -167,12 +192,16 @@ def normalize(payload: dict) -> dict:
     errors = payload.get("errors")
     data["errors"] = {str(k): str(v) for k, v in errors.items()} if isinstance(errors, dict) else {}
     # Une zone ACPI absente ou à 0 K renvoie des valeurs absurdes : on ne garde que le plausible.
+    # A missing ACPI zone, or one at 0 K, returns absurd values: only plausible ones are kept.
     data["temperatures"] = [t for t in data["temperatures"] if 0 < (to_number(t.get("Celsius")) or 0) <= 120]
     return data
 
 
 def compute_memory(data: dict) -> dict:
-    """Mémoire installée (somme des barrettes) et mémoire utilisable vue par Windows."""
+    """Mémoire installée (somme des barrettes) et mémoire utilisable vue par Windows.
+
+    Installed memory (sum of the modules) and usable memory as seen by Windows.
+    """
     system = data.get("os") or {}
     usable = (to_number(system.get("TotalVisibleMemorySize")) or 0) * 1024
     free = (to_number(system.get("FreePhysicalMemory")) or 0) * 1024
@@ -192,7 +221,10 @@ def compute_memory(data: dict) -> dict:
 
 
 def base_report(note: str = "") -> dict:
-    """Ce que l'on sait sans PowerShell : version, horodatage, nom du poste, plateforme."""
+    """Ce que l'on sait sans PowerShell : version, horodatage, nom du poste, plateforme.
+
+    What is known without PowerShell: version, timestamp, computer name, platform.
+    """
     data: dict = {
         "atlas_version": __version__,
         "captured_at": datetime.now().astimezone().isoformat(timespec="seconds"),
@@ -208,7 +240,10 @@ def base_report(note: str = "") -> dict:
 
 
 def scan(runner=run_powershell) -> dict:
-    """Inventaire complet. Ne lève jamais : un échec est décrit dans data['note']."""
+    """Inventaire complet. Ne lève jamais : un échec est décrit dans data['note'].
+
+    Full inventory. Never raises: a failure is described in data['note'].
+    """
     data = base_report()
     if not is_windows():
         data["note"] = _("Informations matérielles détaillées disponibles sous Windows.")

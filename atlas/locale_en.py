@@ -3,10 +3,16 @@
 Une clé absente laisse le texte en français : tests/test_i18n.py vérifie que chaque texte passé à
 _() ou N_() dans le code a sa traduction ici, et qu'aucune traduction n'est orpheline.
 Les {0}, {1}… sont les valeurs insérées : les garder, dans l'ordre qui convient à la phrase.
+
+English catalog: French text of the code → English translation.
+
+A missing key leaves the text in French: tests/test_i18n.py checks that every text passed to
+_() or N_() in the code has its translation here, and that no translation is orphaned.
+The {0}, {1}… are the inserted values: keep them, in the order that suits the sentence.
 """
 
 EN: dict[str, str] = {
-    # ------------------------------------------------------------------ ligne de commande (__main__.py)
+    # ------------------------------------------------------------------ ligne de commande (__main__.py) / command line
     "Atlas PC Monitor — inventaire matériel Windows.": "Atlas PC Monitor — Windows hardware inventory.",
     "rapport JSON d'Atlas PC Monitor à ouvrir ou à convertir au lieu d'analyser ce poste (seul usage possible hors Windows)": "Atlas PC Monitor JSON report to open or convert instead of scanning this PC (the only option outside Windows)",
     "imprime l'inventaire en JSON, sans interface": "print the inventory as JSON, without the interface",
@@ -27,7 +33,7 @@ EN: dict[str, str] = {
     "L'interface demande PySide6 ({0}).\nInstallez-le avec :  python -m pip install -r requirements.txt\n(lancer_atlas.bat le fait automatiquement)": "The interface requires PySide6 ({0}).\nInstall it with:  python -m pip install -r requirements.txt\n(lancer_atlas.bat does it automatically)",
     "Rapport illisible : {0} ({1})": "Unreadable report: {0} ({1})",
     "Impossible d'écrire {0} : {1}": "Cannot write {0}: {1}",
-    # ------------------------------------------------------------------ collecte (collect.py)
+    # ------------------------------------------------------------------ collecte (collect.py) / collection
     "Informations matérielles détaillées disponibles sous Windows.": "Detailed hardware information is available on Windows.",
     "aucun inventaire dans la sortie de PowerShell": "no inventory in the PowerShell output",
     "la sortie de PowerShell n'est pas un objet JSON": "the PowerShell output is not a JSON object",
@@ -46,7 +52,7 @@ EN: dict[str, str] = {
     "CONSTATS — {0}": "FINDINGS — {0}",
     "(Aucune information détectée.)": "(No information detected.)",
     "Constats — {0}": "Findings — {0}",
-    # ------------------------------------------------------------------ codes Windows (formatting.py)
+    # ------------------------------------------------------------------ codes Windows (formatting.py) / Windows codes
     "Non précisé": "Unspecified",
     "Disque dur (HDD)": "Hard disk (HDD)",
     "Stockage virtuel": "Virtual storage",
@@ -96,10 +102,10 @@ EN: dict[str, str] = {
     "Code {0}": "Code {0}",
     "{0} j {1} h": "{0} d {1} h",
     "{0} h {1} min": "{0} h {1} min",
-    # ------------------------------------------------------------------ mode partage (privacy.py)
+    # ------------------------------------------------------------------ mode partage (privacy.py) / sharing mode
     "[masqué]": "[hidden]",
     "POSTE-MASQUÉ": "HIDDEN-PC",
-    # ------------------------------------------------------------------ conseiller mémoire (upgrade.py)
+    # ------------------------------------------------------------------ conseiller mémoire (upgrade.py) / memory advisor
     "{0} Go": "{0} GB",
     "{0} installés : {1}{2}.": "{0} installed: {1}{2}.",
     " ; emplacements occupés : {0} sur {1}": "; slots used: {0} of {1}",
@@ -261,7 +267,7 @@ EN: dict[str, str] = {
     "Capacité à pleine charge": "Full charge capacity",
     "{0} mWh": "{0} mWh",
     "Aucune batterie détectée.": "No battery detected.",
-    # ------------------------------------------------------------------ fiche d'intervention (fiche.py)
+    # ------------------------------------------------------------------ fiche d'intervention (fiche.py) / intervention sheet
     "Fiche d'intervention {0}": "Intervention sheet {0}",
     "Fiche d'intervention": "Intervention sheet",
     "Référence <strong>{0}</strong><br>Diagnostic du <strong>{1}</strong>": "Reference <strong>{0}</strong><br>Diagnosis of <strong>{1}</strong>",
@@ -299,7 +305,7 @@ EN: dict[str, str] = {
     "Recommandations": "Recommendations",
     "Signature du technicien": "Technician signature",
     "Signature du client": "Customer signature",
-    # ------------------------------------------------------------------ constats (findings.py)
+    # ------------------------------------------------------------------ constats (findings.py) / findings
     "À corriger": "To fix",
     "À surveiller": "To watch",
     "À noter": "To note",

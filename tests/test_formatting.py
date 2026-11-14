@@ -55,7 +55,7 @@ def test_memory_helpers_and_stamp():
     assert f.memory_forms(sticks) == ["SO-DIMM"]
     assert f.fmt_stamp("2026-11-13T10:30:00+01:00") == "13/11/2026 10:30"
     assert f.fmt_stamp(None) == f.EMPTY
-    assert f.fmt_binary(1024**6 * 3) == "3072 Po"  # au-delà de la dernière unité, on reste en Po
+    assert f.fmt_binary(1024**6 * 3) == "3072 Po"  # au-delà de la dernière unité, on reste en Po — beyond the last unit, it stays in PB
 
 
 @pytest.mark.parametrize("value", ["None", " none ", "To Be Filled By O.E.M.", "Default string", "Not Specified", ""])
@@ -69,6 +69,9 @@ def test_clean_keeps_real_values():
 
 @pytest.mark.parametrize(("code", "shown"), [(26, "DDR4"), (34, "DDR5"), (2, f.EMPTY), ("0", f.EMPTY), (None, f.EMPTY), (99, "Code 99")])
 def test_memory_type(code, shown):
-    """Hyper-V déclare ses barrettes en type 2 (« inconnu ») : rien plutôt que « Code 2 »."""
+    """Hyper-V déclare ses barrettes en type 2 (« inconnu ») : rien plutôt que « Code 2 ».
+
+    Hyper-V reports its modules as type 2 ("unknown"): nothing rather than "Code 2".
+    """
     assert f.fmt_memory_type(code) == shown
     assert f.memory_types([{"SMBIOSMemoryType": 2}, {"SMBIOSMemoryType": 26}]) == ["DDR4"]

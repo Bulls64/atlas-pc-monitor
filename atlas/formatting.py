@@ -1,4 +1,7 @@
-"""Mise en forme des valeurs : fonctions pures, sans interface ni accès système."""
+"""Mise en forme des valeurs : fonctions pures, sans interface ni accès système.
+
+Value formatting: pure functions, with no interface and no system access.
+"""
 
 from __future__ import annotations
 
@@ -64,6 +67,7 @@ LICENSE_STATUS = {
 }
 
 # Codes ConfigManagerErrorCode (les « points jaunes » du Gestionnaire de périphériques).
+# ConfigManagerErrorCode codes (the "yellow exclamation marks" of Device Manager).
 PNP_ERRORS = {
     1: N_("mal configuré"),
     3: N_("pilote endommagé ou mémoire insuffisante"),
@@ -90,7 +94,10 @@ PNP_ERRORS = {
 
 
 def to_number(value) -> float | None:
-    """Convertit en nombre, ou None si la valeur n'est pas exploitable."""
+    """Convertit en nombre, ou None si la valeur n'est pas exploitable.
+
+    Converts to a number, or None if the value cannot be used.
+    """
     if value is None or isinstance(value, bool):
         return None
     try:
@@ -101,7 +108,10 @@ def to_number(value) -> float | None:
 
 
 def fmt_number(number: float, digits: int = 1) -> str:
-    """Nombre sans « ,0 » inutile : virgule décimale en français, point en anglais."""
+    """Nombre sans « ,0 » inutile : virgule décimale en français, point en anglais.
+
+    Number without a useless ",0": decimal comma in French, decimal point in English.
+    """
     text = f"{number:.{digits}f}"
     if "." in text:
         text = text.rstrip("0").rstrip(".")
@@ -121,12 +131,18 @@ def _fmt_bytes(value, base: int) -> str:
 
 
 def fmt_binary(value) -> str:
-    """Octets en base 1024 (mémoire vive, VRAM), affichés comme le fait Windows."""
+    """Octets en base 1024 (mémoire vive, VRAM), affichés comme le fait Windows.
+
+    Bytes in base 1024 (RAM, VRAM), displayed the way Windows does.
+    """
     return _fmt_bytes(value, 1024)
 
 
 def fmt_decimal(value) -> str:
-    """Octets en base 1000 (capacité commerciale des disques)."""
+    """Octets en base 1000 (capacité commerciale des disques).
+
+    Bytes in base 1000 (advertised capacity of drives).
+    """
     return _fmt_bytes(value, 1000)
 
 
@@ -140,7 +156,10 @@ def fmt_mhz(value) -> str:
 
 
 def fmt_mts(value) -> str:
-    """Débit mémoire : Windows le rapporte en « MHz », mais c'est le nombre de MT/s (DDR4-3200 → 3200)."""
+    """Débit mémoire : Windows le rapporte en « MHz », mais c'est le nombre de MT/s (DDR4-3200 → 3200).
+
+    Memory data rate: Windows reports it in "MHz", but it is the number of MT/s (DDR4-3200 → 3200).
+    """
     number = to_number(value)
     return EMPTY if number is None or number <= 0 else f"{int(number)} MT/s"
 
@@ -164,7 +183,10 @@ def fmt_bool(value) -> str:
 
 
 def fmt_code(value, table: dict[int, str]) -> str:
-    """Traduit un code numérique CIM (dans la langue courante) ; garde la valeur brute si elle est inconnue."""
+    """Traduit un code numérique CIM (dans la langue courante) ; garde la valeur brute si elle est inconnue.
+
+    Translates a numeric CIM code (into the current language); keeps the raw value if it is unknown.
+    """
     number = to_number(value)
     if number is None:
         return str(value).strip() if value not in (None, "") else EMPTY
@@ -186,7 +208,10 @@ def fmt_bus(value) -> str:
 
 
 def fmt_date(value) -> str:
-    """Date ISO (AAAA-MM-JJ[THH:MM:SS]) rendue en JJ/MM/AAAA [HH:MM] ; en anglais, AAAA-MM-JJ [HH:MM]."""
+    """Date ISO (AAAA-MM-JJ[THH:MM:SS]) rendue en JJ/MM/AAAA [HH:MM] ; en anglais, AAAA-MM-JJ [HH:MM].
+
+    ISO date (YYYY-MM-DD[THH:MM:SS]) rendered as DD/MM/YYYY [HH:MM]; in English, YYYY-MM-DD [HH:MM].
+    """
     if not value or not isinstance(value, str):
         return EMPTY
     try:
@@ -197,13 +222,19 @@ def fmt_date(value) -> str:
 
 
 def fmt_day(day, with_time: bool = False) -> str:
-    """Date (ou date et heure) déjà convertie, au format de la langue courante."""
+    """Date (ou date et heure) déjà convertie, au format de la langue courante.
+
+    Date (or date and time) already converted, in the format of the current language.
+    """
     pattern = "%Y-%m-%d" if is_english() else "%d/%m/%Y"
     return day.strftime(pattern + (" %H:%M" if with_time else ""))
 
 
 def fmt_uptime(boot_iso, now_iso) -> str:
-    """Durée écoulée depuis le dernier démarrage."""
+    """Durée écoulée depuis le dernier démarrage.
+
+    Time elapsed since the last boot.
+    """
     try:
         boot = datetime.fromisoformat(boot_iso)
         now = datetime.fromisoformat(now_iso).replace(tzinfo=None)
@@ -222,7 +253,10 @@ def fmt_uptime(boot_iso, now_iso) -> str:
 
 
 def fmt_diagonal(width_cm, height_cm) -> str:
-    """Diagonale d'écran en pouces à partir des dimensions EDID en centimètres."""
+    """Diagonale d'écran en pouces à partir des dimensions EDID en centimètres.
+
+    Screen diagonal in inches, from the EDID dimensions in centimeters.
+    """
     width, height = to_number(width_cm), to_number(height_cm)
     if not width or not height:
         return EMPTY
@@ -231,12 +265,18 @@ def fmt_diagonal(width_cm, height_cm) -> str:
 
 
 def fmt_stamp(value) -> str:
-    """Horodatage ISO d'un inventaire (« captured_at ») en date et heure de la langue courante, fuseau ignoré."""
+    """Horodatage ISO d'un inventaire (« captured_at ») en date et heure de la langue courante, fuseau ignoré.
+
+    ISO timestamp of an inventory ("captured_at") as date and time in the current language, time zone ignored.
+    """
     return fmt_date(str(value or "")[:19])
 
 
 def fmt_memory_type(value) -> str:
-    """Type d'une barrette (DDR4…). 0, 1 et 2 (« inconnu », « autre ») = non renseigné, fréquent sur une VM."""
+    """Type d'une barrette (DDR4…). 0, 1 et 2 (« inconnu », « autre ») = non renseigné, fréquent sur une VM.
+
+    Type of a memory module (DDR4…). 0, 1 and 2 ("unknown", "other") = not provided, common on a VM.
+    """
     number = to_number(value)
     if number is None or int(number) <= 2:
         return EMPTY
@@ -244,23 +284,33 @@ def fmt_memory_type(value) -> str:
 
 
 def memory_types(sticks: list[dict]) -> list[str]:
-    """Types de mémoire distincts des barrettes (DDR4, DDR5…), triés ; les types non renseignés sont ignorés."""
+    """Types de mémoire distincts des barrettes (DDR4, DDR5…), triés ; les types non renseignés sont ignorés.
+
+    Distinct memory types of the modules (DDR4, DDR5…), sorted; types not provided are ignored.
+    """
     return sorted({fmt_memory_type(s.get("SMBIOSMemoryType")) for s in sticks} - {EMPTY})
 
 
 def memory_forms(sticks: list[dict]) -> list[str]:
-    """Formats amovibles distincts des barrettes (DIMM, SO-DIMM), triés."""
+    """Formats amovibles distincts des barrettes (DIMM, SO-DIMM), triés.
+
+    Distinct removable form factors of the modules (DIMM, SO-DIMM), sorted.
+    """
     return sorted({FORM_FACTORS[int(n)] for s in sticks if (n := to_number(s.get("FormFactor"))) in FORM_FACTORS})
 
 
 # Valeurs bouche-trou du SMBIOS et de WMI : affichées comme une valeur absente.
+# SMBIOS and WMI placeholder values: displayed as a missing value.
 PLACEHOLDERS = frozenset(
     {"none", "null", "n/a", "not specified", "not available", "not applicable", "to be filled by o.e.m.", "default string", "undefined"}
 )
 
 
 def clean(value) -> str:
-    """Texte brut nettoyé, ou tiret si vide ou si c'est une valeur bouche-trou (« None », « To Be Filled By O.E.M. »)."""
+    """Texte brut nettoyé, ou tiret si vide ou si c'est une valeur bouche-trou (« None », « To Be Filled By O.E.M. »).
+
+    Cleaned raw text, or a dash if it is empty or a placeholder value ("None", "To Be Filled By O.E.M.").
+    """
     if value is None:
         return EMPTY
     text = str(value).strip()

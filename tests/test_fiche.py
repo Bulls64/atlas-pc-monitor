@@ -14,13 +14,13 @@ def test_fiche_with_all_fields(data):
     assert page.startswith("<!DOCTYPE html>") and "@page { size: A4" in page
     assert "Mme Dupont &lt;SARL &amp; Fils&gt;" in page and "<SARL" not in page
     assert "INT-42" in page and "Chris" in page and "Le PC rame au démarrage." in page
-    assert "Nettoyage\nMise à jour du pilote" in page  # retours à la ligne conservés (pre-wrap)
+    assert "Nettoyage\nMise à jour du pilote" in page  # retours à la ligne conservés (pre-wrap) — line breaks kept (pre-wrap)
     assert "LENOVO · 82JU" in page and "PF3ABCDE" in page and "AMD Ryzen 7 5800H" in page
     assert "Diagnostic automatique — 2 à surveiller" in page
     assert page.count('class="finding watch"') == 2 and "Barrettes dépareillées" in page
     assert "✓ " in page and "Batterie en bon état" in page
     assert "À noter : Mémoire sous sa vitesse nominale · Analyse partielle sans droits administrateur" in page
-    assert 'class="finding info"' not in page  # les points « à noter » tiennent sur une ligne
+    assert 'class="finding info"' not in page  # les points « à noter » tiennent sur une ligne — the "to note" points fit on one line
     assert 'class="free blank"' not in page
     assert "Signature du client" in page and "window.print()" in page
 

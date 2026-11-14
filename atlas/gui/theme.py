@@ -2,6 +2,11 @@
 
 Les couleurs reprennent celles du site (board, cuivre, soudure, sérigraphie). Le thème
 courant est `theme.P` ; les widgets dessinés à la main le lisent au moment de peindre.
+
+BAUSTECH PC theme: dark and light palettes, embedded fonts, Qt style sheet.
+
+The colors are those of the website (board, copper, solder, silkscreen). The current
+theme is `theme.P`; hand-drawn widgets read it when they paint.
 """
 
 from __future__ import annotations
@@ -20,26 +25,28 @@ MONO = "IBM Plex Mono"
 @dataclass(frozen=True)
 class Palette:
     name: str
-    board: str  # fond
-    board2: str  # fond du plan de carte
-    panel: str  # cartes
-    panel2: str  # cartes relevées, champs
-    silk: str  # texte (sérigraphie)
-    dim: str  # texte discret
-    copper: str  # repères, broches
-    bright: str  # cuivre vif : action principale, gros chiffres, « à surveiller »
-    solder: str  # soudure : état OK, pistes allumées
-    led: str  # LED rouge : « à corriger »
-    link: str  # liens et étiquettes de champ
-    eyebrow: str  # petites étiquettes en capitales
+    board: str  # fond — background
+    board2: str  # fond du plan de carte — board map background
+    panel: str  # cartes — cards
+    panel2: str  # cartes relevées, champs — raised cards, fields
+    silk: str  # texte (sérigraphie) — text (silkscreen)
+    dim: str  # texte discret — muted text
+    copper: str  # repères, broches — markings, pins
+    bright: str  # cuivre vif : action principale, gros chiffres, « à surveiller » — bright copper: main action, big numbers, "to watch"
+    solder: str  # soudure : état OK, pistes allumées — solder: OK status, lit traces
+    led: str  # LED rouge : « à corriger » — red LED: "to fix"
+    link: str  # liens et étiquettes de champ — links and field labels
+    eyebrow: str  # petites étiquettes en capitales — small capitalized labels
     border: str
     border2: str
-    dot: str  # trame de points du fond
+    dot: str  # trame de points du fond — background dot grid
     primary_text: str
     badge: str
-    rail: str  # partie éteinte d'une piste
+    rail: str  # partie éteinte d'une piste — unlit part of a trace
     via_off: str
-    warn_text: str  # « à surveiller » en petit texte (l'orange vif ne suffit pas sur fond clair)
+    # « à surveiller » en petit texte (l'orange vif ne suffit pas sur fond clair)
+    # "to watch" in small text (bright orange is not enough on a light background)
+    warn_text: str
 
 
 DARK = Palette(
@@ -51,6 +58,8 @@ DARK = Palette(
 
 # Thème clair du site, avec deux couleurs foncées pour que le petit texte reste lisible (contraste ≥ 4,5:1).
 # Le turquoise sombre distingue l'état OK de l'orange « à surveiller ».
+# The website's light theme, with two dark colors so that small text stays readable (contrast ≥ 4.5:1).
+# The dark turquoise sets the OK status apart from the "to watch" orange.
 LIGHT = Palette(
     name="light", board="#f7f6f3", board2="#ffffff", panel="#ffffff", panel2="#fbfaf8", silk="#17140f", dim="#6b6459",
     copper="#a3480f", bright="#ff5500", solder="#0f7a6c", led="#c1272d", link="#b8460e", eyebrow="#b8460e",
@@ -60,7 +69,7 @@ LIGHT = Palette(
 
 PALETTES = {"dark": DARK, "light": LIGHT}
 P: Palette = DARK
-GLOW = True  # halos lumineux autour des LED et des pistes
+GLOW = True  # halos lumineux autour des LED et des pistes — glows around the LEDs and traces
 
 
 def set_theme(name: str) -> Palette:
@@ -70,7 +79,10 @@ def set_theme(name: str) -> Palette:
 
 
 def qcolor(value: str) -> QColor:
-    """QColor depuis « #rrggbb » ou « rgba(r,g,b,a) »."""
+    """QColor depuis « #rrggbb » ou « rgba(r,g,b,a) ».
+
+    QColor from "#rrggbb" or "rgba(r,g,b,a)".
+    """
     value = value.strip()
     if value.startswith("rgba"):
         r, g, b, a = (float(x) for x in value[value.index("(") + 1 : value.index(")")].split(","))
@@ -81,18 +93,29 @@ def qcolor(value: str) -> QColor:
 
 
 def level_color(level: str | None) -> str:
-    """Couleur d'un niveau de constat : à corriger, à surveiller, à noter, OK (None : sans objet)."""
+    """Couleur d'un niveau de constat : à corriger, à surveiller, à noter, OK (None : sans objet).
+
+    Color of a finding level: to fix, to watch, to note, OK (None: not applicable).
+    """
     return {"fix": P.led, "watch": P.bright, "info": P.silk, "ok": P.solder}.get(level or "", P.dim)
 
 
 def text_color(level: str | None) -> str:
-    """Couleur d'un niveau pour du petit texte (contraste suffisant dans les deux thèmes)."""
+    """Couleur d'un niveau pour du petit texte (contraste suffisant dans les deux thèmes).
+
+    Color of a level for small text (enough contrast in both themes).
+    """
     return P.warn_text if level == "watch" else level_color(level)
 
 
 def load_fonts() -> list[str]:
-    """Charge les polices embarquées (licence OFL) ; renvoie les familles disponibles."""
-    if QGuiApplication.instance() is None:  # Qt exige une application avant d'enregistrer des polices
+    """Charge les polices embarquées (licence OFL) ; renvoie les familles disponibles.
+
+    Loads the embedded fonts (OFL license); returns the available families.
+    """
+    if QGuiApplication.instance() is None:
+        # Qt exige une application avant d'enregistrer des polices
+        # Qt requires an application before fonts can be registered
         return []
     families: set[str] = set()
     for path in sorted(FONT_DIR.glob("*.ttf")):
@@ -103,9 +126,13 @@ def load_fonts() -> list[str]:
 
 
 def qss() -> str:
-    """Feuille de style Qt du thème courant."""
+    """Feuille de style Qt du thème courant.
+
+    Qt style sheet of the current theme.
+    """
     p = P
     # Cartes surmontées d'un filet de couleur : résultat, puis un par niveau de constat.
+    # Cards topped with a colored rule: result, then one per finding level.
     accents = {"result": p.bright, "fix": p.led, "watch": p.bright, "info": p.silk, "ok": p.solder}
     cards = "\n".join(
         f'QFrame[card="{kind}"] {{ background: {p.panel}; border: 1px solid {p.border}; border-top: 3px solid {color}; border-radius: 10px; }}'

@@ -1,4 +1,7 @@
-"""Barrettes mémoire dessinées (vue de face) et pistes du conseiller d'évolution."""
+"""Barrettes mémoire dessinées (vue de face) et pistes du conseiller d'évolution.
+
+Memory modules drawn (front view) and traces of the upgrade advisor.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +14,7 @@ from .widgets import draw_via
 
 CHIP, GOLD = "#0c1512", "#c98a4b"
 # Vert de circuit imprimé, plus clair que les cartes en thème sombre pour que la barrette s'en détache.
+# Circuit board green, lighter than the cards in the dark theme so that the module stands out against them.
 PCB = {"dark": "#24493c", "light": "#142520"}
 STICK_W, STICK_H = 680, 104
 
@@ -47,7 +51,7 @@ class DimmStick(QWidget):
         painter.setPen(Qt.NoPen)
         painter.drawRect(QRectF(4, 66, 536, 14))
         painter.drawRect(QRectF(556, 66, 120, 14))
-        painter.setBrush(theme.qcolor(theme.P.panel))  # encoches latérales
+        painter.setBrush(theme.qcolor(theme.P.panel))  # encoches latérales — side notches
         painter.drawEllipse(QPointF(4, 40), 6, 6)
         painter.drawEllipse(QPointF(676, 40), 6, 6)
         painter.setPen(QPen(QColor(238, 244, 240, 30), 1))
@@ -71,7 +75,10 @@ class DimmStick(QWidget):
 
 
 class RouteTrace(QWidget):
-    """Piste du conseiller : de la capacité actuelle (point creux) à la cible (point plein)."""
+    """Piste du conseiller : de la capacité actuelle (point creux) à la cible (point plein).
+
+    Advisor trace: from the current capacity (hollow dot) to the target (solid dot).
+    """
 
     def __init__(self):
         super().__init__()

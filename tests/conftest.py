@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 GIB = 1024**3
 
 # Ce que renverrait le script PowerShell sur un portable type (valeurs fictives).
+# What the PowerShell script would return on a typical laptop (made-up values).
 PAYLOAD = {
     "admin": False,
     "machine": {
@@ -35,6 +36,7 @@ PAYLOAD = {
         "LastBootUpTime": "2026-11-09T08:00:00",
     },
     # objet seul là où l'on attend une liste : cas réel avec ConvertTo-Json
+    # single object where a list is expected: a real case with ConvertTo-Json
     "cpu": {
         "Name": "AMD Ryzen 7 5800H with Radeon Graphics",
         "Manufacturer": "AuthenticAMD",
@@ -145,7 +147,11 @@ PAYLOAD = {
 @pytest.fixture(autouse=True)
 def not_windows(monkeypatch):
     """Par défaut, aucun test ne lance PowerShell, même sous Windows : le vrai inventaire
-    est vérifié à part (tools/check_scan.py, job « windows-scan » de la CI)."""
+    est vérifié à part (tools/check_scan.py, job « windows-scan » de la CI).
+
+    By default, no test runs PowerShell, even on Windows: the real inventory
+    is checked separately (tools/check_scan.py, "windows-scan" CI job).
+    """
     from atlas import collect
 
     monkeypatch.setattr(collect, "is_windows", lambda: False)
@@ -153,12 +159,15 @@ def not_windows(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def french(monkeypatch):
-    """Les tests attendent l'interface en français, quelle que soit la langue du système qui les lance."""
+    """Les tests attendent l'interface en français, quelle que soit la langue du système qui les lance.
+
+    The tests expect the interface in French, whatever the language of the system running them.
+    """
     from atlas import i18n
 
     for name in ("LC_ALL", "LC_MESSAGES"):
         monkeypatch.delenv(name, raising=False)
-    monkeypatch.setenv("LANG", "fr_FR.UTF-8")  # lu en premier par i18n.system_language()
+    monkeypatch.setenv("LANG", "fr_FR.UTF-8")  # lu en premier par i18n.system_language() — read first by i18n.system_language()
     i18n.set_language("fr")
     yield
     i18n.set_language("fr")
@@ -180,7 +189,10 @@ def payload():
 
 @pytest.fixture
 def data(payload, monkeypatch):
-    """Inventaire complet tel que scan() le produirait sous Windows."""
+    """Inventaire complet tel que scan() le produirait sous Windows.
+
+    Full inventory as scan() would produce it on Windows.
+    """
     from atlas import collect
 
     monkeypatch.setattr(collect, "is_windows", lambda: True)
@@ -192,7 +204,10 @@ def data(payload, monkeypatch):
 
 @pytest.fixture
 def win(qtbot, monkeypatch, tmp_path):
-    """Fenêtre principale sous un « Windows » simulé, inventaire d'exemple chargé."""
+    """Fenêtre principale sous un « Windows » simulé, inventaire d'exemple chargé.
+
+    Main window under a simulated "Windows", with the sample inventory loaded.
+    """
     monkeypatch.setenv("APPDATA", str(tmp_path))
     from atlas import collect
     from atlas.gui import theme, window

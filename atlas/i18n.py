@@ -8,6 +8,17 @@ car la langue peut changer pendant que l'application tourne.
     _("Mémoire")                          → « Memory » en anglais
     _("{0} barrette(s)", 2)               → « 2 module(s) »
     N_("pilote non installé")             → marqué pour le catalogue, traduit plus tard par _()
+
+Interface language: French (the language of the source code) or English.
+
+Every displayed text goes through `_()`: in English, it is replaced by its translation from the
+`atlas/locale_en.py` catalog; in French, it is returned as is. Texts defined when a module is
+loaded (code tables, page names) are only marked with `N_()` and translated at display time,
+because the language can change while the application is running.
+
+    _("Mémoire")                          → "Memory" in English
+    _("{0} barrette(s)", 2)               → "2 module(s)"
+    N_("pilote non installé")             → marked for the catalog, translated later by _()
 """
 
 from __future__ import annotations
@@ -27,7 +38,10 @@ def language() -> str:
 
 
 def set_language(code: str | None) -> str:
-    """Change la langue (code inconnu → français). Renvoie la langue retenue."""
+    """Change la langue (code inconnu → français). Renvoie la langue retenue.
+
+    Changes the language (unknown code → French). Returns the language kept.
+    """
     global _current
     _current = code if code in LANGUAGES else DEFAULT
     return _current
@@ -47,19 +61,28 @@ def _english() -> dict[str, str]:
 
 
 def _(text: str, *args, **kwargs) -> str:
-    """Texte dans la langue courante, puis complété par format() s'il reçoit des valeurs."""
+    """Texte dans la langue courante, puis complété par format() s'il reçoit des valeurs.
+
+    Text in the current language, then completed by format() if it receives values.
+    """
     if _current == "en":
         text = _english().get(text, text)
     return text.format(*args, **kwargs) if args or kwargs else text
 
 
 def N_(text: str) -> str:
-    """Marque un texte pour le catalogue sans le traduire (il le sera à l'affichage)."""
+    """Marque un texte pour le catalogue sans le traduire (il le sera à l'affichage).
+
+    Marks a text for the catalog without translating it (it will be translated at display time).
+    """
     return text
 
 
 def system_language() -> str:
-    """Langue du système : français si l'interface de Windows (ou la locale) est en français, sinon anglais."""
+    """Langue du système : français si l'interface de Windows (ou la locale) est en français, sinon anglais.
+
+    System language: French if the Windows interface (or the locale) is in French, otherwise English.
+    """
     names = [os.environ.get(name, "") for name in ("LC_ALL", "LC_MESSAGES", "LANG")]
     if os.name == "nt":
         try:

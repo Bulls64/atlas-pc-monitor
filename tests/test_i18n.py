@@ -1,4 +1,7 @@
-"""Traduction anglaise : catalogue complet, et aucun reste de français à l'écran ni dans les rapports."""
+"""Traduction anglaise : catalogue complet, et aucun reste de français à l'écran ni dans les rapports.
+
+English translation: complete catalog, and no French left on screen or in the reports.
+"""
 
 from __future__ import annotations
 
@@ -16,6 +19,7 @@ from atlas.locale_en import EN
 ROOT = Path(__file__).resolve().parent.parent
 PLACEHOLDER = re.compile(r"\{[^{}]*\}")
 # Mots qui trahissent un texte resté en français (les valeurs lues sur le poste sont exclues à part).
+# Words that give away a text left in French (values read from the computer are excluded separately).
 FRENCH = re.compile(
     r"[éèêàùçœ]|\b(le|la|les|des|du|une|aucun|aucune|est|sont|sur|pour|avec|sans|dans|ou|et|pas|ce|cette|à)\b",
     re.IGNORECASE,
@@ -23,7 +27,10 @@ FRENCH = re.compile(
 
 
 def marked_texts() -> dict[str, str]:
-    """Textes passés à _() ou N_() dans le code, avec leur emplacement."""
+    """Textes passés à _() ou N_() dans le code, avec leur emplacement.
+
+    Texts passed to _() or N_() in the code, with their location.
+    """
     texts = {}
     for path in sorted((ROOT / "atlas").rglob("*.py")):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
@@ -59,7 +66,7 @@ def test_language_switch_and_number_formats(english):
     assert f.fmt_code(28, f.PNP_ERRORS) == "driver not installed"
     i18n.set_language("fr")
     assert f.fmt_decimal(512_110_190_592) == "512,1 Go" and f.fmt_percent(62) == "62 %"
-    assert i18n.set_language("de") == "fr"  # langue inconnue : français
+    assert i18n.set_language("de") == "fr"  # langue inconnue : français — unknown language: French
 
 
 def test_saved_language_wins_over_the_system(monkeypatch, tmp_path):
@@ -80,14 +87,19 @@ def test_system_language(monkeypatch, environment, expected):
     for name, value in environment.items():
         monkeypatch.setenv(name, value)
     result = i18n.system_language()
-    if expected is None:  # locale neutre : on se rabat sur celle de Windows ou de Python, toujours fr ou en
+    if expected is None:
+        # locale neutre : on se rabat sur celle de Windows ou de Python, toujours fr ou en
+        # neutral locale: falls back on the Windows or Python one, always fr or en
         assert result in i18n.LANGUAGES
     else:
         assert result == expected
 
 
 def data_words(data) -> set[str]:
-    """Toutes les valeurs lues sur le poste (elles peuvent être en français : Windows en français)."""
+    """Toutes les valeurs lues sur le poste (elles peuvent être en français : Windows en français).
+
+    All the values read from the computer (they can be in French: Windows in French).
+    """
     found = set()
 
     def walk(value):
@@ -105,6 +117,7 @@ def data_words(data) -> set[str]:
 
 
 # Textes du catalogue dont l'anglais diffère : affichés tels quels, ils trahissent un oubli de _().
+# Catalog texts whose English differs: displayed as is, they give away a missing _().
 UNTRANSLATED = {key.strip().upper() for key, value in EN.items() if key.strip() != value.strip() and not PLACEHOLDER.search(key)}
 
 
@@ -119,10 +132,12 @@ def french_leftovers(texts, data) -> list[str]:
         for value in sorted(values, key=len, reverse=True):
             if len(value) > 2:
                 cleaned = cleaned.replace(value, " ")
-        cleaned = re.sub(r"<[^>]+>", " ", cleaned)  # balises HTML
-        for name in i18n.LANGUAGES.values():  # le nom d'une langue s'écrit dans cette langue (« Français »)
+        cleaned = re.sub(r"<[^>]+>", " ", cleaned)  # balises HTML — HTML tags
+        for name in i18n.LANGUAGES.values():
+            # le nom d'une langue s'écrit dans cette langue (« Français »)
+            # a language's name is written in that language ("Français")
             cleaned = cleaned.replace(name, " ")
-        if "{" in cleaned and ":" in cleaned and ";" in cleaned:  # feuille de style CSS
+        if "{" in cleaned and ":" in cleaned and ";" in cleaned:  # feuille de style CSS — CSS style sheet
             continue
         if FRENCH.search(cleaned):
             leftovers.append(text)
@@ -170,7 +185,10 @@ def visible_texts(widget) -> list[str]:
 
 
 def test_every_screen_in_english(win, qtbot):
-    """Toutes les pages, la recherche et la fiche, dessinées en anglais : rien ne doit rester en français."""
+    """Toutes les pages, la recherche et la fiche, dessinées en anglais : rien ne doit rester en français.
+
+    All the pages, the search and the sheet, drawn in English: nothing must remain in French.
+    """
     from atlas.pages import PAGES
 
     win.resize(1400, 900)
@@ -192,7 +210,7 @@ def test_every_screen_in_english(win, qtbot):
     leftovers["fiche"] = french_leftovers(visible_texts(win.fiche_dialog), win.data)
     win.fiche_dialog.close()
     assert not any(leftovers.values()), {k: v for k, v in leftovers.items() if v}
-    win.toggle_language()  # retour au français
+    win.toggle_language()  # retour au français — back to French
     assert i18n.language() == "fr" and win.nav["Mémoire"].title.text() == "Mémoire"
 
 

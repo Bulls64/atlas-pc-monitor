@@ -8,7 +8,7 @@ from atlas import export, fiche, pages, privacy, upgrade
 GIB = 1024**3
 
 
-# ---------------------------------------------------------------------- mode partage
+# ---------------------------------------------------------------------- mode partage / sharing mode
 
 
 @pytest.mark.parametrize(
@@ -37,13 +37,14 @@ def test_anonymize_masks_identifiers_only(data):
     original = copy.deepcopy(data)
     data["machine"].update(PartOfDomain=True, Domain="ENTREPRISE.LOCAL")
     shared = privacy.anonymize(data)
-    assert data["bios"]["SerialNumber"] == "PF3ABCDE"  # l'original n'est pas touché
+    assert data["bios"]["SerialNumber"] == "PF3ABCDE"  # l'original n'est pas touché — the original is untouched
     assert shared["anonymized"] is True and privacy.anonymize(shared) is shared
     text = json.dumps(shared, ensure_ascii=False)
     for secret in ("PF3ABCDE", "1234ABCD", "S4EWNX0R", "WL1ABCDE", "DD-EE-FF", "192.168.1.42", "fe80::1", "ENTREPRISE", '"vm"'):
         assert secret not in text, secret
     assert shared["system"]["computer"] == privacy.HOST_MASK
     # le diagnostic reste intact
+    # the diagnosis stays intact
     assert shared["machine"]["Model"] == "82JU" and shared["disks"][0]["Model"] == "SAMSUNG MZVLB512HBJQ"
     assert shared["ram"][0]["PartNumber"] == original["ram"][0]["PartNumber"]
     assert shared["gpu"] == original["gpu"]
@@ -72,7 +73,7 @@ def test_cli_anonyme(capsys):
     assert report["anonymized"] is True and report["system"]["computer"] == privacy.HOST_MASK
 
 
-# ---------------------------------------------------------------------- conseiller d'évolution
+# ---------------------------------------------------------------------- conseiller d'évolution / upgrade advisor
 
 
 def advice_for(data, sticks=None, slots=None, max_gib=None, **stick_fields):
@@ -106,7 +107,7 @@ def test_single_stick_with_free_slot(data):
 def test_no_odd_number_of_sticks_and_ddr5_four_dimm_warning(data):
     advice = advice_for(data, sticks=2, slots=4, max_gib=192, SMBIOSMemoryType=34, FormFactor=8, Speed=6000, Capacity=16 * GIB)
     options = dict(advice.options)
-    assert options[48] == "remplacer par 2 × 24 Go"  # pas de 3e barrette
+    assert options[48] == "remplacer par 2 × 24 Go"  # pas de 3e barrette — no 3rd module
     assert options[64].startswith("ajouter 2 × 16 Go identiques (4 barrettes DDR5 : vitesse souvent réduite)")
     assert options[96] == "remplacer par 2 × 48 Go"
     assert len(advice.options) == 3
@@ -127,7 +128,7 @@ def test_soldered_memory(data):
     bga = advice_for(data, FormFactor=21)
     assert not bga.upgradable and "soudée" in bga.notes[0]
     mixed = copy.deepcopy(data)
-    mixed["ram"][0]["FormFactor"] = 21  # 8 Go soudés + 1 emplacement SO-DIMM
+    mixed["ram"][0]["FormFactor"] = 21  # 8 Go soudés + 1 emplacement SO-DIMM — 8 GB soldered + 1 SO-DIMM slot
     advice = upgrade.memory_advice(mixed)
     assert advice.upgradable and any("8 Go semblent soudés" in note for note in advice.notes)
     assert advice.spec == "DDR4 SO-DIMM 3200 MT/s"

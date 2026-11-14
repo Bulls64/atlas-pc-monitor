@@ -2,6 +2,11 @@
 
 Chaque piste prend la couleur de l'état de son composant ; cliquer une puce ouvre sa page.
 Le dessin est conçu sur 944 × 448 et mis à l'échelle de la largeur disponible.
+
+Board map: the computer's components drawn as chips on a printed circuit board.
+
+Each trace takes the color of its component's status; clicking a chip opens its page.
+The drawing is designed at 944 × 448 and scaled to the available width.
 """
 
 from __future__ import annotations
@@ -56,7 +61,7 @@ class BoardMap(QWidget):
         self.setMinimumWidth(560)
         self.setAccessibleName(_("Plan de la carte : composants détectés et leur état"))
 
-    # ---------------------------------------------------------------- géométrie
+    # ---------------------------------------------------------------- géométrie / geometry
 
     def hasHeightForWidth(self) -> bool:
         return True
@@ -79,7 +84,7 @@ class BoardMap(QWidget):
                 return key
         return None
 
-    # ---------------------------------------------------------------- souris
+    # ---------------------------------------------------------------- souris / mouse
 
     def mouseMoveEvent(self, event) -> None:
         key = self.chip_at(event.position())
@@ -103,7 +108,7 @@ class BoardMap(QWidget):
         if key and event.button() == Qt.LeftButton:
             self.pageRequested.emit(self.chips[key].page)
 
-    # ---------------------------------------------------------------- dessin
+    # ---------------------------------------------------------------- dessin / drawing
 
     def _color(self, level: str | None) -> QColor:
         return theme.qcolor(theme.P.via_off if level is None else theme.level_color(level))
@@ -118,6 +123,7 @@ class BoardMap(QWidget):
         painter.scale(scale, scale)
 
         # traces, puis points de soudure aux coudes
+        # traces, then solder points at the bends
         for key, points in TRACES.items():
             chip = self.chips.get(key)
             level = chip.level if chip else None
@@ -136,6 +142,7 @@ class BoardMap(QWidget):
                 draw_via(painter, QPointF(*point), color, False)
 
         # broches du processeur (masquées au centre par la puce)
+        # processor pins (hidden in the middle by the chip)
         copper = theme.qcolor(p.copper)
         painter.setPen(Qt.NoPen)
         painter.setBrush(copper)

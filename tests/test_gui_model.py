@@ -1,4 +1,7 @@
-"""Modèle d'affichage de l'interface PySide6 (sans Qt)."""
+"""Modèle d'affichage de l'interface PySide6 (sans Qt).
+
+Display model of the PySide6 interface (without Qt).
+"""
 
 import copy
 
@@ -26,7 +29,7 @@ def test_board_chips_missing_and_fix(data):
     chips = model.board_chips(desktop, findings.analyze(desktop))
     assert chips["battery"].level is None and chips["battery"].title == "Sur secteur"
     assert chips["net"].level is None
-    assert chips["gpu"].level == "fix"  # pilote générique
+    assert chips["gpu"].level == "fix"  # pilote générique — generic driver
     empty = model.board_chips({}, [])
     assert all(chip.level is None for key, chip in empty.items() if key != "cpu")
 

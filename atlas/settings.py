@@ -1,4 +1,7 @@
-"""Préférences de l'utilisateur et relance de l'application (sans dépendance graphique)."""
+"""Préférences de l'utilisateur et relance de l'application (sans dépendance graphique).
+
+User preferences and application restart (no graphical dependency).
+"""
 
 from __future__ import annotations
 
@@ -34,7 +37,10 @@ def save_config(config: dict) -> None:
 
 
 def preferred_language() -> str:
-    """Langue enregistrée par l'utilisateur, sinon celle du système (français ou anglais)."""
+    """Langue enregistrée par l'utilisateur, sinon celle du système (français ou anglais).
+
+    Language saved by the user, otherwise the system's (French or English).
+    """
     from .i18n import LANGUAGES, system_language
 
     chosen = load_config().get("language")
@@ -42,7 +48,10 @@ def preferred_language() -> str:
 
 
 def relaunch_command() -> tuple[str, list[str]]:
-    """Exécutable et arguments pour relancer l'application à l'identique."""
+    """Exécutable et arguments pour relancer l'application à l'identique.
+
+    Executable and arguments to restart the application identically.
+    """
     if getattr(sys, "frozen", False):
         return sys.executable, sys.argv[1:]
     executable = sys.executable
@@ -50,13 +59,16 @@ def relaunch_command() -> tuple[str, list[str]]:
     if windowed.is_file():
         executable = str(windowed)
     main_module = sys.modules.get("__main__")
-    if getattr(main_module, "__spec__", None) is not None:  # lancé par « python -m atlas »
+    if getattr(main_module, "__spec__", None) is not None:  # lancé par « python -m atlas » — launched with "python -m atlas"
         return executable, ["-m", "atlas", *sys.argv[1:]]
     return executable, [os.path.abspath(sys.argv[0]), *sys.argv[1:]]
 
 
 def relaunch_as_admin() -> bool:
-    """Relance l'application élevée (invite UAC). Vrai si la nouvelle instance a démarré."""
+    """Relance l'application élevée (invite UAC). Vrai si la nouvelle instance a démarré.
+
+    Restarts the application elevated (UAC prompt). True if the new instance started.
+    """
     if os.name != "nt":
         return False
     import ctypes
