@@ -8,6 +8,17 @@ et sort en erreur si une vérification bloquante échoue :
 - les sources indispensables sont présentes ;
 - toutes les pages, les constats, les exports et la fiche se construisent ;
 - le mode partage ne laisse fuir aucun numéro de série ni adresse MAC complète.
+
+Checks a real inventory produced on Windows (atlas_pc.py --json -o scan.json).
+
+Usage: python tools/check_scan.py scan.json [--strict]
+
+Writes a Markdown summary to standard output (suited to $GITHUB_STEP_SUMMARY)
+and exits with an error if a blocking check fails:
+- the PowerShell collection succeeded (no failure note);
+- the essential sources are present;
+- all the pages, the findings, the exports and the sheet can be built;
+- sharing mode leaks no serial number or full MAC address.
 """
 
 from __future__ import annotations
@@ -21,13 +32,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from atlas import export, fiche, findings, pages, privacy  # noqa: E402
 
 # Sans elles, l'outil n'a pas de sens : bloquant.
+# Without them, the tool makes no sense: blocking.
 REQUIRED = ("os", "cpu", "disks", "volumes", "machine", "board")
 # Souvent absentes sur une machine virtuelle (runner CI) : simple avertissement.
+# Often missing on a virtual machine (CI runner): warning only.
 OPTIONAL = ("bios", "ram", "memoryarray", "gpu", "adapters", "network", "monitors", "audio", "battery", "tpm", "secureboot", "license")
 
 
 def secrets_of(data: dict) -> list[str]:
-    """Valeurs que le mode partage doit faire disparaître."""
+    """Valeurs que le mode partage doit faire disparaître.
+
+    Values that sharing mode must make disappear.
+    """
     found = []
     for section, key in privacy.SERIAL_FIELDS:
         value = data.get(section)
@@ -82,6 +98,7 @@ def main(argv: list[str]) -> int:
     out.append("")
 
     # Tout ce que l'application construit à partir de l'inventaire doit fonctionner sur des données réelles.
+    # Everything the application builds from the inventory must work on real data.
     try:
         built = pages.build_all(data)
         rows = sum(len(section.rows) for sections in built.values() for section in sections)
@@ -100,7 +117,9 @@ def main(argv: list[str]) -> int:
             problems.append(f"Mode partage : {len(leaks)} identifiant(s) encore visibles")
         else:
             out.append(f"- Mode partage : {len(secrets_of(data))} identifiant(s) masqué(s), aucune fuite")
-    except Exception as error:  # le but est justement d'attraper ce qui casse sur des données réelles
+    except Exception as error:
+        # le but est justement d'attraper ce qui casse sur des données réelles
+        # the very point is to catch what breaks on real data
         problems.append(f"Construction des pages ou exports : {type(error).__name__}: {error}")
 
     if warnings:

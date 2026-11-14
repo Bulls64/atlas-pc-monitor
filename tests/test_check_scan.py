@@ -27,6 +27,6 @@ def test_fails_when_collect_failed(tmp_path, capsys):
 def test_detects_privacy_leak(data, tmp_path, capsys, monkeypatch):
     from atlas import privacy
 
-    monkeypatch.setattr(privacy, "anonymize", lambda d: dict(d, anonymized=True))  # masquage cassé
+    monkeypatch.setattr(privacy, "anonymize", lambda d: dict(d, anonymized=True))  # masquage cassé — broken masking
     assert check_scan.main([write(tmp_path, data)]) == 1
     assert "identifiant(s) encore visibles" in capsys.readouterr().out

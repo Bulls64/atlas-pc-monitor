@@ -2,6 +2,11 @@
 
 Module pur : il reçoit l'inventaire et les champs saisis, et renvoie le HTML.
 Les champs laissés vides sont imprimés comme des zones à remplir à la main.
+
+Intervention sheet: an A4 HTML page, ready to print or to save as PDF.
+
+Pure module: it receives the inventory and the fields entered, and returns the HTML.
+Fields left empty are printed as areas to fill in by hand.
 """
 
 from __future__ import annotations
@@ -19,19 +24,25 @@ from .i18n import N_, _, language
 
 @dataclass
 class FicheInfo:
-    """Champs saisis par le technicien. Tous facultatifs."""
+    """Champs saisis par le technicien. Tous facultatifs.
+
+    Fields entered by the technician. All optional.
+    """
 
     technician: str = ""
     client: str = ""
     contact: str = ""
     reference: str = ""
-    request: str = ""  # demande du client, motif de l'intervention
-    work: str = ""  # travaux réalisés
+    request: str = ""  # demande du client, motif de l'intervention — customer request, reason for the intervention
+    work: str = ""  # travaux réalisés — work done
     recommendations: str = ""
 
 
 def default_reference(data: dict) -> str:
-    """Référence proposée par défaut : date et heure de l'analyse."""
+    """Référence proposée par défaut : date et heure de l'analyse.
+
+    Default reference: date and time of the analysis.
+    """
     try:
         moment = datetime.fromisoformat(str(data.get("captured_at")))
     except ValueError:
@@ -40,13 +51,19 @@ def default_reference(data: dict) -> str:
 
 
 def _join(*parts) -> str:
-    """Valeurs renseignées séparées par « · » (vides, None et tirets ignorés)."""
+    """Valeurs renseignées séparées par « · » (vides, None et tirets ignorés).
+
+    Filled-in values separated by "·" (empty values, None and dashes are ignored).
+    """
     texts = (str(part).strip() for part in parts if part is not None)
     return " · ".join(text for text in texts if text and text != EMPTY)
 
 
 def machine_rows(data: dict) -> list[tuple[str, str]]:
-    """Identité du poste, en lignes courtes faites pour tenir sur une page."""
+    """Identité du poste, en lignes courtes faites pour tenir sur une page.
+
+    Identity of the computer, in short lines made to fit on one page.
+    """
     host = data.get("system") or {}
     machine = data.get("machine") or {}
     bios = data.get("bios") or {}
@@ -133,7 +150,10 @@ footer { margin-top: 8px; color: #8c9bad; font-size: 7.5pt; text-align: center; 
 
 
 def _text_block(value: str) -> str:
-    """Zone de texte libre : le contenu saisi, ou des lignes à remplir à la main."""
+    """Zone de texte libre : le contenu saisi, ou des lignes à remplir à la main.
+
+    Free text area: the content entered, or lines to fill in by hand.
+    """
     if value.strip():
         return f'<div class="free">{html.escape(value.strip())}</div>'
     return '<div class="free blank"></div>'
@@ -150,7 +170,10 @@ def _finding(item: Finding) -> str:
 
 
 def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | None = None) -> str:
-    """Fiche d'intervention complète, en un seul fichier HTML autonome."""
+    """Fiche d'intervention complète, en un seul fichier HTML autonome.
+
+    Complete intervention sheet, as a single standalone HTML file.
+    """
     info = info or FicheInfo()
     found = analyze(data) if found is None else found
     esc = html.escape
@@ -184,7 +207,7 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
 
     masked = "<br>" + esc(_("Identifiants masqués")) if data.get("anonymized") else ""
     title = _("Fiche d'intervention {0}", reference)
-    t = {  # libellés de la page, dans la langue courante
+    t = {  # libellés de la page, dans la langue courante — page labels, in the current language
         key: html.escape(_(text), quote=False)
         for key, text in {
             "print": N_("Imprimer ou enregistrer en PDF"),

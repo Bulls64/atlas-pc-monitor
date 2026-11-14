@@ -28,7 +28,7 @@ def test_scan_normalizes(data):
     assert isinstance(data["network"], list) and isinstance(data["battery"], list)
     assert data["secureboot"] == {} and data["tpm"] == {}
     assert data["machine"]["Model"] == "82JU"
-    assert data["ram"][1]["Manufacturer"] == "Mémoire Générique"  # accents intacts
+    assert data["ram"][1]["Manufacturer"] == "Mémoire Générique"  # accents intacts — accents intact
     assert data["errors"]["tpm"] == "Accès refusé."
     assert "note" not in data
 
@@ -84,7 +84,7 @@ def test_script_fits_in_a_windows_command_line():
     import base64
 
     encoded = base64.b64encode(collect.PS_SCRIPT.encode("utf-16le"))
-    assert len(encoded) < 30000  # limite CreateProcess : 32 767 caractères
+    assert len(encoded) < 30000  # limite CreateProcess : 32 767 caractères — CreateProcess limit: 32,767 characters
 
 
 def test_timings(data):

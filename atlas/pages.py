@@ -2,6 +2,11 @@
 
 Module pur (aucune dépendance graphique) : il sert à l'interface, aux exports,
 à la recherche et à la comparaison de rapports.
+
+Page model: turns the inventory into sections of "label / value" rows.
+
+Pure module (no graphical dependency): it serves the interface, the exports,
+the search and the report comparison.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ from .upgrade import gib_text, memory_advice
 OVERVIEW = N_("Vue d'ensemble")
 FINDINGS = N_("Constats")
 # (nom de la page, icône) : ajouter une page ici suffit à l'ajouter à la navigation.
+# (page name, icon): adding a page here is enough to add it to the navigation.
 PAGES: list[tuple[str, str]] = [
     (OVERVIEW, "⌂"),
     (FINDINGS, "✓"),
@@ -38,6 +44,7 @@ HEALTH = {"healthy": N_("Sain"), "warning": N_("Avertissement"), "unhealthy": N_
 NET_STATUS = {"up": N_("Connecté"), "disconnected": N_("Déconnecté"), "disabled": N_("Désactivé"), "not present": N_("Absent")}
 PROTECTION = {"on": N_("Protection activée"), "off": N_("Protection désactivée"), "unknown": N_("État inconnu")}
 # AdapterRAM est un entier 32 bits : à partir de ce seuil, la valeur est plafonnée par Windows.
+# AdapterRAM is a 32-bit integer: from this threshold on, the value is capped by Windows.
 ADAPTER_RAM_CAP = 4 * 1024**3 - 2 * 1024**2
 
 
@@ -45,7 +52,9 @@ ADAPTER_RAM_CAP = 4 * 1024**3 - 2 * 1024**2
 class Row:
     label: str
     value: str
-    volatile: bool = False  # change d'une analyse à l'autre : ignoré par la comparaison
+    # change d'une analyse à l'autre : ignoré par la comparaison
+    # changes from one analysis to the next: ignored by the comparison
+    volatile: bool = False
 
 
 @dataclass
@@ -53,17 +62,25 @@ class Section:
     title: str
     rows: list[Row] = field(default_factory=list)
     note: str = ""
-    tip: str = ""  # remarque neutre (conseil), par opposition à note (problème de collecte)
+    # remarque neutre (conseil), par opposition à note (problème de collecte)
+    # neutral remark (advice), as opposed to note (collection problem)
+    tip: str = ""
 
 
 def _add(rows: list[Row], label: str, value: str, volatile: bool = False) -> None:
-    """Ajoute la ligne seulement si la valeur est renseignée."""
+    """Ajoute la ligne seulement si la valeur est renseignée.
+
+    Adds the row only if the value is provided.
+    """
     if value and value != EMPTY:
         rows.append(Row(label, value, volatile))
 
 
 def _error_note(data: dict, *keys: str) -> str:
-    """Explique pourquoi une source n'a rien renvoyé."""
+    """Explique pourquoi une source n'a rien renvoyé.
+
+    Explains why a source returned nothing.
+    """
     errors = data.get("errors") or {}
     for key in keys:
         if key in errors:
@@ -349,7 +366,7 @@ def page_network(data: dict) -> list[Section]:
         _add(rows, _("Adresse MAC"), f.clean(adapter.get("MacAddress")))
         _add_ip(rows, config.pop(name, {}))
         sections.append(Section(name, rows))
-    for name, ip in config.items():  # interfaces actives non physiques (VPN, virtuelles)
+    for name, ip in config.items():  # interfaces actives non physiques (VPN, virtuelles) — active non-physical interfaces (VPN, virtual)
         rows = []
         _add_ip(rows, ip)
         if rows:
@@ -417,18 +434,27 @@ def build_page(data: dict, page: str) -> list[Section]:
 
 
 def build_all(data: dict) -> dict[str, list[Section]]:
-    """Toutes les pages de détail, dans l'ordre de la navigation."""
+    """Toutes les pages de détail, dans l'ordre de la navigation.
+
+    All the detail pages, in navigation order.
+    """
     return {page: build_page(data, page) for page in DETAIL_PAGES}
 
 
 def fold(text: str) -> str:
-    """Minuscules sans accents, pour une recherche tolérante."""
+    """Minuscules sans accents, pour une recherche tolérante.
+
+    Lowercase without accents, for a forgiving search.
+    """
     decomposed = unicodedata.normalize("NFD", str(text).casefold())
     return "".join(char for char in decomposed if not unicodedata.combining(char))
 
 
 def search(data: dict, query: str) -> list[tuple[str, str, Row]]:
-    """Lignes dont la page, la section, le libellé ou la valeur contiennent tous les mots cherchés."""
+    """Lignes dont la page, la section, le libellé ou la valeur contiennent tous les mots cherchés.
+
+    Rows whose page, section, label or value contain all the words searched for.
+    """
     words = fold(query).split()
     if not words:
         return []
@@ -443,7 +469,10 @@ def search(data: dict, query: str) -> list[tuple[str, str, Row]]:
 
 
 def diff_reports(before: dict, after: dict) -> list[tuple[str, str, str, str]]:
-    """Différences stables entre deux inventaires : (page › section, libellé, avant, après)."""
+    """Différences stables entre deux inventaires : (page › section, libellé, avant, après).
+
+    Stable differences between two inventories: (page › section, label, before, after).
+    """
 
     def index(data: dict) -> dict[tuple[str, str, str], str]:
         found: dict[tuple[str, str, str], str] = {}
@@ -453,6 +482,7 @@ def diff_reports(before: dict, after: dict) -> list[tuple[str, str, str, str]]:
                     if row.volatile:
                         continue
                     # Deux périphériques du même nom (audio, points jaunes) : numérotés, sinon le second écrase le premier.
+                    # Two devices with the same name (audio, yellow marks): numbered, otherwise the second overwrites the first.
                     key, rank = (page, section.title, row.label), 1
                     while key in found:
                         rank += 1

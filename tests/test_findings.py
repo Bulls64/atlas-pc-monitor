@@ -14,7 +14,7 @@ def titles(found, level=None):
 def test_sample_machine(data):
     found = F.analyze(data)
     assert titles(found, F.WATCH) == ["Barrettes dépareillées", "Disque en alerte : ST1000LM035"]
-    assert "Mémoire sous sa vitesse nominale" in titles(found, F.INFO)  # SO-DIMM : simple information
+    assert "Mémoire sous sa vitesse nominale" in titles(found, F.INFO)  # SO-DIMM : simple information — SO-DIMM: information only
     assert "Analyse partielle sans droits administrateur" in titles(found, F.INFO)
     assert "Batterie en bon état" in titles(found, F.OK)
     assert "Aucun périphérique en erreur" in titles(found, F.OK)
@@ -79,7 +79,7 @@ def test_storage_rules(data):
     bad["volumes"] = [
         {"DeviceID": "C:", "Size": 500 * 1000**3, "FreeSpace": 15 * 1000**3},  # 3 %
         {"DeviceID": "D:", "Size": 1000 * 1000**3, "FreeSpace": 80 * 1000**3},  # 8 %
-        {"DeviceID": "E:", "Size": 1 * 1000**3, "FreeSpace": 0},  # petite partition ignorée
+        {"DeviceID": "E:", "Size": 1 * 1000**3, "FreeSpace": 0},  # petite partition ignorée — small partition ignored
     ]
     bad["bitlocker"] = [{"MountPoint": "C:", "Protection": "Off"}]
     found = F.analyze(bad)
@@ -195,7 +195,10 @@ def test_findings_in_exports_and_system_page(data):
     ],
 )
 def test_windows10_ltsc_has_its_own_calendar(data, caption, build, when, level, title):
-    """Les éditions LTSC ne s'arrêtent pas en octobre 2025 : pas d'alerte rouge sur un poste encore suivi."""
+    """Les éditions LTSC ne s'arrêtent pas en octobre 2025 : pas d'alerte rouge sur un poste encore suivi.
+
+    LTSC editions do not end in October 2025: no red alert on a computer that is still supported.
+    """
     ltsc = copy.deepcopy(data)
     ltsc["captured_at"] = f"{when}T10:00:00+01:00"
     ltsc["os"].update(Caption=caption, BuildNumber=build, LastBootUpTime=f"{when}T08:00:00")
@@ -203,14 +206,20 @@ def test_windows10_ltsc_has_its_own_calendar(data, caption, build, when, level, 
 
 
 def test_predictive_failure_from_get_physicaldisk(data):
-    """Get-PhysicalDisk écrit « Predictive Failure » en toutes lettres, Win32_DiskDrive « Pred Fail »."""
+    """Get-PhysicalDisk écrit « Predictive Failure » en toutes lettres, Win32_DiskDrive « Pred Fail ».
+
+    Get-PhysicalDisk writes "Predictive Failure" in full, Win32_DiskDrive "Pred Fail".
+    """
     failing = copy.deepcopy(data)
     failing["disks"] = [{"Model": "ST1000", "Health": "Warning", "Status": "Predictive Failure", "Size": 10**12}]
     assert "Disque défaillant : ST1000" in titles(F.analyze(failing), F.FIX)
 
 
 def hyperv(data):
-    """Ce que renvoie une vraie VM Hyper-V (relevé de la CI Windows, 13/11/2026)."""
+    """Ce que renvoie une vraie VM Hyper-V (relevé de la CI Windows, 13/11/2026).
+
+    What a real Hyper-V VM returns (reading from the Windows CI, 13 November 2026).
+    """
     vm = copy.deepcopy(data)
     vm["machine"].update(Manufacturer="Microsoft Corporation", Model="Virtual Machine")
     vm["ram"] = [
@@ -231,7 +240,10 @@ def test_real_hyperv_inventory(data):
 
 
 def test_inbox_driver_date_is_ignored_on_real_hardware(data):
-    """Le pilote intégré à Windows est daté du 21/06/2006 par convention : pas un pilote vieux de 20 ans."""
+    """Le pilote intégré à Windows est daté du 21/06/2006 par convention : pas un pilote vieux de 20 ans.
+
+    The driver built into Windows is dated 21 June 2006 by convention: not a 20-year-old driver.
+    """
     inbox = copy.deepcopy(data)
     inbox["gpu"] = [{"Name": "Intel(R) UHD Graphics", "DriverDate": "2006-06-21T00:00:00"}]
     assert "Pilote graphique ancien" not in titles(F.analyze(inbox))

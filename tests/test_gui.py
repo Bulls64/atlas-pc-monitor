@@ -1,4 +1,7 @@
-"""Essai de bout en bout de l'interface PySide6, sans écran (plateforme Qt « offscreen »)."""
+"""Essai de bout en bout de l'interface PySide6, sans écran (plateforme Qt « offscreen »).
+
+End-to-end test of the PySide6 interface, without a screen (Qt "offscreen" platform).
+"""
 
 import copy
 import json
@@ -60,7 +63,7 @@ def test_overview_board_and_nav_badge(win, qtbot):
         from PySide6.QtGui import QMouseEvent
 
         scale, dx = board._transform()
-        point = QPointF(dx + 150 * scale, 110 * scale)  # puce mémoire
+        point = QPointF(dx + 150 * scale, 110 * scale)  # puce mémoire — memory chip
         event = QMouseEvent(
             QMouseEvent.MouseButtonRelease,
             point,
@@ -196,9 +199,9 @@ def test_fiche_dialog(win, monkeypatch, tmp_path):
     dialog.entries["client"].setText("Mme Dupont")
     dialog.texts["request"].setPlainText("Lenteurs")
     dialog.insert_advice(dialog.texts["recommendations"])
-    dialog.insert_advice(dialog.texts["recommendations"])  # pas de doublon
+    dialog.insert_advice(dialog.texts["recommendations"])  # pas de doublon — no duplicate
     assert dialog.texts["recommendations"].toPlainText().count("- Barrettes dépareillées") == 1
-    win.open_fiche()  # déjà ouverte : pas de second dialogue
+    win.open_fiche()  # déjà ouverte : pas de second dialogue — already open: no second dialog
     assert win.fiche_dialog is dialog
     dialog.close()
     assert win.fiche_info.client == "Mme Dupont" and win.fiche_info.request == "Lenteurs"
@@ -225,7 +228,10 @@ def test_narrow_window_stacks_rows(win, qtbot):
 
 
 def test_closing_during_scan_is_clean(qapp, qtbot, monkeypatch, tmp_path):
-    """Fenêtre fermée et détruite pendant l'analyse : le thread de collecte se termine sans erreur."""
+    """Fenêtre fermée et détruite pendant l'analyse : le thread de collecte se termine sans erreur.
+
+    Window closed and destroyed during the analysis: the collection thread ends without error.
+    """
     monkeypatch.setenv("APPDATA", str(tmp_path))
     from atlas import collect
     from atlas.gui import window
@@ -234,7 +240,7 @@ def test_closing_during_scan_is_clean(qapp, qtbot, monkeypatch, tmp_path):
         time.sleep(0.3)
         return collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), ""))
 
-    w = window.MainWindow(scanner=slow)  # non suivie par qtbot : on la détruit nous-mêmes
+    w = window.MainWindow(scanner=slow)  # non suivie par qtbot : on la détruit nous-mêmes — not tracked by qtbot: we destroy it ourselves
     w.show()
     w.close()
     w.deleteLater()
@@ -242,7 +248,10 @@ def test_closing_during_scan_is_clean(qapp, qtbot, monkeypatch, tmp_path):
 
 
 def test_tables_show_every_row(win, qtbot):
-    """Aucun tableau ne rogne sa dernière ligne, quelle que soit la largeur (retours à la ligne)."""
+    """Aucun tableau ne rogne sa dernière ligne, quelle que soit la largeur (retours à la ligne).
+
+    No table clips its last row, whatever the width (line wrapping).
+    """
     from atlas.gui.widgets import CopyTable
 
     for width in (1320, 1000, 1600):
@@ -258,7 +267,10 @@ def test_tables_show_every_row(win, qtbot):
 
 
 def test_escape_in_fiche_dialog_keeps_the_input(win, qtbot):
-    """Échap ferme le dialogue sans passer par closeEvent : la saisie doit quand même être gardée."""
+    """Échap ferme le dialogue sans passer par closeEvent : la saisie doit quand même être gardée.
+
+    Esc closes the dialog without going through closeEvent: the entry must still be kept.
+    """
     from PySide6.QtCore import Qt
 
     from atlas import settings
@@ -284,13 +296,16 @@ def test_saved_sharing_mode_is_shown_at_startup(qtbot, monkeypatch, tmp_path):
     w.resize(1300, 800)
     qtbot.wait(30)
     assert w.sharing_button.isChecked() and w.sharing_button.text() == "Partage activé"
-    w.resize(w.minimumWidth(), 800)  # fenêtre étroite : icône seule, l'info-bulle reste
+    w.resize(w.minimumWidth(), 800)  # fenêtre étroite : icône seule, l'info-bulle reste — narrow window: icon only, the tooltip remains
     qtbot.wait(30)
     assert w.sharing_button.isChecked() and w.sharing_button.text() == "" and w.sharing_button.toolTip()
 
 
 def test_theme_switch_keeps_narrow_header(win, qtbot):
-    """Changer de thème reconstruit l'en-tête : en fenêtre étroite, l'état doit rester masqué."""
+    """Changer de thème reconstruit l'en-tête : en fenêtre étroite, l'état doit rester masqué.
+
+    Changing the theme rebuilds the header: in a narrow window, the status must stay hidden.
+    """
     win.resize(1000, 640)
     qtbot.wait(50)
     assert not win.status.isVisible()
@@ -301,7 +316,10 @@ def test_theme_switch_keeps_narrow_header(win, qtbot):
 
 
 def test_inventory_text_is_never_rendered_as_html(win):
-    """Un nom de périphérique contenant une balise s'affiche tel quel, pas interprété en HTML."""
+    """Un nom de périphérique contenant une balise s'affiche tel quel, pas interprété en HTML.
+
+    A device name containing a tag is displayed as is, not interpreted as HTML.
+    """
     from PySide6.QtCore import Qt
     from PySide6.QtWidgets import QLabel
 
@@ -334,11 +352,14 @@ def test_compare_warns_about_another_machine_without_naming_it_in_sharing_mode(w
 
 
 def saved_report(tmp_path, **changes) -> Path:
-    """Rapport JSON tel qu'Atlas PC Monitor l'exporte sur un PC Windows."""
+    """Rapport JSON tel qu'Atlas PC Monitor l'exporte sur un PC Windows.
+
+    JSON report as Atlas PC Monitor exports it on a Windows PC.
+    """
     from atlas import collect, export
 
     on_windows = collect.is_windows
-    collect.is_windows = lambda: True  # comme sur le PC Windows qui a produit le rapport
+    collect.is_windows = lambda: True  # comme sur le PC Windows qui a produit le rapport — as on the Windows PC that produced the report
     try:
         data = collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), ""))
     finally:
@@ -351,7 +372,10 @@ def saved_report(tmp_path, **changes) -> Path:
 
 @pytest.fixture
 def viewer(qtbot, monkeypatch, tmp_path):
-    """Fenêtre hors Windows (autouse not_windows) : visionneuse, sans analyse."""
+    """Fenêtre hors Windows (autouse not_windows) : visionneuse, sans analyse.
+
+    Window outside Windows (autouse not_windows): viewer, without analysis.
+    """
     monkeypatch.setenv("APPDATA", str(tmp_path))
     from atlas.gui import theme, window
 
@@ -370,7 +394,7 @@ def test_viewer_starts_on_welcome_without_scanning(viewer):
     assert viewer.status.text() == "Aucun rapport ouvert"
     assert not viewer.refresh_button.isVisibleTo(viewer)
     assert not any(button.isEnabled() for button in viewer.data_actions)
-    viewer.refresh()  # F5 : sans effet hors Windows
+    viewer.refresh()  # F5 : sans effet hors Windows — F5: no effect outside Windows
     assert not viewer._scanning and not viewer.data
 
 
@@ -383,7 +407,7 @@ def test_viewer_opens_a_report(viewer, tmp_path):
     from atlas.pages import PAGES
 
     for page, _icon in PAGES:
-        viewer.open_page(page)  # chaque page se dessine à partir du rapport
+        viewer.open_page(page)  # chaque page se dessine à partir du rapport — each page is drawn from the report
 
 
 def test_viewer_rejects_a_file_that_is_not_a_report(viewer, tmp_path, monkeypatch):
@@ -412,7 +436,10 @@ def test_viewer_accepts_a_dropped_report(viewer, tmp_path):
 
 
 def test_opened_report_on_windows_then_back_to_this_pc(win, qtbot, tmp_path):
-    """Sous Windows, un rapport ouvert ne propose pas « Relancer en administrateur » ; F5 revient au poste."""
+    """Sous Windows, un rapport ouvert ne propose pas « Relancer en administrateur » ; F5 revient au poste.
+
+    On Windows, an opened report does not offer "Restart as administrator"; F5 goes back to this computer.
+    """
     path = saved_report(tmp_path, admin=False)
     assert win.open_report(str(path))
     assert win.refresh_button.text() == "Analyser ce poste" and not win.admin_button.isVisibleTo(win)
@@ -422,7 +449,10 @@ def test_opened_report_on_windows_then_back_to_this_pc(win, qtbot, tmp_path):
 
 
 def test_make_icon_writes_a_png(qapp, tmp_path):
-    """Icône de l'AppImage (tools/make_icon.py)."""
+    """Icône de l'AppImage (tools/make_icon.py).
+
+    AppImage icon (tools/make_icon.py).
+    """
     import sys
 
     from PySide6.QtGui import QImage
@@ -438,7 +468,10 @@ def test_make_icon_writes_a_png(qapp, tmp_path):
 
 
 def test_make_icon_writes_a_windows_ico(qapp, tmp_path):
-    """Icône de l'exécutable Windows : une image par taille, de 16 à 256 px."""
+    """Icône de l'exécutable Windows : une image par taille, de 16 à 256 px.
+
+    Windows executable icon: one image per size, from 16 to 256 px.
+    """
     image_module = pytest.importorskip("PIL.Image")
     sys_path = str(Path(__file__).resolve().parent.parent / "tools")
     import sys
@@ -454,7 +487,10 @@ def test_make_icon_writes_a_windows_ico(qapp, tmp_path):
 
 
 def test_brand_is_never_cut(win, qtbot):
-    """Le nom « Atlas PC Monitor » reste lisible en entier, de la largeur minimale à la pleine largeur."""
+    """Le nom « Atlas PC Monitor » reste lisible en entier, de la largeur minimale à la pleine largeur.
+
+    The name "Atlas PC Monitor" stays readable in full, from the minimum width to the full width.
+    """
     for width in (win.minimumWidth(), 960, 1100, 1400):
         win.resize(width, 700)
         qtbot.wait(30)

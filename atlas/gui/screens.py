@@ -1,4 +1,7 @@
-"""Les écrans de l'application : vue d'ensemble, constats, pages de détail, recherche."""
+"""Les écrans de l'application : vue d'ensemble, constats, pages de détail, recherche.
+
+The application's screens: overview, findings, detail pages, search.
+"""
 
 from __future__ import annotations
 
@@ -41,7 +44,10 @@ def heading(eyebrow: str, title: str, sub: str = "") -> QWidget:
 
 
 def welcome(win) -> QWidget:
-    """Accueil hors Windows : Atlas PC Monitor y sert de visionneuse de rapports."""
+    """Accueil hors Windows : Atlas PC Monitor y sert de visionneuse de rapports.
+
+    Home screen outside Windows: Atlas PC Monitor serves as a report viewer there.
+    """
     widget, layout = column(18)
     layout.addWidget(
         heading(
@@ -94,7 +100,7 @@ def note(text: str, role: str = "note") -> QLabel:
     return label(text, role, wrap=True)
 
 
-# ====================================================================== vue d'ensemble
+# ====================================================================== vue d'ensemble / overview
 
 
 def overview(win) -> QWidget:
@@ -183,7 +189,7 @@ def _memory_card(data: dict) -> QFrame:
     return frame
 
 
-# ====================================================================== constats
+# ====================================================================== constats / findings
 
 
 def findings_page(win) -> QWidget:
@@ -328,7 +334,7 @@ def _fiche_aside(win) -> QFrame:
     return frame
 
 
-# ====================================================================== pages de détail
+# ====================================================================== pages de détail / detail pages
 
 
 def detail_page(win, page_name: str) -> QWidget:
@@ -339,7 +345,7 @@ def detail_page(win, page_name: str) -> QWidget:
     sections = build_page(data, page_name)
     if page_name == "Mémoire" and data.get("ram"):
         _memory_extras(win, layout)
-        shown_apart = (_("Synthèse"), _("Évolution possible"))  # déjà dessinés au-dessus
+        shown_apart = (_("Synthèse"), _("Évolution possible"))  # déjà dessinés au-dessus — already drawn above
         sections = [s for s in sections if s.title not in shown_apart and not s.title.startswith(_("Barrette"))]
     for section in sections:
         layout.addWidget(section_card(win, section))
@@ -457,7 +463,7 @@ def _memory_extras(win, layout: QVBoxLayout) -> None:
     layout.addWidget(Responsive(pair, ((820, 2), (0, 1))))
 
 
-# ====================================================================== recherche
+# ====================================================================== recherche / search
 
 
 def search_page(win, query: str) -> QWidget:

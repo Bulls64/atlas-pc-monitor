@@ -3,6 +3,12 @@
 Masqué : nom du poste, domaine, numéros de série (machine, carte mère, barrettes,
 disques, écrans), fin des adresses MAC, fin des adresses IPv4, adresses IPv6.
 Conservé : tout ce qui sert au diagnostic (modèles, capacités, versions, états).
+
+Sharing mode: copy of the inventory without the identifiers of a specific computer.
+
+Masked: computer name, domain, serial numbers (machine, motherboard, memory modules,
+drives, monitors), end of MAC addresses, end of IPv4 addresses, IPv6 addresses.
+Kept: everything useful for diagnosis (models, capacities, versions, statuses).
 """
 
 from __future__ import annotations
@@ -14,10 +20,12 @@ import re
 from .i18n import N_, _
 
 # Valeurs de remplacement, écrites dans la langue courante au moment du masquage.
+# Replacement values, written in the current language at masking time.
 MASK = N_("[masqué]")
 HOST_MASK = N_("POSTE-MASQUÉ")
 
 # (section, champ) des numéros de série et identifiants à masquer entièrement.
+# (section, field) of the serial numbers and identifiers to mask entirely.
 SERIAL_FIELDS = (
     ("bios", "SerialNumber"),
     ("board", "SerialNumber"),
@@ -29,7 +37,10 @@ _MAC = re.compile(r"^([0-9A-Fa-f]{2})[-:]([0-9A-Fa-f]{2})[-:]([0-9A-Fa-f]{2})[-:
 
 
 def mask_mac(value) -> str:
-    """Garde le préfixe du fabricant (OUI), masque la partie propre à la carte."""
+    """Garde le préfixe du fabricant (OUI), masque la partie propre à la carte.
+
+    Keeps the manufacturer prefix (OUI), masks the part specific to the card.
+    """
     text = str(value or "").strip()
     match = _MAC.match(text)
     if not match:
@@ -39,7 +50,10 @@ def mask_mac(value) -> str:
 
 
 def mask_ip(value) -> str:
-    """IPv4 : dernier octet masqué (le sous-réseau reste lisible). IPv6 : masquée entièrement."""
+    """IPv4 : dernier octet masqué (le sous-réseau reste lisible). IPv6 : masquée entièrement.
+
+    IPv4: last octet masked (the subnet stays readable). IPv6: masked entirely.
+    """
     masked = []
     for part in str(value or "").split(","):
         address = part.strip()
@@ -64,7 +78,10 @@ def _rows(section) -> list[dict]:
 
 
 def anonymize(data: dict) -> dict:
-    """Copie masquée de l'inventaire ; l'original n'est pas modifié."""
+    """Copie masquée de l'inventaire ; l'original n'est pas modifié.
+
+    Masked copy of the inventory; the original is not modified.
+    """
     if not isinstance(data, dict) or data.get("anonymized"):
         return data
     shared = copy.deepcopy(data)

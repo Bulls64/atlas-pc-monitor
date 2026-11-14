@@ -5,6 +5,14 @@ Usage : python tools/captures.py [--lang en] [dossier]
 
 Fonctionne sans écran (plateforme Qt « offscreen »). Les données sont celles de
 tests/conftest.py : aucune information d'un vrai poste ne finit dans le dépôt.
+
+Regenerates the README screenshots from the sample inventory of the tests.
+
+Usage: python tools/captures.py [--lang en] [folder]
+       by default docs/captures (French) or docs/captures/en (English)
+
+Works without a screen (Qt "offscreen" platform). The data is that of
+tests/conftest.py: no information from a real computer ends up in the repository.
 """
 
 from __future__ import annotations
@@ -22,7 +30,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tests"))
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-os.environ["APPDATA"] = tempfile.mkdtemp()  # préférences jetables : thème sombre au départ
+os.environ["APPDATA"] = tempfile.mkdtemp()  # préférences jetables : thème sombre au départ — throwaway preferences: dark theme at startup
 
 from conftest import PAYLOAD  # noqa: E402
 from PIL import Image, ImageChops  # noqa: E402
@@ -52,13 +60,16 @@ def wait(ms: int) -> None:
 
 
 def save(widget, path: Path, full: bool = False) -> None:
-    """Capture la fenêtre ; « full » l'agrandit pour montrer toute la page."""
+    """Capture la fenêtre ; « full » l'agrandit pour montrer toute la page.
+
+    Captures the window; "full" enlarges it to show the whole page.
+    """
     window = widget.window()
     if full:
         window.resize(WIDTH, max(HEIGHT, window.scroll.widget().sizeHint().height() + 200))
         wait(300)
     image = widget.grab().toImage()
-    if full:  # recadre sous le dernier élément de la page
+    if full:  # recadre sous le dernier élément de la page — crops below the last element of the page
         from PySide6.QtCore import QPoint
         from PySide6.QtWidgets import QWidget
 
@@ -70,13 +81,17 @@ def save(widget, path: Path, full: bool = False) -> None:
     image.save(str(tmp))
     window.resize(WIDTH, HEIGHT)
     # Couleurs complètes : une palette réduite confond le rouge « à corriger » et l'orange « à surveiller ».
+    # Full colors: a reduced palette mixes up the "to fix" red and the "to watch" orange.
     Image.open(tmp).convert("RGB").save(path, optimize=True)
     tmp.unlink()
     print(f"{path.name:28} {path.stat().st_size // 1024} Ko")
 
 
 def fiche_a4(win, info, out: Path) -> None:
-    """Fiche imprimée, rendue par Chrome ou Edge s'il est installé (sinon ignorée)."""
+    """Fiche imprimée, rendue par Chrome ou Edge s'il est installé (sinon ignorée).
+
+    Printed sheet, rendered by Chrome or Edge if installed (otherwise skipped).
+    """
     browser = next((b for b in ("google-chrome", "chromium", "chrome", "msedge") if shutil.which(b)), None)
     if not browser:
         print("fiche-a4.png : aucun Chrome/Edge trouvé, capture ignorée")
@@ -91,7 +106,7 @@ def fiche_a4(win, info, out: Path) -> None:
                         "--window-size=900,1240", page.as_uri()], check=True, capture_output=True, timeout=60)  # fmt: skip
         image = Image.open(shot).convert("RGB")
         page_box = ImageChops.difference(image, Image.new("RGB", image.size, image.getpixel((2, 2)))).getbbox()
-        if page_box:  # recadre sur la feuille, avec une petite marge
+        if page_box:  # recadre sur la feuille, avec une petite marge — crops to the sheet, with a small margin
             left, top, right, bottom = page_box
             image = image.crop((max(0, left - 24), max(0, top - 24), min(image.width, right + 24), min(image.height, bottom + 24)))
         image.save(out / "fiche-a4.png", optimize=True)
@@ -124,7 +139,7 @@ def main() -> int:
     i18n.set_language(lang)
     out = Path(args[0]) if args else ROOT / "docs" / "captures" / ("" if lang == "fr" else lang)
     out.mkdir(parents=True, exist_ok=True)
-    app = QApplication([])  # noqa: F841 (doit vivre jusqu'à la fin)
+    app = QApplication([])  # noqa: F841 (doit vivre jusqu'à la fin — must stay alive until the end)
     from atlas.gui import theme, window
 
     theme.load_fonts()

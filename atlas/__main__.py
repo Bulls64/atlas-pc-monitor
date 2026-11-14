@@ -1,4 +1,7 @@
-"""Point d'entrée : interface graphique par défaut, ou rapport sur la sortie standard."""
+"""Point d'entrée : interface graphique par défaut, ou rapport sur la sortie standard.
+
+Entry point: graphical interface by default, or a report on standard output.
+"""
 
 from __future__ import annotations
 
@@ -50,7 +53,10 @@ def setup_logging(debug: bool) -> Path | None:
 
 
 def requested_language(argv: list[str]) -> str:
-    """Valeur de --lang, lue avant l'analyse des arguments pour que l'aide (--help) soit déjà traduite."""
+    """Valeur de --lang, lue avant l'analyse des arguments pour que l'aide (--help) soit déjà traduite.
+
+    Value of --lang, read before the arguments are parsed so that the help (--help) is already translated.
+    """
     for index, arg in enumerate(argv):
         if arg.startswith("--lang="):
             return arg.split("=", 1)[1]
@@ -68,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         print(_("Journal de débogage : {0}", log_path), file=sys.stderr)
     if not (args.json or args.text or args.html or args.fiche or args.output):
         try:
-            from .gui.app import run  # PySide6 n'est chargé que pour l'interface
+            from .gui.app import run  # PySide6 n'est chargé que pour l'interface — PySide6 is only loaded for the interface
         except ImportError as error:
             print(
                 _(
@@ -109,12 +115,13 @@ def main(argv: list[str] | None = None) -> int:
         saved = _("Fiche enregistrée : {0}") if args.fiche else _("Rapport enregistré : {0}")
         print(saved.format(target), file=sys.stderr)
     else:
-        if sys.stdout is None:  # exécutable sans console : il faut passer par -o
+        if sys.stdout is None:  # exécutable sans console : il faut passer par -o — console-less executable: -o is required
             return 2
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
         sys.stdout.write(content(forced).rstrip("\n") + "\n")
     # Sous Windows, un inventaire sans section « os » est un échec de collecte : code 1 pour les scripts.
+    # On Windows, an inventory without an "os" section means the collection failed: exit code 1 for scripts.
     return 1 if data.get("note") and "os" not in data and collect.is_windows() else 0
 
 

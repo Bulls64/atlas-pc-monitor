@@ -1,4 +1,7 @@
-"""Composants dessinés à la manière d'une carte électronique : LED, pistes, points de soudure."""
+"""Composants dessinés à la manière d'une carte électronique : LED, pistes, points de soudure.
+
+Components drawn like a circuit board: LEDs, traces, solder points.
+"""
 
 from __future__ import annotations
 
@@ -43,7 +46,10 @@ ICONS = {
 
 
 def svg_pixmap(svg: str, size: int, ratio: float = 2.0) -> QPixmap:
-    """Image d'un SVG, en double résolution par défaut (nette sur les écrans HiDPI ; 1.0 pour un fichier)."""
+    """Image d'un SVG, en double résolution par défaut (nette sur les écrans HiDPI ; 1.0 pour un fichier).
+
+    Image of an SVG, at double resolution by default (sharp on HiDPI screens; 1.0 for a file).
+    """
     pixmap = QPixmap(int(size * ratio), int(size * ratio))
     pixmap.fill(Qt.transparent)
     painter = QPainter(pixmap)
@@ -71,7 +77,10 @@ def logo_pixmap(size: int = 40, ratio: float = 2.0) -> QPixmap:
 
 
 def label(text: str = "", role: str = "body", wrap: bool = False, selectable: bool = False, rich: bool = False) -> QLabel:
-    """Libellé du thème. En texte brut sauf `rich` : une valeur lue sur le poste n'est jamais interprétée comme du HTML."""
+    """Libellé du thème. En texte brut sauf `rich` : une valeur lue sur le poste n'est jamais interprétée comme du HTML.
+
+    Theme label. Plain text unless `rich`: a value read from the computer is never interpreted as HTML.
+    """
     widget = QLabel(text)
     widget.setTextFormat(Qt.RichText if rich else Qt.PlainText)
     widget.setProperty("role", role)
@@ -82,7 +91,10 @@ def label(text: str = "", role: str = "body", wrap: bool = False, selectable: bo
 
 
 def card(kind: str = "true", margins=(22, 20, 22, 20), spacing: int = 12) -> tuple[QFrame, QVBoxLayout]:
-    """Carte du thème (« true », « result », « map » ou un niveau : fix, watch, info, ok)."""
+    """Carte du thème (« true », « result », « map » ou un niveau : fix, watch, info, ok).
+
+    Theme card ("true", "result", "map" or a level: fix, watch, info, ok).
+    """
     frame = QFrame()
     frame.setProperty("card", kind)
     layout = QVBoxLayout(frame)
@@ -118,7 +130,10 @@ def draw_via(painter: QPainter, center: QPointF, color: QColor, filled: bool, ra
 
 
 class Led(QWidget):
-    """LED d'état. `level` : fix, watch, info, ok ; `off` : simple anneau (compteur à zéro)."""
+    """LED d'état. `level` : fix, watch, info, ok ; `off` : simple anneau (compteur à zéro).
+
+    Status LED. `level`: fix, watch, info, ok; `off`: plain ring (counter at zero).
+    """
 
     def __init__(self, level: str | None = "ok", size: int = 10, off: bool = False):
         super().__init__()
@@ -145,7 +160,10 @@ class Led(QWidget):
 
 
 class BusLine(QWidget):
-    """Séparateur en piste de circuit, sous l'en-tête."""
+    """Séparateur en piste de circuit, sous l'en-tête.
+
+    Circuit-trace separator, under the header.
+    """
 
     def __init__(self):
         super().__init__()
@@ -168,7 +186,10 @@ class BusLine(QWidget):
 
 
 class TraceMeter(QWidget):
-    """Jauge en piste : un point de soudure s'allume à chaque palier franchi (25, 50, 75 %)."""
+    """Jauge en piste : un point de soudure s'allume à chaque palier franchi (25, 50, 75 %).
+
+    Trace gauge: a solder point lights up at each step reached (25, 50, 75%).
+    """
 
     def __init__(self, percent: float | None):
         super().__init__()
@@ -211,7 +232,10 @@ class TraceMeter(QWidget):
 
 
 class DotBackground(QWidget):
-    """Fond « board » avec une trame de points, comme le site."""
+    """Fond « board » avec une trame de points, comme le site.
+
+    "Board" background with a dot grid, like the website.
+    """
 
     def paintEvent(self, _event) -> None:
         p = theme.P
@@ -226,7 +250,10 @@ class DotBackground(QWidget):
 
 
 class CopyTable(QTableWidget):
-    """Tableau en lecture seule, sans ascenseur propre : Ctrl+C, double-clic ou clic droit pour copier."""
+    """Tableau en lecture seule, sans ascenseur propre : Ctrl+C, double-clic ou clic droit pour copier.
+
+    Read-only table, with no scroll bar of its own: Ctrl+C, double-click or right-click to copy.
+    """
 
     copied = Signal(str)
 
@@ -268,6 +295,8 @@ class CopyTable(QTableWidget):
         self.cellDoubleClicked.connect(lambda r, _c: self.copy_value(r))
         # La hauteur dépend de la largeur des colonnes (retours à la ligne) : on la recalcule
         # après chaque redimensionnement, une fois les colonnes posées.
+        # The height depends on the column widths (line wrapping): it is recomputed
+        # after each resize, once the columns are laid out.
         self._fit_timer = QTimer(self, singleShot=True, interval=0, timeout=self._fit)
         header.sectionResized.connect(lambda *_: self._fit_timer.start())
         self._fit()
@@ -284,7 +313,7 @@ class CopyTable(QTableWidget):
         self._fit_timer.start()
 
     def wheelEvent(self, event) -> None:
-        event.ignore()  # la page entière défile, pas le tableau
+        event.ignore()  # la page entière défile, pas le tableau — the whole page scrolls, not the table
 
     def keyPressEvent(self, event) -> None:
         if event.matches(QKeySequence.StandardKey.Copy):
@@ -318,7 +347,10 @@ class CopyTable(QTableWidget):
 
 
 def _looks_technical(text: str) -> bool:
-    """Références, numéros et adresses en police mono ; phrases en police de texte."""
+    """Références, numéros et adresses en police mono ; phrases en police de texte.
+
+    References, numbers and addresses in the monospace font; sentences in the text font.
+    """
     letters = sum(ch.isalpha() for ch in text)
     return bool(text) and (letters < len(text) * 0.6 or (" " not in text and any(ch.isdigit() for ch in text)))
 
@@ -344,7 +376,10 @@ def screen_size() -> QSize:
 
 
 class Responsive(QWidget):
-    """Rangée qui passe sur moins de colonnes quand la largeur manque (ex. 2 colonnes, puis 1)."""
+    """Rangée qui passe sur moins de colonnes quand la largeur manque (ex. 2 colonnes, puis 1).
+
+    Row that moves to fewer columns when the width runs short (e.g. 2 columns, then 1).
+    """
 
     def __init__(self, widgets: list[QWidget], breakpoints: tuple = ((720, 2), (0, 1)), spacing: int = 20, stretches: tuple | None = None):
         super().__init__()

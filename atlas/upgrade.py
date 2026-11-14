@@ -3,6 +3,12 @@
 Module pur. Il s'appuie sur les barrettes installées, le nombre d'emplacements et la
 capacité maximale déclarés par le SMBIOS. Ces deux dernières valeurs sont parfois
 fausses ou prudentes : chaque conseil le rappelle.
+
+Memory upgrade advisor: what can be bought to increase the RAM.
+
+Pure module. It relies on the installed modules, the number of slots and the
+maximum capacity reported by the SMBIOS. These last two values are sometimes
+wrong or conservative: every piece of advice says so.
 """
 
 from __future__ import annotations
@@ -17,21 +23,24 @@ GIB = 1024**3
 TARGETS_GIB = (8, 16, 32, 48, 64, 96, 128, 192, 256)
 
 # Tailles de barrette courantes dans le commerce, par type (Go).
+# Common retail module sizes, by type (GB).
 STICK_SIZES = {
     "DDR3": (2, 4, 8),
     "DDR4": (4, 8, 16, 32),
     "DDR5": (8, 16, 24, 32, 48, 64),
 }
-SODIMM_MAX = {"DDR5": 48}  # au-delà, pas de SO-DIMM courante
+SODIMM_MAX = {"DDR5": 48}  # au-delà, pas de SO-DIMM courante — beyond that, no common SO-DIMM
 SOLDERED_TYPES = {"LPDDR", "LPDDR2", "LPDDR3", "LPDDR4", "LPDDR5"}
 SOCKETED_FORMS = (8, 12)  # DIMM, SO-DIMM
 
 
 @dataclass
 class MemoryAdvice:
-    current: str  # résumé de la configuration actuelle
-    spec: str = ""  # barrettes à acheter : type, format, vitesse
-    options: list[tuple[int, str]] = field(default_factory=list)  # (capacité visée en Go, comment l'atteindre)
+    current: str  # résumé de la configuration actuelle — summary of the current configuration
+    spec: str = ""  # barrettes à acheter : type, format, vitesse — modules to buy: type, form factor, speed
+    # (capacité visée en Go, comment l'atteindre)
+    # (target capacity in GB, how to reach it)
+    options: list[tuple[int, str]] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
     upgradable: bool = True
     installed_gib: int = 0
@@ -52,7 +61,10 @@ def _type(stick: dict) -> str:
 
 
 def gib_text(size: int) -> str:
-    """Capacité entière en Go (« 16 Go », « 16 GB »)."""
+    """Capacité entière en Go (« 16 Go », « 16 GB »).
+
+    Capacity as a whole number of GB ("16 Go", "16 GB").
+    """
     return _("{0} Go", size)
 
 
@@ -61,7 +73,10 @@ def _plural(count: int, size: int) -> str:
 
 
 def memory_advice(data: dict) -> MemoryAdvice | None:
-    """Conseil d'évolution, ou None si l'inventaire mémoire est absent."""
+    """Conseil d'évolution, ou None si l'inventaire mémoire est absent.
+
+    Upgrade advice, or None if the memory inventory is missing.
+    """
     sticks = [s for s in data.get("ram") or [] if isinstance(s, dict) and _gib(s)]
     if not sticks:
         return None
@@ -105,6 +120,7 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
     spec = " ".join(p for p in (kind, form, f"{speed} MT/s" if speed else "") if p)
     advice.spec = spec or _("même type et même format que les barrettes actuelles")
     # Un SMBIOS incohérent (moins d'emplacements que de barrettes) : on s'en tient aux barrettes vues.
+    # Inconsistent SMBIOS (fewer slots than modules): stick to the modules seen.
     usable_slots = max(slots - (len(sticks) - len(socketed)) if slots else 0, len(socketed))
     free = usable_slots - len(socketed)
     available = STICK_SIZES.get(kind, (4, 8, 16, 32))
@@ -116,7 +132,9 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
 
     socket_sizes = {_gib(s) for s in socketed}
     targets = set(TARGETS_GIB)
-    if soldered:  # partie soudée + barrette(s) amovible(s) : les totaux courants sont décalés (8 + 16 = 24 Go...)
+    if soldered:
+        # partie soudée + barrette(s) amovible(s) : les totaux courants sont décalés (8 + 16 = 24 Go...)
+        # soldered part + removable module(s): the usual totals are shifted (8 + 16 = 24 GB...)
         targets |= {soldered + usable_slots * size for size in available}
         advice.notes.append(_("Avec une partie soudée, des capacités différentes de chaque côté donnent un double canal partiel."))
     for target in sorted(targets):
@@ -125,17 +143,20 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
         need = target - soldered
         ways = []
         # 1. Compléter avec des barrettes identiques aux actuelles (rien à jeter).
+        # 1. Add modules identical to the current ones (nothing to throw away).
         if free and len(socket_sizes) == 1:
             size = next(iter(socket_sizes))
             extra = need - len(socketed) * size
             total = len(socketed) + extra // size if size else 0
             # Seulement si l'on aboutit à un nombre pair de barrettes : double canal équilibré.
+            # Only if this ends with an even number of modules: balanced dual channel.
             if extra > 0 and extra % size == 0 and extra // size <= free and (total % 2 == 0 or usable_slots == 1):
                 count = extra // size
                 note = _(" (4 barrettes DDR5 : vitesse souvent réduite)") if kind == "DDR5" and total >= 4 else ""
                 same = _("ajouter {0} identique") if count == 1 else _("ajouter {0} identiques")
                 ways.append(same.format(_plural(count, size)) + note)
         # 2. Kit complet de 2 (ou 4) barrettes, en remplaçant l'existant.
+        # 2. Complete kit of 2 (or 4) modules, replacing the existing ones.
         for count in (2, 4) if usable_slots >= 2 else (1,):
             if count > usable_slots or need % count:
                 continue

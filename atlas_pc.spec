@@ -7,6 +7,14 @@
 # Icône Windows : python tools/make_icon.py build/atlas-pc-monitor.ico (Pillow), reprise si elle existe.
 # L'exécutable est fenêtré : en ligne de commande, utiliser -o, par exemple
 #   AtlasPCMonitor.exe --json -o rapport.json
+# PyInstaller recipe, on Windows as on Linux (where tools/build_appimage.sh turns it into an AppImage).
+# The commands above build the dist/AtlasPCMonitor/ folder ("onedir") or, with ATLAS_ONEFILE=1,
+# the single file dist/AtlasPCMonitor.exe. The folder starts faster and triggers fewer antivirus
+# alerts; the single file is easier to carry around (it unpacks itself into the temporary folder
+# at every launch).
+# Windows icon: python tools/make_icon.py build/atlas-pc-monitor.ico (Pillow), used if it exists.
+# The executable is windowed: on the command line, use -o, for example
+#   AtlasPCMonitor.exe --json -o report.json
 
 import os
 
@@ -14,14 +22,17 @@ a = Analysis(
     ["atlas_pc.py"],
     pathex=[],
     binaries=[],
-    datas=[("atlas/gui/fonts", "atlas/gui/fonts")],  # polices OFL et leurs licences
-    hiddenimports=["atlas.locale_en"],  # catalogue anglais, importé seulement à la demande
+    datas=[("atlas/gui/fonts", "atlas/gui/fonts")],  # polices OFL et leurs licences — OFL fonts and their licenses
+    hiddenimports=["atlas.locale_en"],  # catalogue anglais, importé seulement à la demande — English catalog, imported only on demand
     excludes=["pytest", "pytestqt", "tkinter"],
 )
 
 # Modules Qt tirés par des greffons mais inutiles ici (QML, Quick, clavier virtuel, PDF, Wayland :
 # sous Linux l'AppImage passe par X11/XWayland) : les retirer allège nettement le dossier.
 # Seule la traduction française de Qt est gardée.
+# Qt modules pulled in by plugins but useless here (QML, Quick, virtual keyboard, PDF, Wayland:
+# on Linux the AppImage goes through X11/XWayland): removing them makes the folder much lighter.
+# Only Qt's French translation is kept.
 UNUSED = ("qt6qml", "qt6quick", "virtualkeyboard", "qt6pdf", "qpdf", "/qml/", "webengine", "wayland", "eglfs")
 
 

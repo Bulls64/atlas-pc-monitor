@@ -1,4 +1,7 @@
-"""Fenêtres secondaires : fiche d'intervention et comparaison de rapports."""
+"""Fenêtres secondaires : fiche d'intervention et comparaison de rapports.
+
+Secondary windows: intervention sheet and report comparison.
+"""
 
 from __future__ import annotations
 
@@ -23,7 +26,10 @@ from .widgets import CopyTable, card, icon, label
 
 
 class FicheDialog(QDialog):
-    """Saisie de la fiche ; laissés vides, les champs s'impriment comme des lignes à remplir à la main."""
+    """Saisie de la fiche ; laissés vides, les champs s'impriment comme des lignes à remplir à la main.
+
+    Sheet entry; fields left empty print as lines to fill in by hand.
+    """
 
     FIELDS = (("technician", N_("Technicien")), ("client", N_("Client")), ("contact", N_("Contact")), ("reference", N_("Référence")))
     TEXTS = (("request", N_("Demande du client")), ("work", N_("Travaux réalisés")), ("recommendations", N_("Recommandations")))
@@ -96,7 +102,10 @@ class FicheDialog(QDialog):
         self.entries["client"].setFocus()
 
     def insert_advice(self, box: QPlainTextEdit) -> None:
-        """Ajoute les conseils des constats à corriger et à surveiller, sans doublon."""
+        """Ajoute les conseils des constats à corriger et à surveiller, sans doublon.
+
+        Adds the advice from the findings to fix and to watch, without duplicates.
+        """
         current = box.toPlainText()
         lines = [_("- {0} : {1}", i.title, i.advice) for i in self.win.findings if i.level in (F.FIX, F.WATCH) and i.advice]
         new = [line for line in lines if line not in current]
@@ -115,6 +124,7 @@ class FicheDialog(QDialog):
 
     def hideEvent(self, event) -> None:
         # Fermer, Échap ou la croix : dans tous les cas la saisie est gardée pour la prochaine ouverture.
+        # Close, Esc or the window's close button: in every case the entry is kept for the next opening.
         self.collect()
         super().hideEvent(event)
 

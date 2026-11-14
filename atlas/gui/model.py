@@ -1,4 +1,7 @@
-"""Ce que les écrans affichent, calculé sans Qt (donc testable seul) à partir de l'inventaire."""
+"""Ce que les écrans affichent, calculé sans Qt (donc testable seul) à partir de l'inventaire.
+
+What the screens display, computed from the inventory without Qt (so it can be tested on its own).
+"""
 
 from __future__ import annotations
 
@@ -11,6 +14,7 @@ from ..i18n import _, is_english
 from ..upgrade import gib_text, memory_advice
 
 # Repères de sérigraphie de la navigation (comme sur une vraie carte électronique).
+# Silkscreen markings of the navigation (as on a real circuit board).
 DESIGNATORS = {
     "Vue d'ensemble": "TOP", "Constats": "TP", "Système": "U0", "Processeur": "U1", "Mémoire": "J1", "Carte mère": "PCB",
     "Graphiques": "U2", "Stockage": "J2", "Réseau": "J3", "Audio": "LS1", "Batterie": "BT1",
@@ -18,7 +22,10 @@ DESIGNATORS = {
 
 
 def worst(found: list[Finding], *topics: str, page: str = "") -> str:
-    """Niveau à afficher pour un composant (constats d'un thème, ou d'une page) : à corriger, à surveiller, sinon OK."""
+    """Niveau à afficher pour un composant (constats d'un thème, ou d'une page) : à corriger, à surveiller, sinon OK.
+
+    Level to display for a component (findings of a topic, or of a page): to fix, to watch, otherwise OK.
+    """
     levels = {item.level for item in found if item.topic in topics or (page and item.page == page)}
     return FIX if FIX in levels else WATCH if WATCH in levels else "ok"
 
@@ -37,7 +44,7 @@ class Chip:
     title: str
     lines: list[str] = field(default_factory=list)
     issue: str = ""
-    level: str | None = "ok"  # None : composant absent
+    level: str | None = "ok"  # None : composant absent — None: component missing
     page: str = ""
 
 
@@ -53,7 +60,10 @@ def _short_nic(text: str) -> str:
 
 
 def board_chips(data: dict, found: list[Finding]) -> dict[str, Chip]:
-    """Les puces du plan de carte de la vue d'ensemble."""
+    """Les puces du plan de carte de la vue d'ensemble.
+
+    The chips of the board map on the overview.
+    """
     chips: dict[str, Chip] = {}
     memory = data.get("memory") or {}
     sticks = data.get("ram") or []
@@ -138,7 +148,10 @@ def board_labels(data: dict) -> tuple[str, str]:
 
 
 def page_heading(data: dict, page: str) -> tuple[str, str]:
-    """Titre et sous-titre d'une page de détail."""
+    """Titre et sous-titre d'une page de détail.
+
+    Title and subtitle of a detail page.
+    """
     machine = data.get("machine") or {}
     system = data.get("os") or {}
     host = data.get("system") or {}
@@ -190,7 +203,7 @@ class StickView:
     slot: str
     bank: str
     spec: str
-    odd: bool  # différente de la première barrette
+    odd: bool  # différente de la première barrette — different from the first module
 
 
 def stick_views(data: dict) -> list[StickView]:
@@ -212,7 +225,10 @@ def stick_views(data: dict) -> list[StickView]:
 
 
 def stick_table(data: dict) -> tuple[list[str], list[tuple]]:
-    """Comparatif des barrettes : une colonne par barrette."""
+    """Comparatif des barrettes : une colonne par barrette.
+
+    Module comparison: one column per module.
+    """
     sticks = [s for s in data.get("ram") or [] if isinstance(s, dict)]
     headers = [_("Propriété"), *[f.clean(s.get("DeviceLocator")) for s in sticks]]
     spec = [
@@ -231,7 +247,10 @@ def stick_table(data: dict) -> tuple[list[str], list[tuple]]:
 
 
 def upgrade_routes(data: dict):
-    """(conseil, [(départ, cible, action)]) pour le conseiller d'évolution, ou None."""
+    """(conseil, [(départ, cible, action)]) pour le conseiller d'évolution, ou None.
+
+    (advice, [(start, target, action)]) for the upgrade advisor, or None.
+    """
     advice = memory_advice(data)
     if not advice:
         return None

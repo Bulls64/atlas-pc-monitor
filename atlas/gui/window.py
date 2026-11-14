@@ -1,4 +1,7 @@
-"""Fenêtre principale d'Atlas PC Monitor (PySide6), au look BAUSTECH PC."""
+"""Fenêtre principale d'Atlas PC Monitor (PySide6), au look BAUSTECH PC.
+
+Main window of Atlas PC Monitor (PySide6), with the BAUSTECH PC look.
+"""
 
 from __future__ import annotations
 
@@ -45,7 +48,10 @@ class _Bridge(QObject):
 
 
 class NavButton(QPushButton):
-    """Entrée de navigation : repère de sérigraphie, nom de la page, compteur ou point actif."""
+    """Entrée de navigation : repère de sérigraphie, nom de la page, compteur ou point actif.
+
+    Navigation entry: silkscreen marking, page name, counter or active dot.
+    """
 
     def __init__(self, name: str):
         super().__init__()
@@ -95,7 +101,9 @@ class MainWindow(QMainWindow):
         self.fiche_info = fiche.FicheInfo(technician=str(self.config.get("technician", "")))
         self.fiche_dialog: FicheDialog | None = None
         self._shown: tuple | None = None
-        self.source = ""  # nom du rapport JSON affiché ; vide = inventaire de ce poste
+        # nom du rapport JSON affiché ; vide = inventaire de ce poste
+        # name of the JSON report shown; empty = inventory of this computer
+        self.source = ""
         self._scanning = False
         self._closing = False
         self.bridge = _Bridge(self)
@@ -115,26 +123,33 @@ class MainWindow(QMainWindow):
         self.build()
         if collect.is_windows():
             self.refresh()
-        else:  # rien à analyser ici : visionneuse de rapports faits sur des PC Windows
+        else:
+            # rien à analyser ici : visionneuse de rapports faits sur des PC Windows
+            # nothing to analyze here: viewer for reports made on Windows PCs
             self._update_status()
             self.render()
 
     def _focus_search(self) -> None:
         self.search.setFocus()
-        self.search.selectAll()  # Ctrl+F sur une recherche en cours : on retape directement
+        # Ctrl+F sur une recherche en cours : on retape directement
+        # Ctrl+F during a search: typing goes straight in
+        self.search.selectAll()
 
-    # ------------------------------------------------------------------ données affichées
+    # ------------------------------------------------------------------ données affichées / displayed data
 
     @property
     def shown(self) -> dict:
-        """Inventaire tel qu'il est affiché et partagé : masqué quand le mode partage est actif."""
+        """Inventaire tel qu'il est affiché et partagé : masqué quand le mode partage est actif.
+
+        Inventory as it is displayed and shared: masked when sharing mode is on.
+        """
         if not self.sharing or not self.data:
             return self.data
         if self._shown is None or self._shown[0] is not self.data:
             self._shown = (self.data, privacy.anonymize(self.data))
         return self._shown[1]
 
-    # ------------------------------------------------------------------ construction
+    # ------------------------------------------------------------------ construction / building
 
     def build(self) -> None:
         QApplication.instance().setStyleSheet(theme.qss())
@@ -168,7 +183,7 @@ class MainWindow(QMainWindow):
         self._update_status()
         self._fit_header(self.width())
         self.render()
-        self.scroll.setFocus()  # pas le champ de recherche au démarrage
+        self.scroll.setFocus()  # pas le champ de recherche au démarrage — not the search field at startup
 
     def _header(self) -> QWidget:
         p = theme.P
@@ -236,7 +251,9 @@ class MainWindow(QMainWindow):
         self.refresh_button.setProperty("kind", "primary")
         self.refresh_button.setIcon(icon("refresh", p.primary_text))
         self.refresh_button.clicked.connect(self.refresh)
-        self.refresh_button.setVisible(collect.is_windows())  # hors Windows, pas de collecte possible
+        # hors Windows, pas de collecte possible
+        # outside Windows, no collection is possible
+        self.refresh_button.setVisible(collect.is_windows())
         row.addWidget(self.refresh_button)
         return header
 
@@ -280,7 +297,7 @@ class MainWindow(QMainWindow):
         layout.addStretch(1)
         return side
 
-    # ------------------------------------------------------------------ état
+    # ------------------------------------------------------------------ état / state
 
     def _update_status(self) -> None:
         if self._closing:
@@ -310,7 +327,9 @@ class MainWindow(QMainWindow):
         self.refresh_button.setToolTip(_("Revenir à l'inventaire de ce poste (F5)") if self.source else _("Relancer l'analyse (F5)"))
         for button in self.data_actions:
             button.setEnabled(bool(self.data))
-        live = collect.is_windows() and not self.source  # un rapport ouvert ne se relance pas en administrateur
+        # un rapport ouvert ne se relance pas en administrateur
+        # an opened report is not restarted as administrator
+        live = collect.is_windows() and not self.source
         self.admin_button.setVisible(live and "admin" in self.data and not self.data["admin"])
 
     def flash(self, message: str) -> None:
@@ -332,7 +351,7 @@ class MainWindow(QMainWindow):
                 button.badge.setText(str(alerts))
                 button.badge.setVisible(bool(alerts))
 
-    # ------------------------------------------------------------------ rendu
+    # ------------------------------------------------------------------ rendu / rendering
 
     def open_page(self, page: str) -> None:
         self.page = page
@@ -376,7 +395,7 @@ class MainWindow(QMainWindow):
         if old is not None:
             old.deleteLater()
 
-    # ------------------------------------------------------------------ collecte
+    # ------------------------------------------------------------------ collecte / collection
 
     def refresh(self) -> None:
         if self._scanning or not collect.is_windows():
@@ -388,10 +407,12 @@ class MainWindow(QMainWindow):
     def _work(self) -> None:
         try:
             result = self.scanner()
-        except Exception as error:  # la collecte ne doit jamais faire tomber l'interface
+        except Exception as error:
+            # la collecte ne doit jamais faire tomber l'interface
+            # the collection must never bring the interface down
             log.exception("Collecte interrompue")
             result = base_report(_("Erreur inattendue pendant la collecte : {0}", error))
-        with contextlib.suppress(RuntimeError):  # fenêtre déjà fermée
+        with contextlib.suppress(RuntimeError):  # fenêtre déjà fermée — window already closed
             self.bridge.done.emit(result)
 
     def _on_scanned(self, result: dict) -> None:
@@ -406,10 +427,13 @@ class MainWindow(QMainWindow):
         self.page = OVERVIEW
         self.render()
 
-    # ------------------------------------------------------------------ visionneuse
+    # ------------------------------------------------------------------ visionneuse / viewer
 
     def open_report(self, path: str | Path | None = None) -> bool:
-        """Affiche un rapport JSON fait par Atlas PC Monitor sur un autre poste (ou plus tôt sur celui-ci)."""
+        """Affiche un rapport JSON fait par Atlas PC Monitor sur un autre poste (ou plus tôt sur celui-ci).
+
+        Shows a JSON report made by Atlas PC Monitor on another computer (or earlier on this one).
+        """
         if self._scanning:
             return False
         if not path:
@@ -444,7 +468,7 @@ class MainWindow(QMainWindow):
             event.acceptProposedAction()
             self.open_report(path)
 
-    # ------------------------------------------------------------------ thème et partage
+    # ------------------------------------------------------------------ thème et partage / theme and sharing
 
     def toggle_theme(self) -> None:
         name = "light" if theme.P.name == "dark" else "dark"
@@ -455,13 +479,18 @@ class MainWindow(QMainWindow):
         self.build()
 
     def toggle_language(self) -> None:
-        """Bascule français ↔ anglais : tout est reconstruit, constats compris (ils sont rédigés à l'analyse)."""
+        """Bascule français ↔ anglais : tout est reconstruit, constats compris (ils sont rédigés à l'analyse).
+
+        Switches French ↔ English: everything is rebuilt, findings included (they are written at analysis time).
+        """
         code = i18n.set_language("en" if i18n.language() == "fr" else "fr")
         self.config["language"] = code
         settings.save_config(self.config)
         qtlang.apply(code)
         self.setWindowTitle(_("Atlas PC Monitor — Informations système"))
-        if self.fiche_dialog is not None:  # ses libellés sont figés : on le refera à la prochaine ouverture
+        if self.fiche_dialog is not None:
+            # ses libellés sont figés : on le refera à la prochaine ouverture
+            # its labels are fixed: it will be rebuilt at the next opening
             self.fiche_dialog.collect()
             self.fiche_dialog.close()
             self.fiche_dialog.deleteLater()
@@ -484,10 +513,10 @@ class MainWindow(QMainWindow):
         p = theme.P
         self.sharing_button.setChecked(self.sharing)
         self.sharing_button.setIcon(icon("share", p.primary_text if self.sharing else p.bright))
-        wide = self.width() >= 960  # en fenêtre étroite, icône seule (voir _fit_header)
+        wide = self.width() >= 960  # en fenêtre étroite, icône seule (voir _fit_header) — in a narrow window, icon only (see _fit_header)
         self.sharing_button.setText((_("Partage activé") if self.sharing else _("Mode partage")) if wide else "")
 
-    # ------------------------------------------------------------------ copie, export, comparaison
+    # ------------------------------------------------------------------ copie, export, comparaison / copy, export, comparison
 
     def copy_menu(self, widget: QWidget, position, text: str) -> None:
         menu = QMenu(self)
@@ -531,9 +560,10 @@ class MainWindow(QMainWindow):
             return
         other = (previous.get("system") or {}).get("computer") or ""
         # Un rapport anonymisé ne dit plus de quel poste il vient : on ne peut pas prévenir.
+        # An anonymized report no longer says which computer it comes from: no warning is possible.
         elsewhere = not previous.get("anonymized") and other != (self.data.get("system") or {}).get("computer")
         current = self.data
-        if self.sharing or previous.get("anonymized"):  # comparer à masquage égal
+        if self.sharing or previous.get("anonymized"):  # comparer à masquage égal — compare with the same masking
             previous, current = privacy.anonymize(previous), privacy.anonymize(current)
         changes = diff_reports(previous, current)
         when = fmt_stamp(previous.get("captured_at"))
@@ -545,7 +575,7 @@ class MainWindow(QMainWindow):
             title += _(" — attention, ce rapport vient d'un autre poste") + ("" if self.sharing else f" ({other})")
         CompareDialog(self, title, changes).show()
 
-    # ------------------------------------------------------------------ fiche d'intervention
+    # ------------------------------------------------------------------ fiche d'intervention / intervention sheet
 
     def open_fiche(self) -> None:
         if not self.data:
@@ -572,7 +602,10 @@ class MainWindow(QMainWindow):
         return "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in (reference or "fiche"))
 
     def print_fiche(self, info: fiche.FicheInfo) -> Path | None:
-        """Écrit la fiche dans le dossier temporaire et l'ouvre dans le navigateur (Ctrl+P pour imprimer ou faire un PDF)."""
+        """Écrit la fiche dans le dossier temporaire et l'ouvre dans le navigateur (Ctrl+P pour imprimer ou faire un PDF).
+
+        Writes the sheet to the temporary folder and opens it in the browser (Ctrl+P to print it or make a PDF).
+        """
         folder = Path(tempfile.gettempdir()) / "AtlasPCMonitor"
         target = folder / f"fiche-{self._safe(info.reference)}.html"
         try:
@@ -603,7 +636,7 @@ class MainWindow(QMainWindow):
         self.flash(_("Fiche enregistrée"))
         return target
 
-    # ------------------------------------------------------------------ élévation et fermeture
+    # ------------------------------------------------------------------ élévation et fermeture / elevation and closing
 
     def relaunch_as_admin(self) -> None:
         if settings.relaunch_as_admin():
@@ -613,11 +646,16 @@ class MainWindow(QMainWindow):
 
     def _fit_header(self, width: int) -> None:
         """En fenêtre étroite, l'en-tête se resserre : le message d'état cède la place en premier,
-        puis le sous-titre, puis le nom passe sur deux lignes (« ATLAS PC » / « MONITOR »)."""
+        puis le sous-titre, puis le nom passe sur deux lignes (« ATLAS PC » / « MONITOR »).
+
+        In a narrow window, the header tightens: the status message gives way first,
+        then the subtitle, then the name moves onto two lines ("ATLAS PC" / "MONITOR").
+        """
         self.status.setVisible(width >= 1180)
         self.status_led.setVisible(width >= 1180)
         wide = width >= 960
         # Bouton « Mode partage » réduit à son icône (l'info-bulle reste) quand la place manque.
+        # "Sharing mode" button reduced to its icon (the tooltip remains) when space runs short.
         self.sharing_button.setText((_("Partage activé") if self.sharing else _("Mode partage")) if wide else "")
         self.brand.setText("ATLAS PC MONITOR" if wide else "ATLAS PC")
         if not wide:
@@ -627,7 +665,7 @@ class MainWindow(QMainWindow):
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
-        if hasattr(self, "status"):  # un redimensionnement peut précéder la construction
+        if hasattr(self, "status"):  # un redimensionnement peut précéder la construction — a resize can come before the window is built
             self._fit_header(event.size().width())
 
     def closeEvent(self, event) -> None:

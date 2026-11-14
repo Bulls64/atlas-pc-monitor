@@ -80,10 +80,10 @@ def test_search_ignores_accents_and_case(data):
 def test_diff_ignores_volatile_and_reports_changes(data):
     assert pages.diff_reports(data, copy.deepcopy(data)) == []
     after = copy.deepcopy(data)
-    after["os"]["FreePhysicalMemory"] = 1024  # volatile : ignoré
+    after["os"]["FreePhysicalMemory"] = 1024  # volatile : ignoré — volatile: ignored
     after["cpu"][0]["LoadPercentage"] = 99
     assert pages.diff_reports(data, after) == []
-    after["ram"].pop()  # barrette retirée
+    after["ram"].pop()  # barrette retirée — module removed
     after["gpu"][0]["DriverVersion"] = "32.0.15.7000"
     after["memory"] = {**after["memory"], "installed": 8 * 1024**3}
     changes = {(where, label): (old, new) for where, label, old, new in pages.diff_reports(data, after)}
@@ -133,7 +133,10 @@ def test_cli(capsys, tmp_path):
 
 
 def test_diff_keeps_devices_with_the_same_name(data):
-    """Deux périphériques audio du même nom : le changement du second n'est pas écrasé par le premier."""
+    """Deux périphériques audio du même nom : le changement du second n'est pas écrasé par le premier.
+
+    Two audio devices with the same name: the change to the second one is not overwritten by the first.
+    """
     before = copy.deepcopy(data)
     before["audio"] = [{"Name": "Périphérique audio HD", "Status": "OK"}, {"Name": "Périphérique audio HD", "Status": "OK"}]
     after = copy.deepcopy(before)
@@ -149,7 +152,10 @@ def test_cli_reports_unwritable_output(capsys, tmp_path):
 
 
 def test_cli_exit_code_on_failed_windows_scan(monkeypatch, capsys):
-    """Code 1 seulement si la collecte a échoué sous Windows ; hors Windows, l'inventaire réduit est normal."""
+    """Code 1 seulement si la collecte a échoué sous Windows ; hors Windows, l'inventaire réduit est normal.
+
+    Exit code 1 only if the collection failed on Windows; outside Windows, the reduced inventory is normal.
+    """
     from atlas import collect
     from atlas.__main__ import main
 
@@ -160,7 +166,10 @@ def test_cli_exit_code_on_failed_windows_scan(monkeypatch, capsys):
 
 
 def test_cli_converts_a_saved_report(tmp_path, capsys, data):
-    """Hors Windows, la ligne de commande transforme un rapport JSON en texte, HTML ou fiche."""
+    """Hors Windows, la ligne de commande transforme un rapport JSON en texte, HTML ou fiche.
+
+    Outside Windows, the command line turns a JSON report into text, HTML or a sheet.
+    """
     from atlas.__main__ import main
 
     path = tmp_path / "rapport.json"

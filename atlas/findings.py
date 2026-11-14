@@ -3,6 +3,12 @@
 Module pur, sans interface : chaque règle lit le dictionnaire produit par collect.scan()
 et renvoie des constats. Une règle qui rencontre une donnée inattendue est ignorée
 (et journalisée) au lieu de faire tomber l'analyse.
+
+Findings: turns the inventory into verdicts (to fix, to watch, to note, OK).
+
+Pure module, with no interface: each rule reads the dictionary produced by collect.scan()
+and returns findings. A rule that runs into unexpected data is skipped
+(and logged) instead of bringing the whole analysis down.
 """
 
 from __future__ import annotations
@@ -22,43 +28,47 @@ FIX, WATCH, INFO, OK = "fix", "watch", "info", "ok"
 LEVELS = {FIX: N_("À corriger"), WATCH: N_("À surveiller"), INFO: N_("À noter"), OK: N_("OK")}
 ORDER = {level: rank for rank, level in enumerate(LEVELS)}
 # Thèmes des constats : identifiants en français, traduits à l'affichage par _(item.topic).
+# Finding topics: identifiers in French, translated at display time by _(item.topic).
 TOPICS = (N_("Mémoire"), N_("Stockage"), N_("Windows"), N_("Pilotes"), N_("Batterie"), N_("Analyse"))
 
 # Seuils : ce sont des choix d'atelier, pas des normes. Les ajuster ici.
-DISK_WEAR_FIX = 80  # % d'usure SSD
+# Thresholds: these are workshop choices, not standards. Adjust them here.
+DISK_WEAR_FIX = 80  # % d'usure SSD — SSD wear %
 DISK_TEMP_WATCH = 60  # °C
-VOLUME_FREE_WATCH = 10  # % d'espace libre
-VOLUME_FREE_FIX = 5  # % d'espace libre
-VOLUME_FREE_FIX_BYTES = 5 * 1024**3  # en dessous, Windows Update échoue souvent
-VOLUME_MIN_SIZE = 20 * 1000**3  # ignore les petites partitions (récupération, OEM)
+VOLUME_FREE_WATCH = 10  # % d'espace libre — % free space
+VOLUME_FREE_FIX = 5  # % d'espace libre — % free space
+VOLUME_FREE_FIX_BYTES = 5 * 1024**3  # en dessous, Windows Update échoue souvent — below this, Windows Update often fails
+VOLUME_MIN_SIZE = 20 * 1000**3  # ignore les petites partitions (récupération, OEM) — ignores small partitions (recovery, OEM)
 BATTERY_WEAR_WATCH = 30  # %
 BATTERY_WEAR_FIX = 50  # %
 DRIVER_AGE_DAYS = 365
 UPTIME_WATCH_DAYS = 14
-MEMORY_PRESSURE = 90  # % utilisé au moment de l'analyse
-SPEED_TOLERANCE = 0.95  # vitesse configurée / nominale
+MEMORY_PRESSURE = 90  # % utilisé au moment de l'analyse — % used at the time of the analysis
+SPEED_TOLERANCE = 0.95  # vitesse configurée / nominale — configured / rated speed
 
 WIN10_END = date(2025, 10, 14)
 # Les éditions LTSB/LTSC ont leur propre calendrier (source : Microsoft, « Windows release health »).
+# LTSB/LTSC editions have their own schedule (source: Microsoft, "Windows release health").
 WIN10_LTSC_END = {10240: date(2025, 10, 14), 14393: date(2026, 10, 13), 17763: date(2029, 1, 9), 19044: date(2027, 1, 12)}
 WIN10_IOT_LTSC_2021_END = date(2032, 1, 13)
-SUPPORT_WATCH_DAYS = 365  # fin de prise en charge « proche »
+SUPPORT_WATCH_DAYS = 365  # fin de prise en charge « proche » — "near" end of support
 WIN11_MIN_RAM = 4 * 1024**3
 WIN11_MIN_DISK = 64 * 1000**3
 GENERIC_GPU = ("microsoft basic display", "microsoft basic render")
 VIRTUAL_GPU = ("virtual", "hyper-v", "remote display", "indirect display", "parsec", "dummy")
 # Date conventionnelle de tous les pilotes fournis avec Windows : elle ne dit rien de leur âge réel.
+# Conventional date of all the drivers shipped with Windows: it says nothing about their real age.
 INBOX_DRIVER_DATE = date(2006, 6, 21)
 
 
 @dataclass(frozen=True)
 class Finding:
-    level: str  # FIX, WATCH, INFO ou OK
-    topic: str  # regroupement affiché : Mémoire, Stockage...
+    level: str  # FIX, WATCH, INFO ou OK — FIX, WATCH, INFO or OK
+    topic: str  # regroupement affiché : Mémoire, Stockage... — displayed group: Memory, Storage...
     title: str
     detail: str = ""
     advice: str = ""
-    page: str = ""  # page de l'application où se trouve le détail
+    page: str = ""  # page de l'application où se trouve le détail — application page holding the details
 
     @property
     def label(self) -> str:
@@ -93,7 +103,10 @@ def _build(data: dict) -> int | None:
 
 
 def windows10_end(caption: str, build: int | None) -> date:
-    """Fin de prise en charge de cette édition de Windows 10 (les LTSC durent plus longtemps)."""
+    """Fin de prise en charge de cette édition de Windows 10 (les LTSC durent plus longtemps).
+
+    End of support for this edition of Windows 10 (LTSC editions last longer).
+    """
     lowered = caption.lower()
     if "ltsc" not in lowered and "ltsb" not in lowered:
         return WIN10_END
@@ -102,7 +115,7 @@ def windows10_end(caption: str, build: int | None) -> date:
     return WIN10_LTSC_END.get(build or 0, WIN10_END)
 
 
-# ---------------------------------------------------------------------- mémoire
+# ---------------------------------------------------------------------- mémoire / memory
 
 
 _CHANNEL = re.compile(r"CHANNEL\s*([A-H])\b", re.IGNORECASE)
@@ -110,7 +123,10 @@ _DIMM_SLOT = re.compile(r"DIMM[_\s-]?([A-H])\d", re.IGNORECASE)
 
 
 def memory_channel(stick: dict) -> str | None:
-    """Lettre du canal mémoire déduite des libellés SMBIOS, si le fabricant l'indique."""
+    """Lettre du canal mémoire déduite des libellés SMBIOS, si le fabricant l'indique.
+
+    Memory channel letter derived from the SMBIOS labels, if the manufacturer provides it.
+    """
     for text in (stick.get("BankLabel"), stick.get("DeviceLocator")):
         match = _CHANNEL.search(str(text or ""))
         if match:
@@ -128,7 +144,9 @@ def rule_memory(data: dict) -> list[Finding]:
     sticks = data.get("ram") or []
     if not sticks:
         return []
-    if is_virtual(data):  # barrettes simulées par l'hyperviseur : seule l'occupation a un sens
+    if is_virtual(data):
+        # barrettes simulées par l'hyperviseur : seule l'occupation a un sens
+        # modules emulated by the hypervisor: only the usage is meaningful
         return _memory_pressure(data)
     found = []
     slots = _int((data.get("memoryarray") or {}).get("MemoryDevices"))
@@ -207,7 +225,9 @@ def rule_memory(data: dict) -> list[Finding]:
                     "Mémoire",
                 )
             )
-            break  # la vitesse est commune à toutes les barrettes : un seul constat suffit
+            # la vitesse est commune à toutes les barrettes : un seul constat suffit
+            # the speed is shared by all the modules: a single finding is enough
+            break
     return found + _memory_pressure(data)
 
 
@@ -227,7 +247,7 @@ def _memory_pressure(data: dict) -> list[Finding]:
     ]
 
 
-# ---------------------------------------------------------------------- stockage
+# ---------------------------------------------------------------------- stockage / storage
 
 
 def rule_storage(data: dict) -> list[Finding]:
@@ -334,7 +354,10 @@ def rule_storage(data: dict) -> list[Finding]:
 
 
 def windows11_checks(data: dict) -> list[tuple[str, bool | None]]:
-    """Critères matériels de Windows 11 : (libellé, respecté / non / inconnu)."""
+    """Critères matériels de Windows 11 : (libellé, respecté / non / inconnu).
+
+    Windows 11 hardware requirements: (label, met / not met / unknown).
+    """
     tpm = data.get("tpm") or {}
     system = data.get("os") or {}
     memory = data.get("memory") or {}
@@ -471,11 +494,14 @@ def rule_windows(data: dict) -> list[Finding]:
     return found
 
 
-# ---------------------------------------------------------------------- pilotes et périphériques
+# ---------------------------------------------------------------------- pilotes et périphériques / drivers and devices
 
 
 def device_name(device: dict) -> str:
-    """Nom du périphérique ; un périphérique sans pilote n'en a souvent pas (« Périphérique inconnu »)."""
+    """Nom du périphérique ; un périphérique sans pilote n'en a souvent pas (« Périphérique inconnu »).
+
+    Device name; a device without a driver often has none ("Unknown device").
+    """
     name = f.clean(device.get("Name"))
     if name != f.EMPTY:
         return name
@@ -520,7 +546,7 @@ def rule_devices(data: dict) -> list[Finding]:
     broken, disabled = [], []
     for device in data.get("pnp") or []:
         code = _int(device.get("ConfigManagerErrorCode"))
-        if not code or code == 45:  # 45 : simplement débranché
+        if not code or code == 45:  # 45 : simplement débranché — 45: simply unplugged
             continue
         line = _("{0} — code {1} : {2}", device_name(device), code, _(f.PNP_ERRORS.get(code, N_("erreur inconnue"))))
         (disabled if code == 22 else broken).append(line)
@@ -549,7 +575,7 @@ def rule_devices(data: dict) -> list[Finding]:
     return found
 
 
-# ---------------------------------------------------------------------- batterie
+# ---------------------------------------------------------------------- batterie / battery
 
 
 def battery_wear(battery: dict) -> float | None:
@@ -591,7 +617,7 @@ def rule_battery(data: dict) -> list[Finding]:
     return found
 
 
-# ---------------------------------------------------------------------- portée de l'analyse
+# ---------------------------------------------------------------------- portée de l'analyse / scope of the analysis
 
 
 def rule_scope(data: dict) -> list[Finding]:
@@ -613,11 +639,14 @@ def rule_scope(data: dict) -> list[Finding]:
 RULES = (rule_windows, rule_memory, rule_storage, rule_devices, rule_battery, rule_scope)
 
 
-# ---------------------------------------------------------------------- synthèse « tout va bien »
+# ---------------------------------------------------------------------- synthèse « tout va bien » / "all good" summary
 
 
 def _all_clear(data: dict, found: list[Finding]) -> list[Finding]:
-    """Une ligne OK par thème analysé sans problème, pour distinguer « rien à signaler » de « pas vérifié »."""
+    """Une ligne OK par thème analysé sans problème, pour distinguer « rien à signaler » de « pas vérifié ».
+
+    One OK line per topic analyzed without problems, to tell "nothing to report" apart from "not checked".
+    """
     flagged = {item.topic for item in found if item.level in (FIX, WATCH)}
     errors = data.get("errors") or {}
     sticks = data.get("ram") or []
@@ -651,14 +680,19 @@ def _all_clear(data: dict, found: list[Finding]) -> list[Finding]:
 
 
 def analyze(data: dict) -> list[Finding]:
-    """Tous les constats, du plus urgent au plus anodin. Ne lève jamais."""
+    """Tous les constats, du plus urgent au plus anodin. Ne lève jamais.
+
+    All findings, from the most urgent to the most harmless. Never raises.
+    """
     if not isinstance(data, dict) or not data.get("os"):
         return []
     found: list[Finding] = []
     for rule in RULES:
         try:
             found.extend(rule(data))
-        except Exception:  # une donnée inattendue ne doit pas masquer les autres constats
+        except Exception:
+            # une donnée inattendue ne doit pas masquer les autres constats
+            # unexpected data must not hide the other findings
             log.exception("Règle %s ignorée", rule.__name__)
     try:
         found.extend(_all_clear(data, found))
