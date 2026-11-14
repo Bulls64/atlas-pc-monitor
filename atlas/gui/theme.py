@@ -171,6 +171,8 @@ QPushButton[kind="primary"]:hover {{ background: {p.copper if p.name == "light" 
 QPushButton[kind="primary"]:disabled {{ background: {p.panel2}; color: {p.dim}; }}
 QPushButton[kind="primary"]:focus {{ border: 2px solid {p.silk}; }}
 QPushButton[kind="icon"] {{ padding: 0; min-width: 40px; max-width: 40px; min-height: 40px; max-height: 40px; text-align: center; }}
+QPushButton[kind="language"] {{ padding: 0 10px; min-height: 40px; max-height: 40px; text-align: center; font-family: "{MONO}";
+    font-size: 12px; font-weight: 600; letter-spacing: 1px; }}
 QPushButton[kind="sharing"]:checked {{ background: {p.bright}; color: {p.primary_text}; border-color: {p.bright}; }}
 QPushButton[kind="link"] {{ background: transparent; border: none; color: {p.link}; padding: 2px 0; font-family: "{MONO}";
     font-size: 12px; letter-spacing: 1px; }}

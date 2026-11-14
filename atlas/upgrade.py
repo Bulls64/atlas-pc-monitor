@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 
 from . import formatting as f
 from .collect import is_virtual
+from .i18n import _
 
 GIB = 1024**3
 TARGETS_GIB = (8, 16, 32, 48, 64, 96, 128, 192, 256)
@@ -30,7 +31,7 @@ SOCKETED_FORMS = (8, 12)  # DIMM, SO-DIMM
 class MemoryAdvice:
     current: str  # résumé de la configuration actuelle
     spec: str = ""  # barrettes à acheter : type, format, vitesse
-    options: list[tuple[str, str]] = field(default_factory=list)  # (objectif, comment l'atteindre)
+    options: list[tuple[int, str]] = field(default_factory=list)  # (capacité visée en Go, comment l'atteindre)
     notes: list[str] = field(default_factory=list)
     upgradable: bool = True
     installed_gib: int = 0
@@ -50,8 +51,13 @@ def _type(stick: dict) -> str:
     return kind if kind in f.MEMORY_TYPES.values() else ""
 
 
+def gib_text(size: int) -> str:
+    """Capacité entière en Go (« 16 Go », « 16 GB »)."""
+    return _("{0} Go", size)
+
+
 def _plural(count: int, size: int) -> str:
-    return f"{count} × {size} Go"
+    return f"{count} × {gib_text(size)}"
 
 
 def memory_advice(data: dict) -> MemoryAdvice | None:
@@ -74,30 +80,30 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
     speed = max((int(f.to_number(s.get("Speed")) or 0) for s in sticks), default=0)
     sizes = sorted({_gib(s) for s in sticks})
     layout = " + ".join(_plural(sum(1 for s in sticks if _gib(s) == size), size) for size in sorted(sizes, reverse=True))
-    occupancy = f" ; emplacements occupés : {len(sticks)} sur {slots}" if slots >= len(sticks) else ""
-    current = f"{installed} Go installés : {layout}{f' {kind}' if kind else ''}{f' {form}' if form else ''}{occupancy}."
+    occupancy = _(" ; emplacements occupés : {0} sur {1}", len(sticks), slots) if slots >= len(sticks) else ""
+    current = _("{0} installés : {1}{2}.", gib_text(installed), " ".join(p for p in (layout, kind, form) if p), occupancy)
     advice = MemoryAdvice(current, installed_gib=installed)
 
     if is_virtual(data):
         advice.upgradable = False
-        advice.notes.append("Machine virtuelle : la mémoire se règle dans l'hyperviseur, pas en achetant des barrettes.")
+        advice.notes.append(_("Machine virtuelle : la mémoire se règle dans l'hyperviseur, pas en achetant des barrettes."))
         return advice
     if kind in SOLDERED_TYPES:
         advice.upgradable = False
-        advice.notes.append(f"Mémoire {kind} soudée à la carte mère : aucune évolution possible.")
+        advice.notes.append(_("Mémoire {0} soudée à la carte mère : aucune évolution possible.", kind))
         return advice
     if not socketed and forms - {0}:
         advice.upgradable = False
-        advice.notes.append("Aucune barrette amovible détectée (format non DIMM/SO-DIMM) : mémoire probablement soudée.")
+        advice.notes.append(_("Aucune barrette amovible détectée (format non DIMM/SO-DIMM) : mémoire probablement soudée."))
         return advice
     if len(socketed) < len(sticks):
         soldered = sum(_gib(s) for s in sticks if s not in socketed)
-        advice.notes.append(f"{soldered} Go semblent soudés à la carte mère : seules les barrettes amovibles se remplacent.")
+        advice.notes.append(_("{0} semblent soudés à la carte mère : seules les barrettes amovibles se remplacent.", gib_text(soldered)))
     else:
         soldered = 0
 
     spec = " ".join(p for p in (kind, form, f"{speed} MT/s" if speed else "") if p)
-    advice.spec = spec or "même type et même format que les barrettes actuelles"
+    advice.spec = spec or _("même type et même format que les barrettes actuelles")
     # Un SMBIOS incohérent (moins d'emplacements que de barrettes) : on s'en tient aux barrettes vues.
     usable_slots = max(slots - (len(sticks) - len(socketed)) if slots else 0, len(socketed))
     free = usable_slots - len(socketed)
@@ -112,7 +118,7 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
     targets = set(TARGETS_GIB)
     if soldered:  # partie soudée + barrette(s) amovible(s) : les totaux courants sont décalés (8 + 16 = 24 Go...)
         targets |= {soldered + usable_slots * size for size in available}
-        advice.notes.append("Avec une partie soudée, des capacités différentes de chaque côté donnent un double canal partiel.")
+        advice.notes.append(_("Avec une partie soudée, des capacités différentes de chaque côté donnent un double canal partiel."))
     for target in sorted(targets):
         if target <= installed or (limit and target > limit):
             continue
@@ -126,27 +132,33 @@ def memory_advice(data: dict) -> MemoryAdvice | None:
             # Seulement si l'on aboutit à un nombre pair de barrettes : double canal équilibré.
             if extra > 0 and extra % size == 0 and extra // size <= free and (total % 2 == 0 or usable_slots == 1):
                 count = extra // size
-                note = " (4 barrettes DDR5 : vitesse souvent réduite)" if kind == "DDR5" and total >= 4 else ""
-                ways.append(f"ajouter {_plural(count, size)} {'identique' if count == 1 else 'identiques'}{note}")
+                note = _(" (4 barrettes DDR5 : vitesse souvent réduite)") if kind == "DDR5" and total >= 4 else ""
+                same = _("ajouter {0} identique") if count == 1 else _("ajouter {0} identiques")
+                ways.append(same.format(_plural(count, size)) + note)
         # 2. Kit complet de 2 (ou 4) barrettes, en remplaçant l'existant.
         for count in (2, 4) if usable_slots >= 2 else (1,):
             if count > usable_slots or need % count:
                 continue
             size = need // count
             if size in available:
-                verb = "remplacer la barrette amovible par" if soldered and count == 1 else "remplacer par" if socketed else "installer"
-                ways.append(f"{verb} {_plural(count, size)}")
+                if soldered and count == 1:
+                    way = _("remplacer la barrette amovible par {0}")
+                else:
+                    way = _("remplacer par {0}") if socketed else _("installer {0}")
+                ways.append(way.format(_plural(count, size)))
                 break
         if ways:
-            advice.options.append((f"Passer à {target} Go", " ; ou ".join(ways)))
+            advice.options.append((target, _(" ; ou ").join(ways)))
         if len(advice.options) >= 3:
             break
 
     if not advice.options:
-        advice.notes.append("Aucune évolution courante trouvée dans les limites déclarées par la carte mère.")
+        advice.notes.append(_("Aucune évolution courante trouvée dans les limites déclarées par la carte mère."))
     if max_gib:
-        advice.notes.append(f"Maximum déclaré par la carte mère : {max_gib} Go. Valeur souvent prudente : vérifier la fiche du fabricant.")
+        advice.notes.append(
+            _("Maximum déclaré par la carte mère : {0}. Valeur souvent prudente : vérifier la fiche du fabricant.", gib_text(max_gib))
+        )
     if not slots:
-        advice.notes.append("Nombre d'emplacements inconnu : vérifier le manuel avant d'acheter.")
-    advice.notes.append("Pour un double canal stable avec un profil XMP/EXPO, préférer un kit de barrettes identiques.")
+        advice.notes.append(_("Nombre d'emplacements inconnu : vérifier le manuel avant d'acheter."))
+    advice.notes.append(_("Pour un double canal stable avec un profil XMP/EXPO, préférer un kit de barrettes identiques."))
     return advice

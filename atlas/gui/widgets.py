@@ -21,11 +21,14 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..formatting import fmt_percent
+from ..i18n import _
 from . import theme
 
 ICONS = {
     "search": '<circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/>',
     "refresh": '<path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/>',
+    "globe": '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',
     "share": '<path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6z"/><path d="M9 12h6"/>',
     "sun": '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     "moon": '<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>',
@@ -203,8 +206,8 @@ class TraceMeter(QWidget):
         font.setPixelSize(10)
         painter.setFont(font)
         painter.drawText(QRectF(0, 26, 60, 14), Qt.AlignLeft, "0")
-        painter.drawText(QRectF(w / 2 - 30, 26, 60, 14), Qt.AlignCenter, "50 %")
-        painter.drawText(QRectF(w - 60, 26, 60, 14), Qt.AlignRight, "100 %")
+        painter.drawText(QRectF(w / 2 - 30, 26, 60, 14), Qt.AlignCenter, fmt_percent(50))
+        painter.drawText(QRectF(w - 60, 26, 60, 14), Qt.AlignRight, fmt_percent(100))
 
 
 class DotBackground(QWidget):
@@ -297,10 +300,10 @@ class CopyTable(QTableWidget):
         rows = sorted({index.row() for index in self.selectedIndexes()})
         lines = ["\t".join(self.item(r, c).text() for c in range(self.columnCount())) for r in rows]
         if lines:
-            self._put("\n".join(lines), f"{len(lines)} ligne(s) copiée(s)")
+            self._put("\n".join(lines), _("{0} ligne(s) copiée(s)", len(lines)))
 
     def copy_value(self, row: int) -> None:
-        self._put(self.item(row, self.columnCount() - 1).text(), "Valeur copiée")
+        self._put(self.item(row, self.columnCount() - 1).text(), _("Valeur copiée"))
 
     def _menu(self, position) -> None:
         row = self.rowAt(position.y())
@@ -309,8 +312,8 @@ class CopyTable(QTableWidget):
         if not self.item(row, 0).isSelected():
             self.selectRow(row)
         menu = QMenu(self)
-        menu.addAction("Copier la valeur", lambda: self.copy_value(row))
-        menu.addAction("Copier la ligne", self.copy_rows)
+        menu.addAction(_("Copier la valeur"), lambda: self.copy_value(row))
+        menu.addAction(_("Copier la ligne"), self.copy_rows)
         menu.exec(self.viewport().mapToGlobal(position))
 
 

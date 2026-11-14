@@ -5,8 +5,10 @@ from __future__ import annotations
 import math
 from datetime import datetime
 
+from .i18n import N_, _, is_english
+
 EMPTY = "—"
-_UNITS = ("o", "Ko", "Mo", "Go", "To", "Po")
+_UNITS = {"fr": ("o", "Ko", "Mo", "Go", "To", "Po"), "en": ("B", "KB", "MB", "GB", "TB", "PB")}
 
 MEMORY_TYPES = {
     20: "DDR",
@@ -21,8 +23,8 @@ MEMORY_TYPES = {
     35: "LPDDR5",
 }
 FORM_FACTORS = {8: "DIMM", 12: "SO-DIMM"}
-MEDIA_TYPES = {0: "Non précisé", 3: "Disque dur (HDD)", 4: "SSD", 5: "SCM"}
-MEDIA_NAMES = {"hdd": "Disque dur (HDD)", "ssd": "SSD", "scm": "SCM", "unspecified": "Non précisé"}
+MEDIA_TYPES = {0: N_("Non précisé"), 3: N_("Disque dur (HDD)"), 4: "SSD", 5: "SCM"}
+MEDIA_NAMES = {"hdd": N_("Disque dur (HDD)"), "ssd": "SSD", "scm": "SCM", "unspecified": N_("Non précisé")}
 BUS_TYPES = {
     1: "SCSI",
     2: "ATAPI",
@@ -35,55 +37,55 @@ BUS_TYPES = {
     11: "SATA",
     12: "SD",
     13: "MMC",
-    15: "Stockage virtuel",
-    16: "Espaces de stockage",
+    15: N_("Stockage virtuel"),
+    16: N_("Espaces de stockage"),
     17: "NVMe",
 }
 BATTERY_STATUS = {
-    1: "Sur batterie",
-    2: "Sur secteur",
-    3: "Chargée",
-    4: "Faible",
-    5: "Critique",
-    6: "En charge",
-    7: "En charge (niveau élevé)",
-    8: "En charge (niveau faible)",
-    9: "En charge (niveau critique)",
-    11: "Partiellement chargée",
+    1: N_("Sur batterie"),
+    2: N_("Sur secteur"),
+    3: N_("Chargée"),
+    4: N_("Faible"),
+    5: N_("Critique"),
+    6: N_("En charge"),
+    7: N_("En charge (niveau élevé)"),
+    8: N_("En charge (niveau faible)"),
+    9: N_("En charge (niveau critique)"),
+    11: N_("Partiellement chargée"),
 }
 LICENSE_STATUS = {
-    0: "Sans licence",
-    1: "Activé",
-    2: "Période de grâce initiale",
-    3: "Période de grâce (matériel modifié)",
-    4: "Période de grâce (copie non authentique)",
-    5: "Notification",
-    6: "Période de grâce étendue",
+    0: N_("Sans licence"),
+    1: N_("Activé"),
+    2: N_("Période de grâce initiale"),
+    3: N_("Période de grâce (matériel modifié)"),
+    4: N_("Période de grâce (copie non authentique)"),
+    5: N_("Notification"),
+    6: N_("Période de grâce étendue"),
 }
 
 # Codes ConfigManagerErrorCode (les « points jaunes » du Gestionnaire de périphériques).
 PNP_ERRORS = {
-    1: "mal configuré",
-    3: "pilote endommagé ou mémoire insuffisante",
-    10: "le périphérique ne peut pas démarrer",
-    12: "ressources insuffisantes",
-    14: "redémarrage nécessaire",
-    18: "pilotes à réinstaller",
-    19: "configuration du registre endommagée",
-    21: "suppression en cours",
-    22: "désactivé",
-    24: "absent ou mal détecté",
-    28: "pilote non installé",
-    31: "Windows ne peut pas charger les pilotes",
-    32: "service du pilote désactivé",
-    37: "le pilote a signalé un échec",
-    39: "pilote endommagé ou manquant",
-    41: "pilote chargé mais matériel introuvable",
-    43: "arrêté après avoir signalé des problèmes",
-    45: "non connecté actuellement",
-    47: "préparé pour un retrait sécurisé",
-    48: "pilote bloqué (incompatible)",
-    52: "signature du pilote non vérifiable",
+    1: N_("mal configuré"),
+    3: N_("pilote endommagé ou mémoire insuffisante"),
+    10: N_("le périphérique ne peut pas démarrer"),
+    12: N_("ressources insuffisantes"),
+    14: N_("redémarrage nécessaire"),
+    18: N_("pilotes à réinstaller"),
+    19: N_("configuration du registre endommagée"),
+    21: N_("suppression en cours"),
+    22: N_("désactivé"),
+    24: N_("absent ou mal détecté"),
+    28: N_("pilote non installé"),
+    31: N_("Windows ne peut pas charger les pilotes"),
+    32: N_("service du pilote désactivé"),
+    37: N_("le pilote a signalé un échec"),
+    39: N_("pilote endommagé ou manquant"),
+    41: N_("pilote chargé mais matériel introuvable"),
+    43: N_("arrêté après avoir signalé des problèmes"),
+    45: N_("non connecté actuellement"),
+    47: N_("préparé pour un retrait sécurisé"),
+    48: N_("pilote bloqué (incompatible)"),
+    52: N_("signature du pilote non vérifiable"),
 }
 
 
@@ -99,22 +101,23 @@ def to_number(value) -> float | None:
 
 
 def fmt_number(number: float, digits: int = 1) -> str:
-    """Nombre à la française : virgule décimale, sans « ,0 » inutile."""
+    """Nombre sans « ,0 » inutile : virgule décimale en français, point en anglais."""
     text = f"{number:.{digits}f}"
     if "." in text:
         text = text.rstrip("0").rstrip(".")
-    return text.replace(".", ",")
+    return text if is_english() else text.replace(".", ",")
 
 
 def _fmt_bytes(value, base: int) -> str:
     number = to_number(value)
     if number is None or number < 0:
         return EMPTY
+    units = _UNITS["en" if is_english() else "fr"]
     unit = 0
-    while number >= base and unit < len(_UNITS) - 1:
+    while number >= base and unit < len(units) - 1:
         number /= base
         unit += 1
-    return f"{fmt_number(number, 1 if unit else 0)} {_UNITS[unit]}"
+    return f"{fmt_number(number, 1 if unit else 0)} {units[unit]}"
 
 
 def fmt_binary(value) -> str:
@@ -144,7 +147,9 @@ def fmt_mts(value) -> str:
 
 def fmt_percent(value) -> str:
     number = to_number(value)
-    return EMPTY if number is None else f"{fmt_number(number, 0)} %"
+    if number is None:
+        return EMPTY
+    return f"{fmt_number(number, 0)}%" if is_english() else f"{fmt_number(number, 0)} %"
 
 
 def fmt_celsius(value) -> str:
@@ -155,20 +160,22 @@ def fmt_celsius(value) -> str:
 def fmt_bool(value) -> str:
     if value is None or value == "":
         return EMPTY
-    return "Oui" if value else "Non"
+    return _("Oui") if value else _("Non")
 
 
 def fmt_code(value, table: dict[int, str]) -> str:
-    """Traduit un code numérique CIM ; garde la valeur brute si elle est inconnue."""
+    """Traduit un code numérique CIM (dans la langue courante) ; garde la valeur brute si elle est inconnue."""
     number = to_number(value)
     if number is None:
         return str(value).strip() if value not in (None, "") else EMPTY
-    return table.get(int(number), f"Code {int(number)}")
+    text = table.get(int(number))
+    return _(text) if text else _("Code {0}", int(number))
 
 
 def fmt_media(value) -> str:
     if isinstance(value, str) and not value.strip().isdigit():
-        return MEDIA_NAMES.get(value.strip().lower(), value.strip() or EMPTY)
+        name = MEDIA_NAMES.get(value.strip().lower())
+        return _(name) if name else value.strip() or EMPTY
     return fmt_code(value, MEDIA_TYPES)
 
 
@@ -179,16 +186,20 @@ def fmt_bus(value) -> str:
 
 
 def fmt_date(value) -> str:
-    """Date ISO (AAAA-MM-JJ[THH:MM:SS]) rendue en JJ/MM/AAAA [HH:MM]."""
+    """Date ISO (AAAA-MM-JJ[THH:MM:SS]) rendue en JJ/MM/AAAA [HH:MM] ; en anglais, AAAA-MM-JJ [HH:MM]."""
     if not value or not isinstance(value, str):
         return EMPTY
     try:
         moment = datetime.fromisoformat(value)
     except ValueError:
         return value
-    if len(value) <= 10:
-        return moment.strftime("%d/%m/%Y")
-    return moment.strftime("%d/%m/%Y %H:%M")
+    return fmt_day(moment, with_time=len(value) > 10)
+
+
+def fmt_day(day, with_time: bool = False) -> str:
+    """Date (ou date et heure) déjà convertie, au format de la langue courante."""
+    pattern = "%Y-%m-%d" if is_english() else "%d/%m/%Y"
+    return day.strftime(pattern + (" %H:%M" if with_time else ""))
 
 
 def fmt_uptime(boot_iso, now_iso) -> str:
@@ -204,10 +215,10 @@ def fmt_uptime(boot_iso, now_iso) -> str:
     days, rest = divmod(minutes, 1440)
     hours, mins = divmod(rest, 60)
     if days:
-        return f"{days} j {hours} h"
+        return _("{0} j {1} h", days, hours)
     if hours:
-        return f"{hours} h {mins} min"
-    return f"{mins} min"
+        return _("{0} h {1} min", hours, mins)
+    return _("{0} min", mins)
 
 
 def fmt_diagonal(width_cm, height_cm) -> str:
@@ -216,11 +227,11 @@ def fmt_diagonal(width_cm, height_cm) -> str:
     if not width or not height:
         return EMPTY
     inches = (width**2 + height**2) ** 0.5 / 2.54
-    return f"{fmt_number(inches)} pouces ({fmt_number(width, 0)} × {fmt_number(height, 0)} cm)"
+    return _("{0} pouces ({1} × {2} cm)", fmt_number(inches), fmt_number(width, 0), fmt_number(height, 0))
 
 
 def fmt_stamp(value) -> str:
-    """Horodatage ISO d'un inventaire (« captured_at ») en JJ/MM/AAAA HH:MM, fuseau ignoré."""
+    """Horodatage ISO d'un inventaire (« captured_at ») en date et heure de la langue courante, fuseau ignoré."""
     return fmt_date(str(value or "")[:19])
 
 

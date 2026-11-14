@@ -8,9 +8,10 @@ from pathlib import Path
 
 from .findings import analyze, summary_text
 from .formatting import fmt_stamp
+from .i18n import N_, _, language
 from .pages import build_all
 
-FORMATS = {".json": "Rapport JSON", ".txt": "Fichier texte", ".html": "Page HTML"}
+FORMATS = {".json": N_("Rapport JSON"), ".txt": N_("Fichier texte"), ".html": N_("Page HTML")}
 
 
 def to_json(data: dict) -> str:
@@ -20,26 +21,26 @@ def to_json(data: dict) -> str:
 def _header(data: dict) -> tuple[str, str]:
     computer = (data.get("system") or {}).get("computer") or ""
     stamp = fmt_stamp(data.get("captured_at"))
-    masked = " · identifiants masqués (mode partage)" if data.get("anonymized") else ""
+    masked = _(" · identifiants masqués (mode partage)") if data.get("anonymized") else ""
     version = data.get("atlas_version", "")
-    return f"Atlas PC Monitor — rapport système de {computer}", f"Généré le {stamp} · Atlas PC Monitor {version}{masked}"
+    return _("Atlas PC Monitor — rapport système de {0}", computer), _("Généré le {0} · Atlas PC Monitor {1}{2}", stamp, version, masked)
 
 
 def to_text(data: dict) -> str:
     title, subtitle = _header(data)
     lines = [title.upper(), subtitle]
     if data.get("note"):
-        lines += ["", f"Remarque : {data['note']}"]
+        lines += ["", _("Remarque : {0}", data["note"])]
     found = analyze(data)
     if found:
-        lines += ["", "=" * 60, f"CONSTATS — {summary_text(found)}".upper(), "=" * 60]
+        lines += ["", "=" * 60, _("CONSTATS — {0}", summary_text(found)).upper(), "=" * 60]
         for item in found:
             lines += ["", f"[{item.label}] {item.title}"]
             lines += [f"    {line}" for line in item.detail.splitlines()]
             if item.advice:
                 lines.append(f"    → {item.advice}")
     for page, sections in build_all(data).items():
-        lines += ["", "=" * 60, page.upper(), "=" * 60]
+        lines += ["", "=" * 60, _(page).upper(), "=" * 60]
         for section in sections:
             lines += ["", section.title, "-" * len(section.title)]
             width = max((len(row.label) for row in section.rows), default=0)
@@ -47,7 +48,7 @@ def to_text(data: dict) -> str:
             if section.note:
                 lines.append(f"({section.note})")
             elif not section.rows:
-                lines.append("(Aucune information détectée.)")
+                lines.append(_("(Aucune information détectée.)"))
             if section.tip:
                 lines.append(section.tip)
     return "\n".join(lines) + "\n"
@@ -75,14 +76,14 @@ def to_html(data: dict) -> str:
     title, subtitle = _header(data)
     parts = [
         "<!DOCTYPE html>",
-        f'<html lang="fr"><head><meta charset="utf-8"><title>{esc(title)}</title><style>{_CSS}</style></head><body>',
+        f'<html lang="{language()}"><head><meta charset="utf-8"><title>{esc(title)}</title><style>{_CSS}</style></head><body>',
         f'<h1>{esc(title)}</h1><p class="meta">{esc(subtitle)}</p>',
     ]
     if data.get("note"):
         parts.append(f'<p class="note">{esc(data["note"])}</p>')
     found = analyze(data)
     if found:
-        parts.append(f'<h2>Constats — {esc(summary_text(found))}</h2><div class="findings">')
+        parts.append(f'<h2>{esc(_("Constats — {0}", summary_text(found)))}</h2><div class="findings">')
         for item in found:
             detail = "<br>".join(esc(line) for line in item.detail.splitlines())
             advice = f'<p class="advice">→ {esc(item.advice)}</p>' if item.advice else ""
@@ -92,7 +93,7 @@ def to_html(data: dict) -> str:
             )
         parts.append("</div>")
     for page, sections in build_all(data).items():
-        parts.append(f"<h2>{esc(page)}</h2>")
+        parts.append(f"<h2>{esc(_(page))}</h2>")
         for section in sections:
             parts.append(f"<h3>{esc(section.title)}</h3>")
             if section.rows:
@@ -122,7 +123,7 @@ def resolve_path(path: str, chosen_filter: str = "") -> Path:
     if target.suffix.lower() in (*FORMATS, ".htm"):
         return target
     for suffix, label in FORMATS.items():
-        if chosen_filter and label in chosen_filter:
+        if chosen_filter and _(label) in chosen_filter:
             return target.with_name(target.name + suffix)
     return target.with_name(target.name + ".json")
 
@@ -137,5 +138,5 @@ def load(path: str | Path) -> dict:
     """Relit un export JSON d'Atlas PC Monitor (comparaison, visionneuse). ValueError si ce n'en est pas un."""
     data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
     if not isinstance(data, dict) or "system" not in data:
-        raise ValueError("ce fichier n'est pas un rapport JSON d'Atlas PC Monitor")
+        raise ValueError(_("ce fichier n'est pas un rapport JSON d'Atlas PC Monitor"))
     return data

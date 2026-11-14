@@ -151,6 +151,28 @@ def not_windows(monkeypatch):
     monkeypatch.setattr(collect, "is_windows", lambda: False)
 
 
+@pytest.fixture(autouse=True)
+def french(monkeypatch):
+    """Les tests attendent l'interface en français, quelle que soit la langue du système qui les lance."""
+    from atlas import i18n
+
+    for name in ("LC_ALL", "LC_MESSAGES"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("LANG", "fr_FR.UTF-8")  # lu en premier par i18n.system_language()
+    i18n.set_language("fr")
+    yield
+    i18n.set_language("fr")
+
+
+@pytest.fixture
+def english():
+    from atlas import i18n
+
+    i18n.set_language("en")
+    yield
+    i18n.set_language("fr")
+
+
 @pytest.fixture
 def payload():
     return json.loads(json.dumps(PAYLOAD))
@@ -166,3 +188,25 @@ def data(payload, monkeypatch):
     result = collect.scan(runner=lambda: (0, stdout, ""))
     result["captured_at"] = "2026-11-11T10:30:00+01:00"
     return result
+
+
+@pytest.fixture
+def win(qtbot, monkeypatch, tmp_path):
+    """Fenêtre principale sous un « Windows » simulé, inventaire d'exemple chargé."""
+    monkeypatch.setenv("APPDATA", str(tmp_path))
+    from atlas import collect
+    from atlas.gui import theme, window
+
+    monkeypatch.setattr(collect, "is_windows", lambda: True)
+    theme.load_fonts()
+    theme.set_theme("dark")
+
+    def fake_scan():
+        return collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), ""))
+
+    w = window.MainWindow(scanner=fake_scan)
+    qtbot.addWidget(w)
+    w.resize(1320, 900)
+    w.show()
+    qtbot.waitUntil(lambda: bool(w.data) and not w._scanning, timeout=5000)
+    return w

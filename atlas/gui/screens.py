@@ -12,6 +12,7 @@ from .. import findings as F
 from .. import formatting as fmt
 from ..collect import ADMIN_SECTIONS
 from ..formatting import EMPTY
+from ..i18n import _
 from ..pages import FINDINGS, SOURCE_LABELS, build_page, search
 from . import model, theme
 from .boardmap import BoardMap
@@ -44,22 +45,24 @@ def welcome(win) -> QWidget:
     widget, layout = column(18)
     layout.addWidget(
         heading(
-            "Visionneuse",
-            "Ouvrir un rapport Atlas PC Monitor",
-            "L'inventaire matériel se fait sous Windows. Ici, Atlas PC Monitor affiche, compare et imprime"
-            " les rapports JSON faits sur des PC Windows.",
+            _("Visionneuse"),
+            _("Ouvrir un rapport Atlas PC Monitor"),
+            _(
+                "L'inventaire matériel se fait sous Windows. Ici, Atlas PC Monitor affiche, compare et imprime"
+                " les rapports JSON faits sur des PC Windows."
+            ),
         )
     )
     box, inner = card(spacing=10)
     steps = (
-        "Sur le PC Windows : bouton « Exporter le rapport » au format JSON, ou AtlasPCMonitor.exe --json -o rapport.json.",
-        "Ici : bouton ci-dessous, Ctrl+O, ou glisser le fichier .json sur la fenêtre.",
-        "Constats, fiche d'intervention, mode partage et comparaison fonctionnent comme sous Windows.",
+        _("Sur le PC Windows : bouton « Exporter le rapport » au format JSON, ou AtlasPCMonitor.exe --json -o rapport.json."),
+        _("Ici : bouton ci-dessous, Ctrl+O, ou glisser le fichier .json sur la fenêtre."),
+        _("Constats, fiche d'intervention, mode partage et comparaison fonctionnent comme sous Windows."),
     )
     for number, text in enumerate(steps, 1):
         inner.addWidget(label(f"{number}.  {text}", "dim", wrap=True))
     inner.addSpacing(6)
-    button = QPushButton("Ouvrir un rapport")
+    button = QPushButton(_("Ouvrir un rapport"))
     button.setProperty("kind", "primary")
     button.setIcon(icon("open", theme.P.primary_text))
     button.clicked.connect(lambda: win.open_report())
@@ -69,7 +72,7 @@ def welcome(win) -> QWidget:
 
 
 def stamp(data: dict) -> str:
-    return fmt.fmt_stamp(data.get("captured_at")).replace(" ", " à ", 1)
+    return fmt.fmt_stamp(data.get("captured_at")).replace(" ", _(" à "), 1)
 
 
 def legend(level: str, text: str, off: bool = False) -> QWidget:
@@ -105,16 +108,16 @@ def overview(win) -> QWidget:
     )
     windows = " ".join(p for p in (fmt.clean(system.get("Caption")), fmt.clean(system.get("DisplayVersion"))) if p != EMPTY)
     sub = " · ".join(p for p in (who, windows or host.get("platform", ""), fmt.clean(system.get("OSArchitecture"))) if p and p != EMPTY)
-    layout.addWidget(heading(f"Vue d'ensemble · inventaire du {stamp(data)}", host.get("computer", ""), sub))
+    layout.addWidget(heading(_("Vue d'ensemble · inventaire du {0}", stamp(data)), host.get("computer", ""), sub))
 
     layout.addWidget(Responsive([_findings_card(win, found), _memory_card(data)], ((700, 2), (0, 1))))
 
     if data.get("os"):
         section, sl = column(14)
-        legend_row = hbox(legend("ok", "OK"), legend("watch", "À surveiller"), legend("fix", "À corriger"), spacing=16)
+        legend_row = hbox(legend("ok", _("OK")), legend("watch", _("À surveiller")), legend("fix", _("À corriger")), spacing=16)
         titles, tl = column(6)
-        tl.addWidget(label("PLAN DE LA CARTE", "eyebrow"))
-        tl.addWidget(label("Composants détectés", "h2"))
+        tl.addWidget(label(_("PLAN DE LA CARTE"), "eyebrow"))
+        tl.addWidget(label(_("Composants détectés"), "h2"))
         legend_box = hbox(None, legend_row)
         sl.addWidget(Responsive([titles, legend_box], ((620, 2), (0, 1)), spacing=8))
         frame, fl = card("map", (12, 12, 12, 12))
@@ -122,14 +125,16 @@ def overview(win) -> QWidget:
         board.pageRequested.connect(win.open_page)
         fl.addWidget(board)
         sl.addWidget(frame)
-        sl.addWidget(label("Chaque piste prend la couleur de l'état de son composant. Cliquer une puce ouvre sa page.", "small", wrap=True))
+        sl.addWidget(
+            label(_("Chaque piste prend la couleur de l'état de son composant. Cliquer une puce ouvre sa page."), "small", wrap=True)
+        )
         layout.addWidget(section)
 
     errors = data.get("errors") or {}
     if errors:
-        names = sorted({SOURCE_LABELS.get(key, key) for key in errors})
-        hint = "" if data.get("admin") else " Certaines exigent une session administrateur."
-        layout.addWidget(note(f"Sources indisponibles : {', '.join(names)}.{hint} Le détail figure sur chaque page."))
+        names = sorted({_(SOURCE_LABELS.get(key, key)) for key in errors})
+        hint = "" if data.get("admin") else _(" Certaines exigent une session administrateur.")
+        layout.addWidget(note(_("Sources indisponibles : {0}.{1} Le détail figure sur chaque page.", ", ".join(names), hint)))
     if data.get("note"):
         layout.addWidget(note(data["note"]))
     layout.addStretch(1)
@@ -138,19 +143,19 @@ def overview(win) -> QWidget:
 
 def _findings_card(win, found) -> QFrame:
     frame, layout = card("result")
-    layout.addWidget(label("BANC DE TEST · CONSTATS", "eyebrow"))
+    layout.addWidget(label(_("BANC DE TEST · CONSTATS"), "eyebrow"))
     counts = F.summary(found)
-    big = F.summary_text(found) if found else "Diagnostic indisponible"
+    big = F.summary_text(found) if found else _("Diagnostic indisponible")
     level = F.FIX if counts[F.FIX] else F.WATCH if counts[F.WATCH] else F.OK
     big_label = label(big, "big", wrap=True)
     if level != F.WATCH:
         big_label.setProperty("level", level)
     layout.addWidget(big_label)
     row = hbox(
-        legend(F.FIX, f"{counts[F.FIX]} à corriger", off=not counts[F.FIX]),
-        legend(F.WATCH, f"{counts[F.WATCH]} à surveiller", off=not counts[F.WATCH]),
-        legend(F.INFO, f"{counts[F.INFO]} à noter"),
-        legend(F.OK, f"{counts[F.OK]} OK", off=not counts[F.OK]),
+        legend(F.FIX, _("{0} à corriger", counts[F.FIX]), off=not counts[F.FIX]),
+        legend(F.WATCH, _("{0} à surveiller", counts[F.WATCH]), off=not counts[F.WATCH]),
+        legend(F.INFO, _("{0} à noter", counts[F.INFO])),
+        legend(F.OK, _("{0} OK", counts[F.OK]), off=not counts[F.OK]),
         None,
         spacing=14,
     )
@@ -158,7 +163,7 @@ def _findings_card(win, found) -> QFrame:
     urgent = [item.title for item in found if item.level in (F.FIX, F.WATCH)][:3]
     if urgent:
         layout.addWidget(label(" · ".join(urgent), "dim", wrap=True))
-    layout.addWidget(link_button("Voir les constats", lambda: win.open_page(FINDINGS)), 0, Qt.AlignLeft)
+    layout.addWidget(link_button(_("Voir les constats"), lambda: win.open_page(FINDINGS)), 0, Qt.AlignLeft)
     layout.addStretch(1)
     return frame
 
@@ -166,13 +171,13 @@ def _findings_card(win, found) -> QFrame:
 def _memory_card(data: dict) -> QFrame:
     memory = data.get("memory") or {}
     frame, layout = card("result")
-    layout.addWidget(label("MÉMOIRE UTILISÉE", "eyebrow"))
+    layout.addWidget(label(_("MÉMOIRE UTILISÉE"), "eyebrow"))
     percent = memory.get("percent")
-    layout.addWidget(label(f"{percent} %" if percent is not None else EMPTY, "bigger"))
+    layout.addWidget(label(fmt.fmt_percent(percent), "bigger"))
     layout.addWidget(TraceMeter(percent))
     if memory:
-        text = (f'<span style="color:{theme.P.silk}">{fmt.fmt_binary(memory.get("used"))}</span> utilisés sur '
-                f'{fmt.fmt_binary(memory.get("total"))} · {fmt.fmt_binary(memory.get("free"))} disponibles')  # fmt: skip
+        used, total, free = (fmt.fmt_binary(memory.get(key)) for key in ("used", "total", "free"))
+        text = _('<span style="color:{0}">{1}</span> utilisés sur {2} · {3} disponibles', theme.P.silk, used, total, free)
         layout.addWidget(label(text, "dim", wrap=True, rich=True))
     layout.addStretch(1)
     return frame
@@ -186,23 +191,25 @@ def findings_page(win) -> QWidget:
     counts = F.summary(found)
     page, layout = column(22)
     if counts[F.FIX]:
-        title = f"{counts[F.FIX]} point(s) à corriger"
+        title = _("{0} point(s) à corriger", counts[F.FIX])
     elif counts[F.WATCH]:
-        title = f"{counts[F.WATCH]} point(s) à surveiller"
+        title = _("{0} point(s) à surveiller", counts[F.WATCH])
     else:
-        title = "Rien à corriger" if found else "Constats indisponibles"
-    sub = "Diagnostic automatique de l'inventaire."
+        title = _("Rien à corriger") if found else _("Constats indisponibles")
+    sub = _("Diagnostic automatique de l'inventaire.")
     if found and not data.get("admin") and any(k in (data.get("errors") or {}) for k in ADMIN_SECTIONS):
-        sub += " L'inventaire a été lu sans droits administrateur : quelques sources manquent."
+        sub += _(" L'inventaire a été lu sans droits administrateur : quelques sources manquent.")
     if not found:
-        sub = "L'inventaire Windows n'a pas pu être lu."
-    layout.addWidget(heading(f"Constats · banc de test du {stamp(data)}", title, sub))
+        sub = _("L'inventaire Windows n'a pas pu être lu.")
+    layout.addWidget(heading(_("Constats · banc de test du {0}", stamp(data)), title, sub))
 
     counters = []
     for level in (F.FIX, F.WATCH, F.INFO, F.OK):
         frame, fl = card(level, (20, 16, 20, 18), 10)
         fl.addWidget(
-            hbox(Led(level, 10, off=not counts[level] and level != F.INFO), label(F.LEVELS[level].upper(), "eyebrowDim"), None, spacing=4)
+            hbox(
+                Led(level, 10, off=not counts[level] and level != F.INFO), label(_(F.LEVELS[level]).upper(), "eyebrowDim"), None, spacing=4
+            )
         )
         number = label(str(counts[level]), "counter")
         number.setProperty("level", level if counts[level] else "off")
@@ -215,7 +222,7 @@ def findings_page(win) -> QWidget:
         items = [item for item in found if item.level == level]
         if not items:
             continue
-        group = label(f"{F.LEVELS[level].upper()} ({len(items)})", "level")
+        group = label(f"{_(F.LEVELS[level]).upper()} ({len(items)})", "level")
         group.setProperty("level", level)
         ll.addSpacing(6)
         ll.addWidget(group)
@@ -223,7 +230,7 @@ def findings_page(win) -> QWidget:
             ll.addWidget(_finding_card(win, item))
     oks = [item for item in found if item.level == F.OK]
     if oks:
-        group = label(f"OK ({len(oks)})", "level")
+        group = label(_("OK ({0})", len(oks)), "level")
         group.setProperty("level", F.OK)
         ll.addSpacing(6)
         ll.addWidget(group)
@@ -273,14 +280,14 @@ def _finding_card(win, item: F.Finding) -> QFrame:
     row.setSpacing(18)
     row.addWidget(_RingLed(item.level), 0, Qt.AlignTop)
     text, tl = column(6)
-    topic = f'<span style="color:{theme.P.dim}; font-weight:400"> · {escape(item.topic.upper())}</span>'
+    topic = f'<span style="color:{theme.P.dim}; font-weight:400"> · {escape(_(item.topic).upper())}</span>'
     tag = label(escape(item.label.upper()) + topic, "level", rich=True)
     tag.setProperty("level", item.level)
     top = QHBoxLayout()
     top.addWidget(tag)
     top.addStretch(1)
     if item.page:
-        top.addWidget(link_button(item.page, lambda _=False, page=item.page: win.open_page(page)))
+        top.addWidget(link_button(_(item.page), lambda checked=False, page=item.page: win.open_page(page)))
     tl.addLayout(top)
     tl.addWidget(label(item.title, "h3", wrap=True, selectable=True))
     if item.detail:
@@ -299,9 +306,9 @@ def _fiche_aside(win) -> QFrame:
     frame, layout = card("result")
     frame.setMinimumWidth(270)
     frame.setMaximumWidth(320)
-    layout.addWidget(label("FICHE D'INTERVENTION", "eyebrow"))
-    layout.addWidget(label("Les points à surveiller et à corriger, avec leurs conseils, partent sur la fiche A4.", "body", wrap=True))
-    button = QPushButton("Préparer la fiche")
+    layout.addWidget(label(_("FICHE D'INTERVENTION"), "eyebrow"))
+    layout.addWidget(label(_("Les points à surveiller et à corriger, avec leurs conseils, partent sur la fiche A4."), "body", wrap=True))
+    button = QPushButton(_("Préparer la fiche"))
     button.setProperty("kind", "primary")
     button.setIcon(icon("print", theme.P.primary_text))
     button.clicked.connect(win.open_fiche)
@@ -309,12 +316,12 @@ def _fiche_aside(win) -> QFrame:
     layout.addWidget(separator())
     thresholds = "\n".join(
         [
-            "SEUILS · atlas/findings.py",
-            f"usure SSD ≥ {F.DISK_WEAR_FIX} %",
-            f"volume libre < {F.VOLUME_FREE_WATCH} %",
-            f"usure batterie ≥ {F.BATTERY_WEAR_WATCH} %",
-            "pilote graphique > 1 an",
-            f"sans redémarrage ≥ {F.UPTIME_WATCH_DAYS} j",
+            _("SEUILS · atlas/findings.py"),
+            _("usure SSD ≥ {0} %", F.DISK_WEAR_FIX),
+            _("volume libre < {0} %", F.VOLUME_FREE_WATCH),
+            _("usure batterie ≥ {0} %", F.BATTERY_WEAR_WATCH),
+            _("pilote graphique > 1 an"),
+            _("sans redémarrage ≥ {0} j", F.UPTIME_WATCH_DAYS),
         ]
     )
     layout.addWidget(label(thresholds, "mono"))
@@ -328,11 +335,12 @@ def detail_page(win, page_name: str) -> QWidget:
     data = win.shown
     page, layout = column(22)
     title, sub = model.page_heading(data, page_name)
-    layout.addWidget(heading(f"{model.DESIGNATORS.get(page_name, '')} · {page_name}", title, sub))
+    layout.addWidget(heading(f"{model.DESIGNATORS.get(page_name, '')} · {_(page_name)}", title, sub))
     sections = build_page(data, page_name)
     if page_name == "Mémoire" and data.get("ram"):
         _memory_extras(win, layout)
-        sections = [s for s in sections if s.title not in ("Synthèse", "Évolution possible") and not s.title.startswith("Barrette")]
+        shown_apart = (_("Synthèse"), _("Évolution possible"))  # déjà dessinés au-dessus
+        sections = [s for s in sections if s.title not in shown_apart and not s.title.startswith(_("Barrette"))]
     for section in sections:
         layout.addWidget(section_card(win, section))
     if data.get("note"):
@@ -345,13 +353,13 @@ def section_card(win, section) -> QFrame:
     frame, layout = card("true", (8, 18, 8, 12), 8)
     layout.addWidget(hbox(label(section.title.upper(), "eyebrow"), margins=(14, 0, 14, 4)))
     if section.rows:
-        table = CopyTable(["Propriété", "Valeur"], [(row.label, row.value) for row in section.rows])
+        table = CopyTable([_("Propriété"), _("Valeur")], [(row.label, row.value) for row in section.rows])
         table.copied.connect(win.flash)
         layout.addWidget(table)
     if section.note or not section.rows:
         layout.addWidget(
             hbox(
-                note(section.note or "Aucune information détectée.", "note" if section.note else "dim"),
+                note(section.note or _("Aucune information détectée."), "note" if section.note else "dim"),
                 margins=(14, 0, 14, 4),
                 stretch_at=0,
             )
@@ -374,27 +382,27 @@ def _memory_extras(win, layout: QVBoxLayout) -> None:
     memory = data.get("memory") or {}
     max_kb = fmt.to_number((data.get("memoryarray") or {}).get("MaxCapacity"))
     stats = [
-        ("Installée", fmt.fmt_binary(memory.get("installed")), f"{len(data.get('ram') or [])} barrette(s)"),
-        ("Utilisable", fmt.fmt_binary(memory.get("total")), "vue par Windows"),
-        ("Utilisée", fmt.fmt_binary(memory.get("used")), f"{fmt.fmt_percent(memory.get('percent'))} au moment de l'analyse"),
-        ("Max. déclaré", fmt.fmt_binary(max_kb * 1024) if max_kb else EMPTY, "par la carte mère"),
+        (_("Installée"), fmt.fmt_binary(memory.get("installed")), _("{0} barrette(s)", len(data.get("ram") or []))),
+        (_("Utilisable"), fmt.fmt_binary(memory.get("total")), _("vue par Windows")),
+        (_("Utilisée"), fmt.fmt_binary(memory.get("used")), _("{0} au moment de l'analyse", fmt.fmt_percent(memory.get("percent")))),
+        (_("Max. déclaré"), fmt.fmt_binary(max_kb * 1024) if max_kb else EMPTY, _("par la carte mère")),
     ]
     layout.addWidget(Responsive([_stat(*item) for item in stats], ((680, 4), (0, 2)), spacing=14))
 
     frame, fl = card("true", (24, 22, 24, 22), 20)
     titles, tl = column(6)
-    tl.addWidget(label("EMPLACEMENTS", "eyebrow"))
-    tl.addWidget(label("Barrettes installées", "h2"))
+    tl.addWidget(label(_("EMPLACEMENTS"), "eyebrow"))
+    tl.addWidget(label(_("Barrettes installées"), "h2"))
     top = QHBoxLayout()
     top.addWidget(titles)
     top.addStretch(1)
-    top.addWidget(label("vue de face · échelle indicative", "mono"), 0, Qt.AlignBottom)
+    top.addWidget(label(_("vue de face · échelle indicative"), "mono"), 0, Qt.AlignBottom)
     fl.addLayout(top)
     for view in model.stick_views(data):
         block, bl = column(10)
-        tag = label("DÉPAREILLÉE" if view.odd else "RÉFÉRENCE", "tag" if view.odd else "tagOk")
+        tag = label(_("DÉPAREILLÉE") if view.odd else _("RÉFÉRENCE"), "tag" if view.odd else "tagOk")
         bl.addWidget(hbox(label(view.slot, "monoStrong"), label(view.bank, "mono"), tag, None, spacing=10))
-        bl.addWidget(DimmStick(f"Barrette {view.slot}"))
+        bl.addWidget(DimmStick(_("Barrette {0}", view.slot)))
         bl.addWidget(label(view.spec, "mono", wrap=True, selectable=True))
         fl.addWidget(block)
     layout.addWidget(frame)
@@ -404,12 +412,17 @@ def _memory_extras(win, layout: QVBoxLayout) -> None:
     if routes:
         advice, items = routes
         frame, fl = card("result", (22, 20, 22, 20), 10)
-        fl.addWidget(label("CONSEILLER D'ÉVOLUTION", "eyebrow"))
-        fl.addWidget(label("Évolution possible", "h3"))
+        fl.addWidget(label(_("CONSEILLER D'ÉVOLUTION"), "eyebrow"))
+        fl.addWidget(label(_("Évolution possible"), "h3"))
         if advice.upgradable:
             fl.addWidget(
                 label(
-                    f'Barrettes à acheter : <span style="color:{theme.P.silk}; font-family:{theme.MONO}">{escape(advice.spec)}</span>',
+                    _(
+                        'Barrettes à acheter : <span style="color:{0}; font-family:{1}">{2}</span>',
+                        theme.P.silk,
+                        theme.MONO,
+                        escape(advice.spec),
+                    ),
                     "dim",
                     wrap=True,
                     rich=True,
@@ -435,7 +448,7 @@ def _memory_extras(win, layout: QVBoxLayout) -> None:
         pair.append(frame)
     headers, rows = model.stick_table(data)
     frame, fl = card("true", (8, 20, 8, 12), 8)
-    fl.addWidget(hbox(label("DÉTAIL PAR BARRETTE", "eyebrow"), margins=(14, 0, 14, 4)))
+    fl.addWidget(hbox(label(_("DÉTAIL PAR BARRETTE"), "eyebrow"), margins=(14, 0, 14, 4)))
     table = CopyTable(headers, rows, show_header=True)
     table.copied.connect(win.flash)
     fl.addWidget(table)
@@ -453,15 +466,17 @@ def search_page(win, query: str) -> QWidget:
     page, layout = column(18)
     layout.addWidget(
         heading(
-            "Recherche",
-            f"{len(hits)} résultat(s) pour « {query} »",
-            "Recherche dans toutes les pages, sans tenir compte des accents. Échap pour revenir.",
+            _("Recherche"),
+            _("{0} résultat(s) pour « {1} »", len(hits), query),
+            _("Recherche dans toutes les pages, sans tenir compte des accents. Échap pour revenir."),
         )
     )
     if hits:
         frame, fl = card("true", (8, 12, 8, 12), 0)
         table = CopyTable(
-            ["Emplacement", "Propriété", "Valeur"], [(f"{p} › {s}", row.label, row.value) for p, s, row in hits], show_header=True
+            [_("Emplacement"), _("Propriété"), _("Valeur")],
+            [(f"{_(p)} › {s}", row.label, row.value) for p, s, row in hits],
+            show_header=True,
         )
         table.copied.connect(win.flash)
         fl.addWidget(table)

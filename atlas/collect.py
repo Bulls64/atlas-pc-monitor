@@ -14,6 +14,7 @@ from datetime import datetime
 
 from . import __version__
 from .formatting import to_number
+from .i18n import _
 
 log = logging.getLogger("atlas")
 
@@ -148,10 +149,10 @@ def parse_inventory(stdout: str) -> dict:
             break
     start = text.find("{")
     if start < 0:
-        raise ValueError("aucun inventaire dans la sortie de PowerShell")
+        raise ValueError(_("aucun inventaire dans la sortie de PowerShell"))
     payload = json.loads(text[start:])
     if not isinstance(payload, dict):
-        raise ValueError("la sortie de PowerShell n'est pas un objet JSON")
+        raise ValueError(_("la sortie de PowerShell n'est pas un objet JSON"))
     return payload
 
 
@@ -210,17 +211,17 @@ def scan(runner=run_powershell) -> dict:
     """Inventaire complet. Ne lève jamais : un échec est décrit dans data['note']."""
     data = base_report()
     if not is_windows():
-        data["note"] = "Informations matérielles détaillées disponibles sous Windows."
+        data["note"] = _("Informations matérielles détaillées disponibles sous Windows.")
         return data
     started = time.perf_counter()
     try:
         code, stdout, stderr = runner()
     except subprocess.TimeoutExpired:
-        data["note"] = f"La collecte a dépassé {TIMEOUT_SECONDS} s et a été interrompue. Réessayez avec « Actualiser »."
+        data["note"] = _("La collecte a dépassé {0} s et a été interrompue. Réessayez avec « Actualiser ».", TIMEOUT_SECONDS)
         log.warning("PowerShell : délai dépassé")
         return data
     except OSError as error:
-        data["note"] = f"Impossible de lancer PowerShell : {error}"
+        data["note"] = _("Impossible de lancer PowerShell : {0}", error)
         log.warning("PowerShell : %s", error)
         return data
     log.debug("PowerShell code=%s stdout=%d car. stderr=%r", code, len(stdout), stderr[:2000])
@@ -230,7 +231,7 @@ def scan(runner=run_powershell) -> dict:
         data.update(normalize(payload))
     except (ValueError, TypeError) as error:
         detail = (stderr.strip().splitlines() or [str(error)])[-1]
-        data["note"] = f"La collecte PowerShell a échoué (code {code}) : {detail}"
+        data["note"] = _("La collecte PowerShell a échoué (code {0}) : {1}", code, detail)
         log.warning("Sortie PowerShell illisible : %s", error)
         return data
     data["memory"] = compute_memory(data)

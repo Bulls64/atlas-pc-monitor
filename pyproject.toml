@@ -10,7 +10,8 @@ select = ["E", "F", "W", "B", "UP", "I"]
 "atlas/findings.py" = ["E501"]
 "tools/check_scan.py" = ["E501"]
 "atlas/gui/widgets.py" = ["E501"]  # tracés SVG des icônes
-"atlas/gui/theme.py" = ["E501"]  # feuille de style Qt  # messages en français, plus lisibles d'un seul tenant
+"atlas/gui/theme.py" = ["E501"]  # feuille de style Qt
+"atlas/locale_en.py" = ["E501"]  # catalogue de traduction : une phrase par ligne, plus lisible
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
