@@ -64,6 +64,10 @@ echo "2/3 Dossier de l'application…"
 rm -rf -- "$APPDIR"  # dossier de construction de ce script uniquement — this script's build folder only
 mkdir -p "$APPDIR/usr/lib" "$APPDIR/usr/share/applications" "$APPDIR/usr/share/icons/hicolor/256x256/apps"
 cp -a dist/AtlasPCMonitor "$APPDIR/usr/lib/atlas-pc-monitor"
+# Licence de l'application et mentions tierces (Qt/PySide6 sous LGPL, Python, polices…).
+# Application license and third-party notices (Qt/PySide6 under the LGPL, Python, fonts…).
+mkdir -p "$APPDIR/usr/share/doc/atlas-pc-monitor"
+cp -a LICENSE THIRD-PARTY-NOTICES.md licenses "$APPDIR/usr/share/doc/atlas-pc-monitor/"
 install -m 755 packaging/linux/AppRun "$APPDIR/AppRun"
 install -m 644 packaging/linux/atlas-pc-monitor.desktop "$APPDIR/atlas-pc-monitor.desktop"
 cp "$APPDIR/atlas-pc-monitor.desktop" "$APPDIR/usr/share/applications/"

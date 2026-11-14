@@ -3,4 +3,4 @@
 Atlas PC Monitor — Windows hardware inventory, interface in French and English.
 """
 
-__version__ = "3.0.0"
+__version__ = "1.0.0"
