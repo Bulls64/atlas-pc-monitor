@@ -1,0 +1,12 @@
+# Mises à jour proposées chaque mois : actions de la CI et dépendances Python.
+# Monthly update proposals: CI actions and Python dependencies.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: monthly

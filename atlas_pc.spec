@@ -17,12 +17,21 @@
 #   AtlasPCMonitor.exe --json -o report.json
 
 import os
+import re
+import sys
+
+VERSION = re.search(r'__version__ = "([^"]+)"', open("atlas/__init__.py", encoding="utf-8").read()).group(1)
 
 a = Analysis(
     ["atlas_pc.py"],
     pathex=[],
     binaries=[],
-    datas=[("atlas/gui/fonts", "atlas/gui/fonts")],  # polices OFL et leurs licences — OFL fonts and their licenses
+    datas=[
+        ("atlas/gui/fonts", "atlas/gui/fonts"),
+        ("LICENSE", "."),
+        ("THIRD-PARTY-NOTICES.md", "."),
+        ("licenses", "licenses"),
+    ],  # polices OFL et leurs licences — OFL fonts and their licenses
     hiddenimports=["atlas.locale_en"],  # catalogue anglais, importé seulement à la demande — English catalog, imported only on demand
     excludes=["pytest", "pytestqt", "tkinter"],
 )
@@ -51,8 +60,40 @@ a.datas = [entry for entry in a.datas if keep(entry)]
 pyz = PYZ(a.pure)
 ICON = "build/atlas-pc-monitor.ico" if os.path.exists("build/atlas-pc-monitor.ico") else None
 
+
+def version_info():
+    """Propriétés du fichier .exe (onglet « Détails » de l'Explorateur) ; seulement sous Windows.
+
+    Properties of the .exe file (Explorer's "Details" tab); Windows only.
+    """
+    if sys.platform != "win32":
+        return None
+    from PyInstaller.utils.win32 import versioninfo as v
+
+    numbers = tuple(int(n) for n in re.findall(r"\d+", VERSION)[:3]) + (0,)
+    strings = {
+        "CompanyName": "Bulls64",
+        "FileDescription": "Atlas PC Monitor",
+        "FileVersion": VERSION,
+        "InternalName": "AtlasPCMonitor",
+        "LegalCopyright": "© 2026 Bulls64 — MIT License",
+        "OriginalFilename": "AtlasPCMonitor.exe",
+        "ProductName": "Atlas PC Monitor",
+        "ProductVersion": VERSION,
+    }
+    return v.VSVersionInfo(
+        ffi=v.FixedFileInfo(filevers=numbers, prodvers=numbers),
+        kids=[
+            v.StringFileInfo([v.StringTable("040904B0", [v.StringStruct(k, val) for k, val in strings.items()])]),
+            v.VarFileInfo([v.VarStruct("Translation", [0x0409, 1200])]),
+        ],
+    )
+
+
+VERSION_INFO = version_info()
+
 if os.environ.get("ATLAS_ONEFILE", "").strip() == "1":
-    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="AtlasPCMonitor", console=False, upx=False, icon=ICON)
+    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="AtlasPCMonitor", console=False, upx=False, icon=ICON, version=VERSION_INFO)
 else:
-    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="AtlasPCMonitor", console=False, upx=False, icon=ICON)
+    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="AtlasPCMonitor", console=False, upx=False, icon=ICON, version=VERSION_INFO)
     coll = COLLECT(exe, a.binaries, a.datas, upx=False, name="AtlasPCMonitor")

@@ -82,7 +82,12 @@ goes through every page and ignores accents.
 - **Without Python**: download `AtlasPCMonitor.exe` from the
   [Releases](https://github.com/Bulls64/atlas-pc/releases) page and run it (Windows 10 or 11).
   `AtlasPCMonitor-windows.zip` holds the same application as a folder: it starts faster and triggers
-  fewer antivirus warnings.
+  fewer antivirus warnings. Changes from one version to the next are listed in [CHANGELOG.md](CHANGELOG.md).
+
+  The executables are not code-signed: on first launch, Windows SmartScreen may show
+  “Windows protected your PC”. Click **More info**, then **Run anyway**. To make sure the file is the one
+  published here, compare its fingerprint (`Get-FileHash AtlasPCMonitor.exe` in PowerShell) with
+  `SHA256SUMS.txt`, attached to each release.
 
 With Python 3.9 or later:
 
@@ -103,6 +108,18 @@ Shortcuts: **F5** to refresh, **Ctrl+F** to search, **Esc** to leave the search.
 The language, theme (dark or light), sharing mode and technician name are saved in
 `%APPDATA%\AtlasPC\config.json`. On first launch, the language follows the Windows display language
 (French if Windows is in French, English otherwise).
+
+### Privacy
+
+Atlas PC Monitor works entirely offline: it sends nothing over the network, has no telemetry and does not
+check for updates. The inventory is read on the computer itself (PowerShell/CIM) and only leaves it if you
+export, copy or print it.
+
+- Saved on the computer: only the preferences above, in `%APPDATA%\AtlasPC\config.json`.
+- The intervention sheet is written to the temporary folder (`%TEMP%\AtlasPCMonitor`) to open it in the browser.
+- `--debug` writes a log with the raw, **unmasked** inventory to the temporary folder (`atlas-debug.log`).
+- Reports contain identifiers (computer name, serial numbers, MAC and IP addresses): switch on
+  **sharing mode** before sending one to someone else.
 
 ### Command line
 
@@ -147,10 +164,10 @@ Windows PCs (“Export report” button, or `AtlasPCMonitor.exe --json -o report
 findings, the intervention sheet, exports and comparison from them.
 
 ```
-chmod +x AtlasPCMonitor-3.0.0-x86_64.AppImage
-./AtlasPCMonitor-3.0.0-x86_64.AppImage                    interface
-./AtlasPCMonitor-3.0.0-x86_64.AppImage report.json        opens a report directly
-./AtlasPCMonitor-3.0.0-x86_64.AppImage --fiche report.json -o sheet.html
+chmod +x AtlasPCMonitor-1.0.0-x86_64.AppImage
+./AtlasPCMonitor-1.0.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-1.0.0-x86_64.AppImage report.json        opens a report directly
+./AtlasPCMonitor-1.0.0-x86_64.AppImage --fiche report.json -o sheet.html
 ```
 
 A report can also be opened by dragging it onto the window, or with Ctrl+O. If the AppImage does not
@@ -209,6 +226,10 @@ The manual checks to run on real PCs are listed (in French) in [`docs/ESSAIS-WIN
 
 Code under the [MIT](LICENSE) license. The bundled fonts (Space Grotesk, Inter, IBM Plex Mono) are under
 the SIL Open Font License; their license texts are in [`atlas/gui/fonts/`](atlas/gui/fonts).
+
+The executables and the AppImage also contain Qt and PySide6 (LGPL-3.0) and Python (PSF License):
+see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and the [`licenses/`](licenses) folder, which are
+shipped with each build.
 
 ---
 
@@ -292,7 +313,12 @@ parcourt toutes les pages sans tenir compte des accents.
 - **Sans Python** : télécharger `AtlasPCMonitor.exe` sur la page
   [Releases](https://github.com/Bulls64/atlas-pc/releases) et le lancer (Windows 10 ou 11).
   `AtlasPCMonitor-windows.zip` contient la même application en dossier : elle démarre plus vite et alerte moins
-  les antivirus.
+  les antivirus. Les changements d'une version à l'autre sont décrits dans [CHANGELOG.md](CHANGELOG.md).
+
+  Les exécutables ne sont pas signés : au premier lancement, Windows SmartScreen peut afficher
+  « Windows a protégé votre ordinateur ». Cliquer sur **Informations complémentaires**, puis sur
+  **Exécuter quand même**. Pour s'assurer que le fichier est bien celui publié ici, comparer son empreinte
+  (`Get-FileHash AtlasPCMonitor.exe` dans PowerShell) avec `SHA256SUMS.txt`, joint à chaque release.
 
 Avec Python 3.9 ou plus récent :
 
@@ -313,6 +339,18 @@ Raccourcis : **F5** pour actualiser, **Ctrl+F** pour rechercher, **Échap** pour
 La langue, le thème (sombre ou clair), le mode partage et le nom du technicien sont mémorisés dans
 `%APPDATA%\AtlasPC\config.json`. Au premier lancement, la langue suit celle de l'affichage de Windows
 (français si Windows est en français, anglais sinon).
+
+### Confidentialité
+
+Atlas PC Monitor fonctionne entièrement hors ligne : il n'envoie rien sur le réseau, ne contient aucune
+télémétrie et ne cherche pas de mise à jour. L'inventaire est lu sur le poste lui-même (PowerShell/CIM) et
+ne le quitte que si vous l'exportez, le copiez ou l'imprimez.
+
+- Enregistré sur le poste : seulement les préférences ci-dessus, dans `%APPDATA%\AtlasPC\config.json`.
+- La fiche d'intervention est écrite dans le dossier temporaire (`%TEMP%\AtlasPCMonitor`) pour l'ouvrir dans le navigateur.
+- `--debug` écrit dans le dossier temporaire un journal avec l'inventaire brut, **non masqué** (`atlas-debug.log`).
+- Les rapports contiennent des identifiants (nom du poste, numéros de série, adresses MAC et IP) :
+  activer le **mode partage** avant d'en envoyer un à quelqu'un d'autre.
 
 ### Ligne de commande
 
@@ -356,10 +394,10 @@ JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPCMoni
 et en tire constats, fiche d'intervention, exports et comparaison.
 
 ```
-chmod +x AtlasPCMonitor-3.0.0-x86_64.AppImage
-./AtlasPCMonitor-3.0.0-x86_64.AppImage                    interface
-./AtlasPCMonitor-3.0.0-x86_64.AppImage rapport.json       ouvre directement un rapport
-./AtlasPCMonitor-3.0.0-x86_64.AppImage --fiche rapport.json -o fiche.html
+chmod +x AtlasPCMonitor-1.0.0-x86_64.AppImage
+./AtlasPCMonitor-1.0.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-1.0.0-x86_64.AppImage rapport.json       ouvre directement un rapport
+./AtlasPCMonitor-1.0.0-x86_64.AppImage --fiche rapport.json -o fiche.html
 ```
 
 Un rapport s'ouvre aussi par glisser-déposer sur la fenêtre, ou avec Ctrl+O. Si l'AppImage ne démarre
@@ -418,3 +456,7 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 
 Code sous licence [MIT](LICENSE). Les polices embarquées (Space Grotesk, Inter, IBM Plex Mono) sont sous
 licence SIL Open Font License ; leurs textes de licence sont dans [`atlas/gui/fonts/`](atlas/gui/fonts).
+
+Les exécutables et l'AppImage contiennent aussi Qt et PySide6 (LGPL-3.0) et Python (licence PSF) :
+voir [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) et le dossier [`licenses/`](licenses), livrés avec
+chaque version.
