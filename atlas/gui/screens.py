@@ -40,19 +40,19 @@ def heading(eyebrow: str, title: str, sub: str = "") -> QWidget:
 
 
 def welcome(win) -> QWidget:
-    """Accueil hors Windows : Atlas PC y sert de visionneuse de rapports."""
+    """Accueil hors Windows : Atlas PC Monitor y sert de visionneuse de rapports."""
     widget, layout = column(18)
     layout.addWidget(
         heading(
             "Visionneuse",
-            "Ouvrir un rapport Atlas PC",
-            "L'inventaire matériel se fait sous Windows. Ici, Atlas PC affiche, compare et imprime"
+            "Ouvrir un rapport Atlas PC Monitor",
+            "L'inventaire matériel se fait sous Windows. Ici, Atlas PC Monitor affiche, compare et imprime"
             " les rapports JSON faits sur des PC Windows.",
         )
     )
     box, inner = card(spacing=10)
     steps = (
-        "Sur le PC Windows : bouton « Exporter le rapport » au format JSON, ou AtlasPC.exe --json -o rapport.json.",
+        "Sur le PC Windows : bouton « Exporter le rapport » au format JSON, ou AtlasPCMonitor.exe --json -o rapport.json.",
         "Ici : bouton ci-dessous, Ctrl+O, ou glisser le fichier .json sur la fenêtre.",
         "Constats, fiche d'intervention, mode partage et comparaison fonctionnent comme sous Windows.",
     )

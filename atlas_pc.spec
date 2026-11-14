@@ -1,12 +1,12 @@
 # Recette PyInstaller, sous Windows comme sous Linux (où tools/build_appimage.sh en fait une AppImage).
 #   pip install -r requirements-dev.txt
-#   pyinstaller atlas_pc.spec --noconfirm                            → dossier dist/AtlasPC/ (« onedir »)
-#   set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → fichier unique dist/AtlasPC.exe
+#   pyinstaller atlas_pc.spec --noconfirm                            → dossier dist/AtlasPCMonitor/ (« onedir »)
+#   set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → fichier unique dist/AtlasPCMonitor.exe
 # Le dossier démarre plus vite et alerte moins les antivirus ; le fichier unique est plus simple à
 # transporter (il se décompresse dans le dossier temporaire à chaque lancement).
-# Icône Windows : python tools/make_icon.py build/atlas-pc.ico (Pillow), reprise si elle existe.
+# Icône Windows : python tools/make_icon.py build/atlas-pc-monitor.ico (Pillow), reprise si elle existe.
 # L'exécutable est fenêtré : en ligne de commande, utiliser -o, par exemple
-#   AtlasPC.exe --json -o rapport.json
+#   AtlasPCMonitor.exe --json -o rapport.json
 
 import os
 
@@ -38,10 +38,10 @@ a.binaries = [entry for entry in a.binaries if keep(entry)]
 a.datas = [entry for entry in a.datas if keep(entry)]
 
 pyz = PYZ(a.pure)
-ICON = "build/atlas-pc.ico" if os.path.exists("build/atlas-pc.ico") else None
+ICON = "build/atlas-pc-monitor.ico" if os.path.exists("build/atlas-pc-monitor.ico") else None
 
 if os.environ.get("ATLAS_ONEFILE", "").strip() == "1":
-    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="AtlasPC", console=False, upx=False, icon=ICON)
+    exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name="AtlasPCMonitor", console=False, upx=False, icon=ICON)
 else:
-    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="AtlasPC", console=False, upx=False, icon=ICON)
-    coll = COLLECT(exe, a.binaries, a.datas, upx=False, name="AtlasPC")
+    exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="AtlasPCMonitor", console=False, upx=False, icon=ICON)
+    coll = COLLECT(exe, a.binaries, a.datas, upx=False, name="AtlasPCMonitor")

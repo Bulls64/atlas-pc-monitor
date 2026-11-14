@@ -17,7 +17,7 @@ def run(report: str | None = None) -> int:
     # Échelle d'affichage exacte (125 %, 150 %…) plutôt qu'arrondie à l'entier.
     QGuiApplication.setHighDpiScaleFactorRoundingPolicy(Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
     app = QApplication.instance() or QApplication(sys.argv[:1])
-    app.setApplicationName("Atlas PC")
+    app.setApplicationName("Atlas PC Monitor")
     app.setOrganizationName("Bulls64")
     theme.load_fonts()
     QLocale.setDefault(QLocale(QLocale.French, QLocale.France))
@@ -28,7 +28,7 @@ def run(report: str | None = None) -> int:
         try:
             import ctypes
 
-            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Bulls64.AtlasPC")
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("Bulls64.AtlasPCMonitor")
         except (AttributeError, OSError):
             pass
     window = MainWindow()

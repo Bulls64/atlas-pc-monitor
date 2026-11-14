@@ -1,7 +1,7 @@
-"""Écrit l'icône d'Atlas PC à partir du logo dessiné par l'interface.
+"""Écrit l'icône d'Atlas PC Monitor à partir du logo dessiné par l'interface.
 
-QT_QPA_PLATFORM=offscreen python tools/make_icon.py atlas-pc.png 256   PNG (AppImage)
-QT_QPA_PLATFORM=offscreen python tools/make_icon.py atlas-pc.ico       ICO multi-tailles (Windows, Pillow)
+QT_QPA_PLATFORM=offscreen python tools/make_icon.py atlas-pc-monitor.png 256   PNG (AppImage)
+QT_QPA_PLATFORM=offscreen python tools/make_icon.py atlas-pc-monitor.ico       ICO multi-tailles (Windows, Pillow)
 """
 
 from __future__ import annotations

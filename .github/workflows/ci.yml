@@ -94,17 +94,17 @@ jobs:
       - name: Icône
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python tools/make_icon.py build/atlas-pc.ico
+        run: python tools/make_icon.py build/atlas-pc-monitor.ico
       - name: Dossier (onedir)
         run: pyinstaller atlas_pc.spec --noconfirm
       - name: Lancer le dossier construit
         shell: pwsh
         run: |
           # Exécutable fenêtré : on attend explicitement la fin du processus.
-          $p = Start-Process -FilePath dist\AtlasPC\AtlasPC.exe -ArgumentList "--json", "-o", "built.json" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "AtlasPC.exe (dossier) a renvoyé $($p.ExitCode)" }
+          $p = Start-Process -FilePath dist\AtlasPCMonitor\AtlasPCMonitor.exe -ArgumentList "--json", "-o", "built.json" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "AtlasPCMonitor.exe (dossier) a renvoyé $($p.ExitCode)" }
           python tools/check_scan.py built.json
-          Compress-Archive -Path dist\AtlasPC -DestinationPath AtlasPC-windows.zip
+          Compress-Archive -Path dist\AtlasPCMonitor -DestinationPath AtlasPCMonitor-windows.zip
       - name: Fichier unique (onefile)
         env:
           ATLAS_ONEFILE: "1"
@@ -112,16 +112,16 @@ jobs:
       - name: Lancer le fichier unique
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath dist\AtlasPC.exe -ArgumentList "--json", "-o", "onefile.json" -Wait -PassThru
-          if ($p.ExitCode -ne 0) { throw "AtlasPC.exe (fichier unique) a renvoyé $($p.ExitCode)" }
+          $p = Start-Process -FilePath dist\AtlasPCMonitor.exe -ArgumentList "--json", "-o", "onefile.json" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "AtlasPCMonitor.exe (fichier unique) a renvoyé $($p.ExitCode)" }
           python tools/check_scan.py onefile.json
-          Get-Item dist\AtlasPC.exe, AtlasPC-windows.zip | Format-Table Name, @{n="Mo"; e={[math]::Round($_.Length / 1MB, 1)}}
+          Get-Item dist\AtlasPCMonitor.exe, AtlasPCMonitor-windows.zip | Format-Table Name, @{n="Mo"; e={[math]::Round($_.Length / 1MB, 1)}}
       - uses: actions/upload-artifact@v4
         with:
-          name: AtlasPC-windows
+          name: AtlasPCMonitor-windows
           path: |
-            AtlasPC-windows.zip
-            dist/AtlasPC.exe
+            AtlasPCMonitor-windows.zip
+            dist/AtlasPCMonitor.exe
 
   linux-appimage:
     name: AppImage Linux
@@ -152,7 +152,7 @@ jobs:
           data = collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), ""))
           open("exemple.json", "w", encoding="utf-8").write(export.to_json(data))
           PY
-          app=$(ls dist/AtlasPC-*-x86_64.AppImage)
+          app=$(ls dist/AtlasPCMonitor-*-x86_64.AppImage)
           "$app" --version
           "$app" --text exemple.json | grep -q "CONSTATS"
           "$app" --fiche exemple.json -o fiche.html && grep -q "Fiche d'intervention" fiche.html
@@ -161,8 +161,8 @@ jobs:
           ls -la "$app"
       - uses: actions/upload-artifact@v4
         with:
-          name: AtlasPC-linux-appimage
-          path: dist/AtlasPC-*-x86_64.AppImage
+          name: AtlasPCMonitor-linux-appimage
+          path: dist/AtlasPCMonitor-*-x86_64.AppImage
 
 
   release:
@@ -183,8 +183,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls -la artefacts artefacts/dist || true
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Atlas PC ${GITHUB_REF_NAME#v}" \
-            --notes "AtlasPC.exe : fichier unique pour Windows 10/11, à lancer directement.
-          AtlasPC-windows.zip : même application en dossier, démarrage plus rapide et moins d'alertes antivirus.
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Atlas PC Monitor ${GITHUB_REF_NAME#v}" \
+            --notes "AtlasPCMonitor.exe : fichier unique pour Windows 10/11, à lancer directement.
+          AtlasPCMonitor-windows.zip : même application en dossier, démarrage plus rapide et moins d'alertes antivirus.
           AppImage : visionneuse de rapports pour Linux (glibc 2.35 ou plus)." \
-            artefacts/dist/AtlasPC.exe artefacts/AtlasPC-windows.zip artefacts/AtlasPC-*-x86_64.AppImage
+            artefacts/dist/AtlasPCMonitor.exe artefacts/AtlasPCMonitor-windows.zip artefacts/AtlasPCMonitor-*-x86_64.AppImage

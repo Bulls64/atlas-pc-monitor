@@ -30,7 +30,7 @@ class FicheDialog(QDialog):
     def __init__(self, win, info: fiche.FicheInfo):
         super().__init__(win)
         self.win, self.info = win, info
-        self.setWindowTitle("Atlas PC — Fiche d'intervention")
+        self.setWindowTitle("Atlas PC Monitor — Fiche d'intervention")
         self.setWindowIcon(win.windowIcon())
         self.resize(660, 760)
         layout = QVBoxLayout(self)
@@ -119,7 +119,7 @@ class FicheDialog(QDialog):
 class CompareDialog(QDialog):
     def __init__(self, win, title: str, changes: list[tuple]):
         super().__init__(win)
-        self.setWindowTitle("Atlas PC — Comparaison de rapports")
+        self.setWindowTitle("Atlas PC Monitor — Comparaison de rapports")
         self.setWindowIcon(win.windowIcon())
         self.resize(1000, 600)
         layout = QVBoxLayout(self)

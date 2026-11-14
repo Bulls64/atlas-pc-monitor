@@ -1,4 +1,4 @@
-"""Fenêtre principale d'Atlas PC (PySide6), au look BAUSTECH PC."""
+"""Fenêtre principale d'Atlas PC Monitor (PySide6), au look BAUSTECH PC."""
 
 from __future__ import annotations
 
@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         self._flash_timer = QTimer(self, singleShot=True, interval=2500, timeout=self._update_status)
         self._search_timer = QTimer(self, singleShot=True, interval=200, timeout=self._run_search)
 
-        self.setWindowTitle("Atlas PC — Informations système")
+        self.setWindowTitle("Atlas PC Monitor — Informations système")
         self.setWindowIcon(QIcon(logo_pixmap(64)))
         available = screen_size()
         self.resize(min(1320, available.width() - 60), min(900, available.height() - 60))
@@ -182,7 +182,8 @@ class MainWindow(QMainWindow):
         bl = QVBoxLayout(brand)
         bl.setContentsMargins(4, 0, 0, 0)
         bl.setSpacing(4)
-        bl.addWidget(label("ATLAS PC", "brand"))
+        self.brand = label("ATLAS PC MONITOR", "brand")
+        bl.addWidget(self.brand)
         self.brand_sub = label(f"INVENTAIRE · DIAGNOSTIC · v{__version__}", "brandSub")
         bl.addWidget(self.brand_sub)
         row.addWidget(brand)
@@ -265,7 +266,7 @@ class MainWindow(QMainWindow):
             action("Copier le rapport", "copy", self.copy_report),
             action("Comparer à un rapport", "compare", self.compare),
         ]
-        action("Ouvrir un rapport", "open", self.open_report).setToolTip("Afficher un rapport JSON d'Atlas PC (Ctrl+O)")
+        action("Ouvrir un rapport", "open", self.open_report).setToolTip("Afficher un rapport JSON d'Atlas PC Monitor (Ctrl+O)")
         self.admin_button = action("Relancer en administrateur", "admin", self.relaunch_as_admin)
         self.admin_button.hide()
         layout.addStretch(1)
@@ -347,7 +348,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(content)
         layout.setContentsMargins(16, 8, 32, 40)
         if not self.data and (self._scanning or collect.is_windows()):
-            layout.addWidget(screens.heading("Atlas PC", "Analyse en cours…", "L'inventaire du poste est en cours de lecture."))
+            layout.addWidget(screens.heading("Atlas PC Monitor", "Analyse en cours…", "L'inventaire du poste est en cours de lecture."))
             layout.addStretch(1)
         elif not self.data:
             layout.addWidget(screens.welcome(self))
@@ -398,11 +399,11 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------ visionneuse
 
     def open_report(self, path: str | Path | None = None) -> bool:
-        """Affiche un rapport JSON fait par Atlas PC sur un autre poste (ou plus tôt sur celui-ci)."""
+        """Affiche un rapport JSON fait par Atlas PC Monitor sur un autre poste (ou plus tôt sur celui-ci)."""
         if self._scanning:
             return False
         if not path:
-            path, _ = QFileDialog.getOpenFileName(self, "Ouvrir un rapport JSON d'Atlas PC", "", "Rapport JSON (*.json)")
+            path, _ = QFileDialog.getOpenFileName(self, "Ouvrir un rapport JSON d'Atlas PC Monitor", "", "Rapport JSON (*.json)")
             if not path:
                 return False
         try:
@@ -475,7 +476,7 @@ class MainWindow(QMainWindow):
         if not self.data:
             return
         filters = ";;".join(f"{name} (*{suffix})" for suffix, name in export.FORMATS.items())
-        path, chosen = QFileDialog.getSaveFileName(self, "Exporter le rapport", f"atlas-pc-{datetime.now():%Y%m%d-%H%M}", filters)
+        path, chosen = QFileDialog.getSaveFileName(self, "Exporter le rapport", f"atlas-pc-monitor-{datetime.now():%Y%m%d-%H%M}", filters)
         if not path:
             return
         try:
@@ -488,7 +489,7 @@ class MainWindow(QMainWindow):
     def compare(self) -> None:
         if not self.data:
             return
-        path, _ = QFileDialog.getOpenFileName(self, "Choisir un rapport JSON d'Atlas PC", "", "Rapport JSON (*.json)")
+        path, _ = QFileDialog.getOpenFileName(self, "Choisir un rapport JSON d'Atlas PC Monitor", "", "Rapport JSON (*.json)")
         if not path:
             return
         try:
@@ -540,7 +541,7 @@ class MainWindow(QMainWindow):
 
     def print_fiche(self, info: fiche.FicheInfo) -> Path | None:
         """Écrit la fiche dans le dossier temporaire et l'ouvre dans le navigateur (Ctrl+P pour imprimer ou faire un PDF)."""
-        folder = Path(tempfile.gettempdir()) / "AtlasPC"
+        folder = Path(tempfile.gettempdir()) / "AtlasPCMonitor"
         target = folder / f"fiche-{self._safe(info.reference)}.html"
         try:
             folder.mkdir(parents=True, exist_ok=True)
@@ -577,10 +578,16 @@ class MainWindow(QMainWindow):
             self.flash("Élévation annulée")
 
     def _fit_header(self, width: int) -> None:
-        """En fenêtre étroite, l'en-tête se resserre : le message d'état cède la place en premier."""
+        """En fenêtre étroite, l'en-tête se resserre : le message d'état cède la place en premier,
+        puis le sous-titre, puis le nom passe sur deux lignes (« ATLAS PC » / « MONITOR »)."""
         self.status.setVisible(width >= 1180)
         self.status_led.setVisible(width >= 1180)
-        self.brand_sub.setText(f"INVENTAIRE · DIAGNOSTIC{' · v' + __version__ if width >= 1100 else ''}")
+        wide = width >= 960
+        self.brand.setText("ATLAS PC MONITOR" if wide else "ATLAS PC")
+        if not wide:
+            self.brand_sub.setText("MONITOR")
+        else:
+            self.brand_sub.setText(f"INVENTAIRE · DIAGNOSTIC{' · v' + __version__ if width >= 1100 else ''}")
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

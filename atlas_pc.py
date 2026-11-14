@@ -1,4 +1,4 @@
-"""Atlas PC — inventaire matériel Windows, interface française.
+"""Atlas PC Monitor — inventaire matériel Windows, interface française.
 
 Lanceur : tout le code vit dans le paquet « atlas ».
     python atlas_pc.py            interface graphique

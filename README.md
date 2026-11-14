@@ -1,22 +1,22 @@
-# Atlas PC
+# Atlas PC Monitor
 
 **[English](#english)** · **[Français](#français)**
 
 ## English
 
 A hardware inventory and diagnostic tool for Windows PCs, in the spirit of Speccy.
-Atlas PC reads the machine's configuration, turns it into **findings** (what needs fixing,
+Atlas PC Monitor reads the machine's configuration, turns it into **findings** (what needs fixing,
 what to keep an eye on, what is fine) and prepares a printable **intervention sheet**.
 
 The user interface is in French. Its visual identity comes from the BAUSTECH PC website:
 the application is drawn like a circuit board.
 
-![Atlas PC overview in the dark theme: motherboard map, findings and memory in use](docs/captures/vue-ensemble.png)
+![Atlas PC Monitor overview in the dark theme: motherboard map, findings and memory in use](docs/captures/vue-ensemble.png)
 
 > All screenshots use the sample inventory from the tests, not a real machine.
 > To regenerate them: `python tools/captures.py`.
 
-### What Atlas PC does
+### What Atlas PC Monitor does
 
 - **Full inventory** in a single PowerShell/CIM query: machine model, BIOS/UEFI, processor,
   memory (type, form factor, speeds), graphics cards and monitors, disks (actual SSD/HDD, NVMe/SATA, health,
@@ -76,9 +76,9 @@ goes through every page and ignores accents.
 
 ### Installation and launch
 
-- **Without Python**: download `AtlasPC.exe` from the
+- **Without Python**: download `AtlasPCMonitor.exe` from the
   [Releases](https://github.com/Bulls64/atlas-pc/releases) page and run it (Windows 10 or 11).
-  `AtlasPC-windows.zip` holds the same application as a folder: it starts faster and triggers
+  `AtlasPCMonitor-windows.zip` holds the same application as a folder: it starts faster and triggers
   fewer antivirus warnings.
 
 With Python 3.9 or later:
@@ -124,9 +124,9 @@ The `--debug` log contains the raw inventory, **not masked**.
 
 ```
 python -m pip install -r requirements-dev.txt pillow
-set "QT_QPA_PLATFORM=offscreen" && python tools/make_icon.py build/atlas-pc.ico
-pyinstaller atlas_pc.spec --noconfirm                           → dist/AtlasPC/ folder
-set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → single file dist/AtlasPC.exe
+set "QT_QPA_PLATFORM=offscreen" && python tools/make_icon.py build/atlas-pc-monitor.ico
+pyinstaller atlas_pc.spec --noconfirm                           → dist/AtlasPCMonitor/ folder
+set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → single file dist/AtlasPCMonitor.exe
 ```
 
 The folder (« onedir ») is distributed whole, zipped: it starts faster and antivirus software and
@@ -136,15 +136,15 @@ as a GitHub release.
 
 ### Linux: AppImage
 
-The inventory is done on Windows. On Linux, Atlas PC is a **viewer**: it opens JSON reports made on
-Windows PCs (« Exporter le rapport » button, or `AtlasPC.exe --json -o report.json`) and derives
+The inventory is done on Windows. On Linux, Atlas PC Monitor is a **viewer**: it opens JSON reports made on
+Windows PCs (« Exporter le rapport » button, or `AtlasPCMonitor.exe --json -o report.json`) and derives
 findings, the intervention sheet, exports and comparison from them.
 
 ```
-chmod +x AtlasPC-3.0.0-x86_64.AppImage
-./AtlasPC-3.0.0-x86_64.AppImage                    interface
-./AtlasPC-3.0.0-x86_64.AppImage report.json        opens a report directly
-./AtlasPC-3.0.0-x86_64.AppImage --fiche report.json -o sheet.html
+chmod +x AtlasPCMonitor-3.0.0-x86_64.AppImage
+./AtlasPCMonitor-3.0.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-3.0.0-x86_64.AppImage report.json        opens a report directly
+./AtlasPCMonitor-3.0.0-x86_64.AppImage --fiche report.json -o sheet.html
 ```
 
 A report can also be opened by dragging it onto the window, or with Ctrl+O. If the AppImage does not
@@ -156,7 +156,7 @@ glibc 2.35 or later. To build it yourself:
 ```
 sudo apt install libxcb-cursor0 squashfs-tools
 python -m pip install -r requirements-dev.txt
-tools/build_appimage.sh                            → dist/AtlasPC-<version>-x86_64.AppImage
+tools/build_appimage.sh                            → dist/AtlasPCMonitor-<version>-x86_64.AppImage
 ```
 
 The script assembles the AppImage without appimagetool: a squashfs image of the PyInstaller folder,
@@ -207,18 +207,18 @@ the SIL Open Font License; their license texts are in [`atlas/gui/fonts/`](atlas
 ## Français
 
 Inventaire matériel et diagnostic d'un PC Windows, en français, dans l'esprit de Speccy.
-Atlas PC lit la configuration du poste, la traduit en **constats** (ce qui est à corriger,
+Atlas PC Monitor lit la configuration du poste, la traduit en **constats** (ce qui est à corriger,
 à surveiller ou en ordre) et prépare une **fiche d'intervention** prête à imprimer.
 
 L'interface reprend l'identité visuelle du site BAUSTECH PC :
 l'application est dessinée comme une carte électronique.
 
-![Vue d'ensemble d'Atlas PC en thème sombre : plan de carte mère, constats et mémoire utilisée](docs/captures/vue-ensemble.png)
+![Vue d'ensemble d'Atlas PC Monitor en thème sombre : plan de carte mère, constats et mémoire utilisée](docs/captures/vue-ensemble.png)
 
 > Toutes les captures sont faites avec l'inventaire d'exemple des tests, et non avec un vrai poste.
 > Pour les régénérer : `python tools/captures.py`.
 
-### Ce que fait Atlas PC
+### Ce que fait Atlas PC Monitor
 
 - **Inventaire complet** en une seule requête PowerShell/CIM : modèle du poste, BIOS/UEFI, processeur,
   mémoire (type, format, vitesses), cartes graphiques et écrans, disques (SSD/HDD réel, NVMe/SATA, santé,
@@ -278,9 +278,9 @@ parcourt toutes les pages sans tenir compte des accents.
 
 ### Installation et lancement
 
-- **Sans Python** : télécharger `AtlasPC.exe` sur la page
+- **Sans Python** : télécharger `AtlasPCMonitor.exe` sur la page
   [Releases](https://github.com/Bulls64/atlas-pc/releases) et le lancer (Windows 10 ou 11).
-  `AtlasPC-windows.zip` contient la même application en dossier : elle démarre plus vite et alerte moins
+  `AtlasPCMonitor-windows.zip` contient la même application en dossier : elle démarre plus vite et alerte moins
   les antivirus.
 
 Avec Python 3.9 ou plus récent :
@@ -326,9 +326,9 @@ Le journal `--debug` contient l'inventaire brut, **non masqué**.
 
 ```
 python -m pip install -r requirements-dev.txt pillow
-set "QT_QPA_PLATFORM=offscreen" && python tools/make_icon.py build/atlas-pc.ico
-pyinstaller atlas_pc.spec --noconfirm                           → dossier dist/AtlasPC/
-set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → fichier unique dist/AtlasPC.exe
+set "QT_QPA_PLATFORM=offscreen" && python tools/make_icon.py build/atlas-pc-monitor.ico
+pyinstaller atlas_pc.spec --noconfirm                           → dossier dist/AtlasPCMonitor/
+set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → fichier unique dist/AtlasPCMonitor.exe
 ```
 
 Le dossier (« onedir ») se distribue entier, zippé : il démarre plus vite et les antivirus comme
@@ -338,15 +338,15 @@ la CI, avec l'AppImage, dans une release GitHub.
 
 ### Linux : AppImage
 
-L'inventaire se fait sous Windows. Sous Linux, Atlas PC est une **visionneuse** : il ouvre les rapports
-JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPC.exe --json -o rapport.json`)
+L'inventaire se fait sous Windows. Sous Linux, Atlas PC Monitor est une **visionneuse** : il ouvre les rapports
+JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPCMonitor.exe --json -o rapport.json`)
 et en tire constats, fiche d'intervention, exports et comparaison.
 
 ```
-chmod +x AtlasPC-3.0.0-x86_64.AppImage
-./AtlasPC-3.0.0-x86_64.AppImage                    interface
-./AtlasPC-3.0.0-x86_64.AppImage rapport.json       ouvre directement un rapport
-./AtlasPC-3.0.0-x86_64.AppImage --fiche rapport.json -o fiche.html
+chmod +x AtlasPCMonitor-3.0.0-x86_64.AppImage
+./AtlasPCMonitor-3.0.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-3.0.0-x86_64.AppImage rapport.json       ouvre directement un rapport
+./AtlasPCMonitor-3.0.0-x86_64.AppImage --fiche rapport.json -o fiche.html
 ```
 
 Un rapport s'ouvre aussi par glisser-déposer sur la fenêtre, ou avec Ctrl+O. Si l'AppImage ne démarre
@@ -358,7 +358,7 @@ distributions dont la glibc vaut 2.35 ou plus. Pour la construire soi-même :
 ```
 sudo apt install libxcb-cursor0 squashfs-tools
 python -m pip install -r requirements-dev.txt
-tools/build_appimage.sh                            → dist/AtlasPC-<version>-x86_64.AppImage
+tools/build_appimage.sh                            → dist/AtlasPCMonitor-<version>-x86_64.AppImage
 ```
 
 Le script assemble l'AppImage sans appimagetool : image squashfs du dossier PyInstaller, précédée du

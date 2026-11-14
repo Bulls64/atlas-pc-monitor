@@ -1,1 +1,1 @@
-"""Interface graphique PySide6 d'Atlas PC, au look BAUSTECH PC."""
+"""Interface graphique PySide6 d'Atlas PC Monitor, au look BAUSTECH PC."""

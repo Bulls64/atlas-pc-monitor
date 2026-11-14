@@ -204,7 +204,7 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
   <div class="box"><span class="label">Signature du technicien</span></div>
   <div class="box"><span class="label">Signature du client</span></div>
 </div>
-<footer>Généré par Atlas PC {esc(__version__)} le {datetime.now():%d/%m/%Y à %H:%M}</footer>
+<footer>Généré par Atlas PC Monitor {esc(__version__)} le {datetime.now():%d/%m/%Y à %H:%M}</footer>
 </div>
 </body></html>
 """

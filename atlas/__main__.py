@@ -13,11 +13,11 @@ from .collect import scan
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="atlas_pc", description="Atlas PC — inventaire matériel Windows.")
+    parser = argparse.ArgumentParser(prog="atlas_pc", description="Atlas PC Monitor — inventaire matériel Windows.")
     parser.add_argument(
         "rapport",
         nargs="?",
-        help="rapport JSON d'Atlas PC à ouvrir ou à convertir au lieu d'analyser ce poste (seul usage possible hors Windows)",
+        help="rapport JSON d'Atlas PC Monitor à ouvrir ou à convertir au lieu d'analyser ce poste (seul usage possible hors Windows)",
     )
     group = parser.add_mutually_exclusive_group()
     group.add_argument("--json", action="store_true", help="imprime l'inventaire en JSON, sans interface")
@@ -30,7 +30,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--reference", default="", help="référence de l'intervention sur la fiche")
     parser.add_argument("-o", "--output", metavar="FICHIER", help="écrit le rapport dans ce fichier (.json, .txt ou .html)")
     parser.add_argument("--debug", action="store_true", help="journal détaillé dans le dossier temporaire (atlas-debug.log)")
-    parser.add_argument("--version", action="version", version=f"Atlas PC {__version__}")
+    parser.add_argument("--version", action="version", version=f"Atlas PC Monitor {__version__}")
     return parser
 
 
