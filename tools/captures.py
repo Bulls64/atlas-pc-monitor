@@ -1,6 +1,7 @@
 """Régénère les captures d'écran du README à partir de l'inventaire d'exemple des tests.
 
-Usage : python tools/captures.py [dossier]   (par défaut docs/captures)
+Usage : python tools/captures.py [--lang en] [dossier]
+        par défaut docs/captures (français) ou docs/captures/en (anglais)
 
 Fonctionne sans écran (plateforme Qt « offscreen »). Les données sont celles de
 tests/conftest.py : aucune information d'un vrai poste ne finit dans le dépôt.
@@ -28,7 +29,7 @@ from PIL import Image, ImageChops  # noqa: E402
 from PySide6.QtCore import QEventLoop, QTimer  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from atlas import collect, fiche  # noqa: E402
+from atlas import collect, fiche, i18n  # noqa: E402
 
 WIDTH, HEIGHT = 1320, 900
 HOST = "POSTE-CLIENT-01"
@@ -97,8 +98,31 @@ def fiche_a4(win, info, out: Path) -> None:
     print(f"{'fiche-a4.png':28} {(out / 'fiche-a4.png').stat().st_size // 1024} Ko")
 
 
+SAMPLE_FICHE = {
+    "fr": {
+        "client": "Mme Dupont",
+        "contact": "06 12 34 56 78",
+        "request": "Le PC est lent au démarrage et la batterie tient peu.",
+        "work": "Contrôle SMART du disque ST1000LM035.\nNettoyage des programmes au démarrage.",
+    },
+    "en": {
+        "client": "Mrs Smith",
+        "contact": "+44 20 7946 0000",
+        "request": "The PC is slow to start and the battery does not last long.",
+        "work": "SMART check of the ST1000LM035 disk.\nRemoved unneeded startup programs.",
+    },
+}
+
+
 def main() -> int:
-    out = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / "docs" / "captures"
+    args = sys.argv[1:]
+    lang = "fr"
+    if "--lang" in args:
+        index = args.index("--lang")
+        lang = args[index + 1]
+        del args[index : index + 2]
+    i18n.set_language(lang)
+    out = Path(args[0]) if args else ROOT / "docs" / "captures" / ("" if lang == "fr" else lang)
     out.mkdir(parents=True, exist_ok=True)
     app = QApplication([])  # noqa: F841 (doit vivre jusqu'à la fin)
     from atlas.gui import theme, window
@@ -131,11 +155,7 @@ def main() -> int:
     win.toggle_theme()
     wait(300)
 
-    info = fiche.FicheInfo(
-        technician="Chris", client="Mme Dupont", contact="06 12 34 56 78", reference="INT-20261113-1030",
-        request="Le PC est lent au démarrage et la batterie tient peu.",
-        work="Contrôle SMART du disque ST1000LM035.\nNettoyage des programmes au démarrage.",
-    )  # fmt: skip
+    info = fiche.FicheInfo(technician="Chris", reference="INT-20261113-1030", **SAMPLE_FICHE[i18n.language()])
     win.open_fiche()
     dialog = win.fiche_dialog
     for key, entry in dialog.entries.items():

@@ -14,6 +14,7 @@ from . import __version__
 from . import formatting as f
 from .findings import FIX, INFO, OK, WATCH, Finding, analyze, battery_wear, summary, summary_text
 from .formatting import EMPTY
+from .i18n import N_, _, language
 
 
 @dataclass
@@ -58,30 +59,35 @@ def machine_rows(data: dict) -> list[tuple[str, str]]:
         if value and value != EMPTY:
             rows.append((label, value))
 
-    add("Nom du poste", f.clean(host.get("computer")))
-    add("Fabricant et modèle", _join(machine.get("Manufacturer"), machine.get("Model"), machine.get("SystemFamily")))
-    add("Numéro de série", f.clean(bios.get("SerialNumber")))
+    add(_("Nom du poste"), f.clean(host.get("computer")))
+    add(_("Fabricant et modèle"), _join(machine.get("Manufacturer"), machine.get("Model"), machine.get("SystemFamily")))
+    add(_("Numéro de série"), f.clean(bios.get("SerialNumber")))
     windows = _join(
-        system.get("Caption"), system.get("DisplayVersion"), f"build {system['BuildNumber']}" if system.get("BuildNumber") else ""
+        system.get("Caption"), system.get("DisplayVersion"), _("build {0}", system["BuildNumber"]) if system.get("BuildNumber") else ""
     )
     product = next(iter(data.get("license") or []), None)
     if product:
         windows = _join(windows, f.fmt_code(product.get("LicenseStatus"), f.LICENSE_STATUS))
-    add("Windows", windows or f.clean(host.get("platform")))
+    add(_("Windows"), windows or f.clean(host.get("platform")))
     for cpu in (data.get("cpu") or [])[:1]:
-        add("Processeur", _join(cpu.get("Name"), f"{cpu['NumberOfCores']} cœurs" if cpu.get("NumberOfCores") else ""))
-    add("Mémoire", _join(f.fmt_binary(memory.get("installed")), f"{len(sticks)} barrette(s)" if sticks else "", *f.memory_types(sticks)))
+        add(_("Processeur"), _join(cpu.get("Name"), _("{0} cœurs", cpu["NumberOfCores"]) if cpu.get("NumberOfCores") else ""))
+    add(
+        _("Mémoire"),
+        _join(f.fmt_binary(memory.get("installed")), _("{0} barrette(s)", len(sticks)) if sticks else "", *f.memory_types(sticks)),
+    )
     for disk in data.get("disks") or []:
         kind = f.fmt_media(disk.get("MediaType")) if disk.get("MediaType") not in (None, "") else ""
-        health = {"healthy": "sain", "warning": "en alerte", "unhealthy": "défaillant"}.get(str(disk.get("Health") or "").lower(), "")
-        add("Disque", _join(disk.get("Model"), f.fmt_decimal(disk.get("Size")), kind, health))
+        health = {"healthy": _("sain"), "warning": _("en alerte"), "unhealthy": _("défaillant")}.get(
+            str(disk.get("Health") or "").lower(), ""
+        )
+        add(_("Disque"), _join(disk.get("Model"), f.fmt_decimal(disk.get("Size")), kind, health))
     gpus = [f.clean(gpu.get("Name")) for gpu in data.get("gpu") or []]
-    add("Carte graphique" if len(gpus) < 2 else "Cartes graphiques", " + ".join(g for g in gpus if g != EMPTY))
+    add(_("Carte graphique") if len(gpus) < 2 else _("Cartes graphiques"), " + ".join(g for g in gpus if g != EMPTY))
     for battery in data.get("battery") or []:
         wear = battery_wear(battery)
         if wear is not None:
-            add("Batterie", f"usure {int(round(wear))} %")
-    add("BIOS / UEFI", _join(bios.get("Version"), f.fmt_date(bios.get("ReleaseDate"))))
+            add(_("Batterie"), _("usure {0} %", int(round(wear))))
+    add(_("BIOS / UEFI"), _join(bios.get("Version"), f.fmt_date(bios.get("ReleaseDate"))))
     return rows
 
 
@@ -163,48 +169,67 @@ def to_html(data: dict, info: FicheInfo | None = None, found: list[Finding] | No
     if alerts:
         findings_html = "".join(_finding(item) for item in alerts)
     elif found:
-        findings_html = '<p class="ok-line">Aucun point à corriger ni à surveiller.</p>'
+        findings_html = f'<p class="ok-line">{esc(_("Aucun point à corriger ni à surveiller."))}</p>'
     else:
-        findings_html = '<p class="ok-line" style="color:#637386">Diagnostic automatique indisponible (inventaire Windows non lu).</p>'
+        unavailable = esc(_("Diagnostic automatique indisponible (inventaire Windows non lu)."))
+        findings_html = f'<p class="ok-line" style="color:#637386">{unavailable}</p>'
     if notes:
-        findings_html += f'<p class="notes">À noter : {esc(" · ".join(notes))}</p>'
+        findings_html += f'<p class="notes">{esc(_("À noter : {0}", " · ".join(notes)))}</p>'
     if oks:
         findings_html += f'<p class="ok-line">✓ {esc(" · ".join(oks))}</p>'
 
     counts = summary(found)
-    verdict_text = summary_text(found) if counts[FIX] or counts[WATCH] else ("Rien à signaler" if found else "")
+    verdict_text = summary_text(found) if counts[FIX] or counts[WATCH] else (_("Rien à signaler") if found else "")
     note = f'<p class="ok-line" style="color:#98620a">{esc(data["note"])}</p>' if data.get("note") else ""
 
-    masked = "<br>Identifiants masqués" if data.get("anonymized") else ""
-    title = f"Fiche d'intervention {reference}"
+    masked = "<br>" + esc(_("Identifiants masqués")) if data.get("anonymized") else ""
+    title = _("Fiche d'intervention {0}", reference)
+    t = {  # libellés de la page, dans la langue courante
+        key: html.escape(_(text), quote=False)
+        for key, text in {
+            "print": N_("Imprimer ou enregistrer en PDF"),
+            "heading": N_("Fiche d'intervention"),
+            "client": N_("Client"),
+            "technician": N_("Technicien"),
+            "request": N_("Demande du client"),
+            "machine": N_("Poste diagnostiqué"),
+            "diagnosis": N_("Diagnostic automatique"),
+            "work": N_("Travaux réalisés"),
+            "recommendations": N_("Recommandations"),
+            "sign_tech": N_("Signature du technicien"),
+            "sign_client": N_("Signature du client"),
+        }.items()
+    }
+    meta = _("Référence <strong>{0}</strong><br>Diagnostic du <strong>{1}</strong>", esc(reference), esc(stamp))
+    footer = esc(_("Généré par Atlas PC Monitor {0} le {1}", __version__, f.fmt_day(datetime.now(), with_time=True)))
     return f"""<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><title>{esc(title)} — {esc(computer)}</title><style>{_CSS}</style></head>
+<html lang="{language()}"><head><meta charset="utf-8"><title>{esc(title)} — {esc(computer)}</title><style>{_CSS}</style></head>
 <body>
-<div class="toolbar"><button onclick="window.print()">Imprimer ou enregistrer en PDF</button></div>
+<div class="toolbar"><button onclick="window.print()">{t["print"]}</button></div>
 <div class="sheet">
 <header>
-  <h1>Fiche d'intervention</h1>
-  <div class="meta">Référence <strong>{esc(reference)}</strong><br>Diagnostic du <strong>{esc(stamp)}</strong>{masked}</div>
+  <h1>{t["heading"]}</h1>
+  <div class="meta">{meta}{masked}</div>
 </header>
 <div class="parties">
-  {party("Client", info.client, info.contact)}
-  {party("Technicien", info.technician)}
+  {party(t["client"], info.client, info.contact)}
+  {party(t["technician"], info.technician)}
 </div>
-<h2>Demande du client</h2>
+<h2>{t["request"]}</h2>
 {_text_block(info.request)}
-<h2>Poste diagnostiqué</h2>
+<h2>{t["machine"]}</h2>
 <table>{machine}</table>
-<h2>Diagnostic automatique{f" — {esc(verdict_text)}" if verdict_text else ""}</h2>
+<h2>{t["diagnosis"]}{f" — {esc(verdict_text)}" if verdict_text else ""}</h2>
 {note}{findings_html}
-<h2>Travaux réalisés</h2>
+<h2>{t["work"]}</h2>
 {_text_block(info.work)}
-<h2>Recommandations</h2>
+<h2>{t["recommendations"]}</h2>
 {_text_block(info.recommendations)}
 <div class="signatures">
-  <div class="box"><span class="label">Signature du technicien</span></div>
-  <div class="box"><span class="label">Signature du client</span></div>
+  <div class="box"><span class="label">{t["sign_tech"]}</span></div>
+  <div class="box"><span class="label">{t["sign_client"]}</span></div>
 </div>
-<footer>Généré par Atlas PC Monitor {esc(__version__)} le {datetime.now():%d/%m/%Y à %H:%M}</footer>
+<footer>{footer}</footer>
 </div>
 </body></html>
 """

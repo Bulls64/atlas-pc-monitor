@@ -8,13 +8,14 @@ A hardware inventory and diagnostic tool for Windows PCs, in the spirit of Specc
 Atlas PC Monitor reads the machine's configuration, turns it into **findings** (what needs fixing,
 what to keep an eye on, what is fine) and prepares a printable **intervention sheet**.
 
-The user interface is in French. Its visual identity comes from the BAUSTECH PC website:
-the application is drawn like a circuit board.
+The interface is available in English and French: the **EN/FR** button in the header switches
+language on the fly. Its visual identity comes from the BAUSTECH PC website: the application is drawn
+like a circuit board.
 
-![Atlas PC Monitor overview in the dark theme: motherboard map, findings and memory in use](docs/captures/vue-ensemble.png)
+![Atlas PC Monitor overview in the dark theme: motherboard map, findings and memory in use](docs/captures/en/vue-ensemble.png)
 
 > All screenshots use the sample inventory from the tests, not a real machine.
-> To regenerate them: `python tools/captures.py`.
+> To regenerate them: `python tools/captures.py --lang en` (French: `python tools/captures.py`).
 
 ### What Atlas PC Monitor does
 
@@ -24,30 +25,32 @@ the application is drawn like a circuit board.
 - **Automatic findings**, each with a piece of advice: single-channel memory or memory below its rated
   speed, mismatched modules, failing or worn disk, full volume, worn battery, Windows 10 end of support and
   Windows 11 eligibility, generic or outdated graphics driver, devices in error…
-- **A4 intervention sheet** (*fiche d'intervention*), printable or saved as PDF.
+- **A4 intervention sheet**, printable or saved as PDF.
 - **Memory upgrade advisor**: which modules to buy, and how to reach the next capacity.
 - **Sharing mode**: hides the machine's identifiers before a screenshot or an export.
 - **Comparison** with an older report: what changed on the machine.
 - **JSON, text and HTML exports**, and a **command line** to do everything without the interface.
 - **Report viewer**, on Windows as well as on Linux (AppImage): open a JSON report made on another PC,
   with its findings, intervention sheet and comparison.
+- **English and French**: interface, findings, reports and intervention sheet, switched with the **EN/FR**
+  button or `--lang`.
 
 ### Screenshots
 
 #### Findings: the test bench
 
-Each item is rated *to fix*, *to watch*, *to note* or *OK* (*à corriger*, *à surveiller*, *à noter*), with an
+Each item is rated *to fix*, *to watch*, *to note* or *OK*, with an
 explanation, a piece of advice and a link to the relevant page. Thresholds are set at the top of
 [`atlas/findings.py`](atlas/findings.py).
 
-![Findings page: counters by level, findings with status LEDs and advice, intervention sheet panel](docs/captures/constats.png)
+![Findings page: counters by level, findings with status LEDs and advice, intervention sheet panel](docs/captures/en/constats.png)
 
 #### Memory and upgrade advisor
 
 The memory modules are drawn, a mismatched module is flagged, and the advisor shows the possible upgrades
 based on the motherboard's slots, memory type, form factor and maximum capacity. Shown here in the light theme.
 
-![Memory page in the light theme: drawn modules, upgrade advisor and module comparison](docs/captures/memoire-clair.png)
+![Memory page in the light theme: drawn modules, upgrade advisor and module comparison](docs/captures/en/memoire-clair.png)
 
 #### Intervention sheet
 
@@ -56,14 +59,14 @@ the advice from the findings. Fields left empty are printed as blank lines to fi
 
 | Entry in the application | Printed sheet (A4) |
 | :---: | :---: |
-| ![Intervention sheet form](docs/captures/fiche.png) | ![Completed A4 intervention sheet, with the diagnosed machine and its findings](docs/captures/fiche-a4.png) |
+| ![Intervention sheet form](docs/captures/en/fiche.png) | ![Completed A4 intervention sheet, with the diagnosed machine and its findings](docs/captures/en/fiche-a4.png) |
 
 #### Sharing mode
 
 One click hides the computer name, the domain, serial numbers, the end of MAC and IPv4 addresses and
 IPv6 addresses, on screen as well as in copies, exports and the intervention sheet.
 
-![Motherboard page in sharing mode: serial numbers replaced with « masqué » (hidden)](docs/captures/mode-partage.png)
+![Motherboard page in sharing mode: serial numbers replaced with “[hidden]”](docs/captures/en/mode-partage.png)
 
 #### Detail pages and light theme
 
@@ -72,7 +75,7 @@ goes through every page and ignores accents.
 
 | Storage, dark theme | Overview, light theme |
 | :---: | :---: |
-| ![Storage page: one table per disk with type, interface, health and wear](docs/captures/stockage.png) | ![Overview in the light theme](docs/captures/vue-ensemble-clair.png) |
+| ![Storage page: one table per disk with type, interface, health and wear](docs/captures/en/stockage.png) | ![Overview in the light theme](docs/captures/en/vue-ensemble-clair.png) |
 
 ### Installation and launch
 
@@ -93,16 +96,18 @@ With Python 3.9 or later:
   ```
 
 Some sources (TPM, BitLocker, Secure Boot, disk reliability counters, temperatures) require an
-administrator session: the « Relancer en administrateur » (restart as administrator) button appears
+administrator session: the “Restart as administrator” button appears
 when it helps, and each page explains why a piece of information is missing.
 
 Shortcuts: **F5** to refresh, **Ctrl+F** to search, **Esc** to leave the search.
-The theme (dark or light), sharing mode and technician name are saved in
-`%APPDATA%\AtlasPC\config.json`.
+The language, theme (dark or light), sharing mode and technician name are saved in
+`%APPDATA%\AtlasPC\config.json`. On first launch, the language follows the Windows display language
+(French if Windows is in French, English otherwise).
 
 ### Command line
 
-Commands without the interface do not need PySide6. Options are in French.
+Commands without the interface do not need PySide6. Option names are in French; `--lang en` gives
+the help, messages and reports in English.
 
 ```
 python atlas_pc.py --json                    JSON inventory on standard output
@@ -114,6 +119,7 @@ python atlas_pc.py --json --anonyme          inventory without identifiers
 python atlas_pc.py report.json               opens a JSON report in the interface
 python atlas_pc.py --fiche report.json -o sheet.html
                                              sheet for an existing report, without scanning this PC
+python atlas_pc.py --lang en --text          report in English (--lang fr: in French)
 python atlas_pc.py --debug                   detailed log in the temporary folder
 python atlas_pc.py --help
 ```
@@ -129,7 +135,7 @@ pyinstaller atlas_pc.spec --noconfirm                           → dist/AtlasPC
 set "ATLAS_ONEFILE=1" && pyinstaller atlas_pc.spec --noconfirm   → single file dist/AtlasPCMonitor.exe
 ```
 
-The folder (« onedir ») is distributed whole, zipped: it starts faster and antivirus software and
+The folder (“onedir”) is distributed whole, zipped: it starts faster and antivirus software and
 SmartScreen flag it less often. The single file is easier to carry around, but unpacks itself to the
 temporary folder on every launch. Pushing a `v*` tag makes the CI publish both, along with the AppImage,
 as a GitHub release.
@@ -137,7 +143,7 @@ as a GitHub release.
 ### Linux: AppImage
 
 The inventory is done on Windows. On Linux, Atlas PC Monitor is a **viewer**: it opens JSON reports made on
-Windows PCs (« Exporter le rapport » button, or `AtlasPCMonitor.exe --json -o report.json`) and derives
+Windows PCs (“Export report” button, or `AtlasPCMonitor.exe --json -o report.json`) and derives
 findings, the intervention sheet, exports and comparison from them.
 
 ```
@@ -150,7 +156,7 @@ chmod +x AtlasPCMonitor-3.0.0-x86_64.AppImage
 A report can also be opened by dragging it onto the window, or with Ctrl+O. If the AppImage does not
 start because FUSE is missing, install `libfuse2` (or run it with `--appimage-extract-and-run`).
 
-The CI AppImage (« AppImage Linux » job) is built on Ubuntu 22.04: it runs on distributions with
+The CI AppImage (“AppImage Linux” job) is built on Ubuntu 22.04: it runs on distributions with
 glibc 2.35 or later. To build it yourself:
 
 ```
@@ -168,7 +174,8 @@ preceded by the official AppImage runtime, pinned to a dated release and checked
 python -m pip install -r requirements-dev.txt
 pytest                          tests (the interface is tested headless)
 ruff check . ; ruff format .    linting and formatting
-python tools/captures.py        regenerates the screenshots in this README
+python tools/captures.py [--lang en]
+                                regenerates the screenshots in this README
 python tools/check_scan.py scan.json
                                 checks a real Windows inventory
 ```
@@ -190,7 +197,8 @@ The manual checks to run on real PCs are listed (in French) in [`docs/ESSAIS-WIN
 | `atlas/fiche.py` | A4 intervention sheet |
 | `atlas/privacy.py` | sharing mode (identifier masking) |
 | `atlas/export.py` | JSON, text and HTML exports |
-| `atlas/formatting.py` | value formatting |
+| `atlas/formatting.py` | value formatting (numbers, units and dates follow the language) |
+| `atlas/i18n.py`, `atlas/locale_en.py` | language choice and English catalog |
 | `atlas/settings.py` | preferences, restart as administrator |
 | `atlas/gui/` | PySide6 interface: theme, board map, memory modules, screens, window |
 | `tests/` | tests (pytest, pytest-qt) |
@@ -206,17 +214,18 @@ the SIL Open Font License; their license texts are in [`atlas/gui/fonts/`](atlas
 
 ## Français
 
-Inventaire matériel et diagnostic d'un PC Windows, en français, dans l'esprit de Speccy.
+Inventaire matériel et diagnostic d'un PC Windows, dans l'esprit de Speccy.
 Atlas PC Monitor lit la configuration du poste, la traduit en **constats** (ce qui est à corriger,
 à surveiller ou en ordre) et prépare une **fiche d'intervention** prête à imprimer.
 
-L'interface reprend l'identité visuelle du site BAUSTECH PC :
-l'application est dessinée comme une carte électronique.
+L'interface existe en français et en anglais : le bouton **FR/EN** de l'en-tête change de langue à la
+volée. Elle reprend l'identité visuelle du site BAUSTECH PC : l'application est dessinée comme une
+carte électronique.
 
 ![Vue d'ensemble d'Atlas PC Monitor en thème sombre : plan de carte mère, constats et mémoire utilisée](docs/captures/vue-ensemble.png)
 
 > Toutes les captures sont faites avec l'inventaire d'exemple des tests, et non avec un vrai poste.
-> Pour les régénérer : `python tools/captures.py`.
+> Pour les régénérer : `python tools/captures.py` (en anglais : `python tools/captures.py --lang en`).
 
 ### Ce que fait Atlas PC Monitor
 
@@ -233,6 +242,8 @@ l'application est dessinée comme une carte électronique.
 - **Exports** JSON, texte et HTML, et une **ligne de commande** pour tout faire sans interface.
 - **Visionneuse de rapports**, sous Windows comme sous Linux (AppImage) : ouvrir un rapport JSON fait
   sur un autre PC, avec ses constats, sa fiche d'intervention et la comparaison.
+- **Français et anglais** : interface, constats, rapports et fiche d'intervention, au choix avec le bouton
+  **FR/EN** ou `--lang`.
 
 ### Aperçu
 
@@ -299,8 +310,9 @@ demandent une session administrateur : le bouton « Relancer en administrateur �
 et chaque page indique pourquoi une information manque.
 
 Raccourcis : **F5** pour actualiser, **Ctrl+F** pour rechercher, **Échap** pour sortir de la recherche.
-Le thème (sombre ou clair), le mode partage et le nom du technicien sont mémorisés dans
-`%APPDATA%\AtlasPC\config.json`.
+La langue, le thème (sombre ou clair), le mode partage et le nom du technicien sont mémorisés dans
+`%APPDATA%\AtlasPC\config.json`. Au premier lancement, la langue suit celle de l'affichage de Windows
+(français si Windows est en français, anglais sinon).
 
 ### Ligne de commande
 
@@ -316,6 +328,7 @@ python atlas_pc.py --json --anonyme          inventaire sans identifiants
 python atlas_pc.py rapport.json              ouvre un rapport JSON dans l'interface
 python atlas_pc.py --fiche rapport.json -o fiche.html
                                              fiche d'un rapport déjà fait, sans analyser ce poste
+python atlas_pc.py --lang en --text          rapport en anglais (--lang fr : en français)
 python atlas_pc.py --debug                   journal détaillé dans le dossier temporaire
 python atlas_pc.py --help
 ```
@@ -370,7 +383,8 @@ runtime AppImage officiel, épinglé à une version datée et vérifié par son 
 python -m pip install -r requirements-dev.txt
 pytest                          tests (l'interface est testée sans écran)
 ruff check . ; ruff format .    contrôle et mise en forme
-python tools/captures.py        régénère les captures de ce README
+python tools/captures.py [--lang en]
+                                régénère les captures de ce README
 python tools/check_scan.py scan.json
                                 vérifie un inventaire Windows réel
 ```
@@ -392,7 +406,8 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 | `atlas/fiche.py` | fiche d'intervention A4 |
 | `atlas/privacy.py` | mode partage (masquage des identifiants) |
 | `atlas/export.py` | exports JSON, texte et HTML |
-| `atlas/formatting.py` | mise en forme des valeurs |
+| `atlas/formatting.py` | mise en forme des valeurs (nombres, unités et dates suivent la langue) |
+| `atlas/i18n.py`, `atlas/locale_en.py` | choix de la langue et catalogue anglais |
 | `atlas/settings.py` | préférences, relance en administrateur |
 | `atlas/gui/` | interface PySide6 : thème, plan de carte, barrettes, écrans, fenêtre |
 | `tests/` | tests (pytest, pytest-qt) |

@@ -33,6 +33,14 @@ def save_config(config: dict) -> None:
         log.warning("Préférences non enregistrées : %s", error)
 
 
+def preferred_language() -> str:
+    """Langue enregistrée par l'utilisateur, sinon celle du système (français ou anglais)."""
+    from .i18n import LANGUAGES, system_language
+
+    chosen = load_config().get("language")
+    return chosen if chosen in LANGUAGES else system_language()
+
+
 def relaunch_command() -> tuple[str, list[str]]:
     """Exécutable et arguments pour relancer l'application à l'identique."""
     if getattr(sys, "frozen", False):

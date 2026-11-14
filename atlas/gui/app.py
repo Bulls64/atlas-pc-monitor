@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import sys
 
-from PySide6.QtCore import QLibraryInfo, QLocale, Qt, QTranslator
+from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
-from . import theme
+from .. import i18n
+from . import qtlang, theme
 from .window import MainWindow
 
 
@@ -20,10 +21,7 @@ def run(report: str | None = None) -> int:
     app.setApplicationName("Atlas PC Monitor")
     app.setOrganizationName("Bulls64")
     theme.load_fonts()
-    QLocale.setDefault(QLocale(QLocale.French, QLocale.France))
-    translator = QTranslator(app)  # boutons des dialogues Qt (Enregistrer, Annuler…) en français
-    if translator.load(QLocale(QLocale.French), "qtbase", "_", QLibraryInfo.path(QLibraryInfo.TranslationsPath)):
-        app.installTranslator(translator)
+    qtlang.apply(i18n.language())  # boutons des dialogues Qt (Enregistrer, Annuler…) dans la langue choisie
     if sys.platform == "win32":  # icône propre dans la barre des tâches
         try:
             import ctypes

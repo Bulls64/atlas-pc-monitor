@@ -93,32 +93,32 @@ def test_sample_laptop(data):
     advice = upgrade.memory_advice(data)
     assert advice.current == "16 Go installés : 2 × 8 Go DDR4 SO-DIMM ; emplacements occupés : 2 sur 2."
     assert advice.spec == "DDR4 SO-DIMM 3200 MT/s"
-    assert advice.options == [("Passer à 32 Go", "remplacer par 2 × 16 Go"), ("Passer à 64 Go", "remplacer par 2 × 32 Go")]
+    assert advice.options == [(32, "remplacer par 2 × 16 Go"), (64, "remplacer par 2 × 32 Go")]
     assert any("64 Go" in note and "prudente" in note for note in advice.notes)
 
 
 def test_single_stick_with_free_slot(data):
     advice = advice_for(data, sticks=1)
     goal, way = advice.options[0]
-    assert goal == "Passer à 16 Go" and way == "ajouter 1 × 8 Go identique ; ou remplacer par 2 × 8 Go"
+    assert goal == 16 and way == "ajouter 1 × 8 Go identique ; ou remplacer par 2 × 8 Go"
 
 
 def test_no_odd_number_of_sticks_and_ddr5_four_dimm_warning(data):
     advice = advice_for(data, sticks=2, slots=4, max_gib=192, SMBIOSMemoryType=34, FormFactor=8, Speed=6000, Capacity=16 * GIB)
     options = dict(advice.options)
-    assert options["Passer à 48 Go"] == "remplacer par 2 × 24 Go"  # pas de 3e barrette
-    assert options["Passer à 64 Go"].startswith("ajouter 2 × 16 Go identiques (4 barrettes DDR5 : vitesse souvent réduite)")
-    assert options["Passer à 96 Go"] == "remplacer par 2 × 48 Go"
+    assert options[48] == "remplacer par 2 × 24 Go"  # pas de 3e barrette
+    assert options[64].startswith("ajouter 2 × 16 Go identiques (4 barrettes DDR5 : vitesse souvent réduite)")
+    assert options[96] == "remplacer par 2 × 48 Go"
     assert len(advice.options) == 3
 
 
 def test_limits(data):
     capped = advice_for(data, max_gib=32)
-    assert [goal for goal, _ in capped.options] == ["Passer à 32 Go"]
+    assert [goal for goal, _ in capped.options] == [32]
     full = advice_for(data, max_gib=16)
-    assert full.options == [] or all("16" not in goal for goal, _ in full.options)
+    assert full.options == [] or all(goal != 16 for goal, _ in full.options)
     one_slot = advice_for(data, sticks=1, slots=1)
-    assert dict(one_slot.options)["Passer à 16 Go"] == "remplacer par 1 × 16 Go"
+    assert dict(one_slot.options)[16] == "remplacer par 1 × 16 Go"
 
 
 def test_soldered_memory(data):
@@ -132,8 +132,8 @@ def test_soldered_memory(data):
     assert advice.upgradable and any("8 Go semblent soudés" in note for note in advice.notes)
     assert advice.spec == "DDR4 SO-DIMM 3200 MT/s"
     assert advice.options == [
-        ("Passer à 24 Go", "remplacer la barrette amovible par 1 × 16 Go"),
-        ("Passer à 40 Go", "remplacer la barrette amovible par 1 × 32 Go"),
+        (24, "remplacer la barrette amovible par 1 × 16 Go"),
+        (40, "remplacer la barrette amovible par 1 × 32 Go"),
     ]
 
 

@@ -14,12 +14,15 @@ from datetime import date, datetime
 
 from . import formatting as f
 from .collect import ADMIN_SECTIONS, is_virtual
+from .i18n import N_, _
 
 log = logging.getLogger("atlas")
 
 FIX, WATCH, INFO, OK = "fix", "watch", "info", "ok"
-LEVELS = {FIX: "À corriger", WATCH: "À surveiller", INFO: "À noter", OK: "OK"}
+LEVELS = {FIX: N_("À corriger"), WATCH: N_("À surveiller"), INFO: N_("À noter"), OK: N_("OK")}
 ORDER = {level: rank for rank, level in enumerate(LEVELS)}
+# Thèmes des constats : identifiants en français, traduits à l'affichage par _(item.topic).
+TOPICS = (N_("Mémoire"), N_("Stockage"), N_("Windows"), N_("Pilotes"), N_("Batterie"), N_("Analyse"))
 
 # Seuils : ce sont des choix d'atelier, pas des normes. Les ajuster ici.
 DISK_WEAR_FIX = 80  # % d'usure SSD
@@ -59,7 +62,7 @@ class Finding:
 
     @property
     def label(self) -> str:
-        return LEVELS[self.level]
+        return _(LEVELS[self.level])
 
 
 def _num(value) -> float | None:
@@ -133,18 +136,24 @@ def rule_memory(data: dict) -> list[Finding]:
         if slots == 1:
             found.append(
                 Finding(
-                    INFO, "Mémoire", "Une seule barrette, un seul emplacement", "Pas d'extension possible en double canal.", page="Mémoire"
+                    INFO,
+                    "Mémoire",
+                    _("Une seule barrette, un seul emplacement"),
+                    _("Pas d'extension possible en double canal."),
+                    page="Mémoire",
                 )
             )
         else:
-            free = f" ({slots - 1} emplacement(s) libre(s))" if slots and slots > 1 else ""
+            free = _(" ({0} emplacement(s) libre(s))", slots - 1) if slots and slots > 1 else ""
             found.append(
                 Finding(
                     WATCH,
                     "Mémoire",
-                    "Mémoire en mono-canal",
-                    f"Une seule barrette installée{free}.",
-                    "Ajouter une barrette identique double la bande passante mémoire : gain net en jeu et avec une puce graphique intégrée.",
+                    _("Mémoire en mono-canal"),
+                    _("Une seule barrette installée{0}.", free),
+                    _(
+                        "Ajouter une barrette identique double la bande passante mémoire : gain net en jeu et avec une puce graphique intégrée."
+                    ),
                     "Mémoire",
                 )
             )
@@ -156,9 +165,9 @@ def rule_memory(data: dict) -> list[Finding]:
                 Finding(
                     WATCH,
                     "Mémoire",
-                    "Barrettes probablement sur le même canal",
-                    f"Les {len(sticks)} barrettes sont déclarées sur le canal {known.pop()}.",
-                    "Vérifier les emplacements conseillés dans le manuel de la carte mère (souvent A2 et B2).",
+                    _("Barrettes probablement sur le même canal"),
+                    _("Les {0} barrettes sont déclarées sur le canal {1}.", len(sticks), known.pop()),
+                    _("Vérifier les emplacements conseillés dans le manuel de la carte mère (souvent A2 et B2)."),
                     "Mémoire",
                 )
             )
@@ -170,9 +179,11 @@ def rule_memory(data: dict) -> list[Finding]:
             Finding(
                 WATCH,
                 "Mémoire",
-                "Barrettes dépareillées",
+                _("Barrettes dépareillées"),
                 " · ".join(_stick_name(s) for s in sticks),
-                "Des barrettes différentes fonctionnent, mais s'alignent sur la plus lente et peuvent être instables avec un profil XMP/EXPO.",
+                _(
+                    "Des barrettes différentes fonctionnent, mais s'alignent sur la plus lente et peuvent être instables avec un profil XMP/EXPO."
+                ),
                 "Mémoire",
             )
         )
@@ -186,11 +197,13 @@ def rule_memory(data: dict) -> list[Finding]:
                 Finding(
                     INFO if laptop else WATCH,
                     "Mémoire",
-                    "Mémoire sous sa vitesse nominale",
-                    f"{where} : {f.fmt_mts(rated)} annoncés, {f.fmt_mts(configured)} configurés.",
-                    "Sur portable, la vitesse est souvent bridée par le processeur ou le BIOS."
+                    _("Mémoire sous sa vitesse nominale"),
+                    _("{0} : {1} annoncés, {2} configurés.", where, f.fmt_mts(rated), f.fmt_mts(configured)),
+                    _("Sur portable, la vitesse est souvent bridée par le processeur ou le BIOS.")
                     if laptop
-                    else "Vérifier le profil XMP/EXPO dans le BIOS. Des barrettes mélangées ou quatre barrettes peuvent aussi imposer une vitesse plus basse.",
+                    else _(
+                        "Vérifier le profil XMP/EXPO dans le BIOS. Des barrettes mélangées ou quatre barrettes peuvent aussi imposer une vitesse plus basse."
+                    ),
                     "Mémoire",
                 )
             )
@@ -206,9 +219,9 @@ def _memory_pressure(data: dict) -> list[Finding]:
         Finding(
             WATCH,
             "Mémoire",
-            "Mémoire presque saturée",
-            f"{int(percent)} % utilisés au moment de l'analyse.",
-            "Repérer les programmes gourmands dans le Gestionnaire des tâches ; ajouter de la mémoire si c'est habituel.",
+            _("Mémoire presque saturée"),
+            _("{0} % utilisés au moment de l'analyse.", int(percent)),
+            _("Repérer les programmes gourmands dans le Gestionnaire des tâches ; ajouter de la mémoire si c'est habituel."),
             "Mémoire",
         )
     ]
@@ -228,9 +241,9 @@ def rule_storage(data: dict) -> list[Finding]:
                 Finding(
                     FIX,
                     "Stockage",
-                    f"Disque défaillant : {name}",
-                    "Windows signale une panne imminente (SMART).",
-                    "Sauvegarder les données sans attendre, puis remplacer le disque.",
+                    _("Disque défaillant : {0}", name),
+                    _("Windows signale une panne imminente (SMART)."),
+                    _("Sauvegarder les données sans attendre, puis remplacer le disque."),
                     "Stockage",
                 )
             )
@@ -239,9 +252,9 @@ def rule_storage(data: dict) -> list[Finding]:
                 Finding(
                     WATCH,
                     "Stockage",
-                    f"Disque en alerte : {name}",
-                    "État de santé « Avertissement » selon Windows.",
-                    "Faire une sauvegarde et contrôler les attributs SMART avec l'outil du fabricant.",
+                    _("Disque en alerte : {0}", name),
+                    _("État de santé « Avertissement » selon Windows."),
+                    _("Faire une sauvegarde et contrôler les attributs SMART avec l'outil du fabricant."),
                     "Stockage",
                 )
             )
@@ -251,9 +264,9 @@ def rule_storage(data: dict) -> list[Finding]:
                 Finding(
                     FIX,
                     "Stockage",
-                    f"SSD très usé : {name}",
-                    f"Usure de {int(wear)} %.",
-                    "Prévoir le remplacement et vérifier les sauvegardes.",
+                    _("SSD très usé : {0}", name),
+                    _("Usure de {0} %.", int(wear)),
+                    _("Prévoir le remplacement et vérifier les sauvegardes."),
                     "Stockage",
                 )
             )
@@ -263,9 +276,9 @@ def rule_storage(data: dict) -> list[Finding]:
                 Finding(
                     WATCH,
                     "Stockage",
-                    f"Disque chaud : {name}",
-                    f"{int(temperature)} °C au moment de l'analyse.",
-                    "Vérifier la ventilation, ou ajouter un dissipateur sur un SSD NVMe.",
+                    _("Disque chaud : {0}", name),
+                    _("{0} °C au moment de l'analyse.", int(temperature)),
+                    _("Vérifier la ventilation, ou ajouter un dissipateur sur un SSD NVMe."),
                     "Stockage",
                 )
             )
@@ -276,15 +289,15 @@ def rule_storage(data: dict) -> list[Finding]:
             continue
         percent = free * 100 / size
         letter = f.clean(volume.get("DeviceID"))
-        detail = f"{f.fmt_decimal(free)} libres sur {f.fmt_decimal(size)} ({f.fmt_number(percent)} %)."
+        detail = _("{0} libres sur {1} ({2} %).", f.fmt_decimal(free), f.fmt_decimal(size), f.fmt_number(percent))
         if percent < VOLUME_FREE_FIX or free < VOLUME_FREE_FIX_BYTES:
             found.append(
                 Finding(
                     FIX,
                     "Stockage",
-                    f"Volume {letter} presque plein",
+                    _("Volume {0} presque plein", letter),
                     detail,
-                    "Libérer de l'espace (Nettoyage de disque, fichiers temporaires) : les mises à jour Windows risquent d'échouer.",
+                    _("Libérer de l'espace (Nettoyage de disque, fichiers temporaires) : les mises à jour Windows risquent d'échouer."),
                     "Stockage",
                 )
             )
@@ -293,9 +306,9 @@ def rule_storage(data: dict) -> list[Finding]:
                 Finding(
                     WATCH,
                     "Stockage",
-                    f"Volume {letter} bien rempli",
+                    _("Volume {0} bien rempli", letter),
                     detail,
-                    "Prévoir un nettoyage ou plus d'espace de stockage.",
+                    _("Prévoir un nettoyage ou plus d'espace de stockage."),
                     "Stockage",
                 )
             )
@@ -308,9 +321,9 @@ def rule_storage(data: dict) -> list[Finding]:
                 Finding(
                     INFO,
                     "Stockage",
-                    f"Volume système {drive} non chiffré",
-                    "BitLocker n'est pas actif.",
-                    "Sur un portable, le chiffrement protège les données en cas de vol.",
+                    _("Volume système {0} non chiffré", drive),
+                    _("BitLocker n'est pas actif."),
+                    _("Sur un portable, le chiffrement protège les données en cas de vol."),
                     "Stockage",
                 )
             )
@@ -329,19 +342,19 @@ def windows11_checks(data: dict) -> list[tuple[str, bool | None]]:
     checks: list[tuple[str, bool | None]] = []
 
     spec = str(tpm.get("SpecVersion") or "")
-    checks.append(("TPM 2.0", spec.startswith("2.0") if tpm else None))
+    checks.append((_("TPM 2.0"), spec.startswith("2.0") if tpm else None))
     firmware = str(system.get("FirmwareType") or "").lower()
-    checks.append(("démarrage UEFI", True if firmware == "uefi" else False if firmware == "legacy" else None))
+    checks.append((_("démarrage UEFI"), True if firmware == "uefi" else False if firmware == "legacy" else None))
     installed = _num(memory.get("installed"))
-    checks.append(("4 Go de mémoire", installed >= WIN11_MIN_RAM if installed else None))
+    checks.append((_("4 Go de mémoire"), installed >= WIN11_MIN_RAM if installed else None))
     sizes = [_num(d.get("Size")) or 0 for d in data.get("disks") or []]
-    checks.append(("64 Go de stockage", max(sizes) >= WIN11_MIN_DISK if sizes else None))
+    checks.append((_("64 Go de stockage"), max(sizes) >= WIN11_MIN_DISK if sizes else None))
     cores, clock = _num(cpu.get("NumberOfCores")), _num(cpu.get("MaxClockSpeed"))
     arch = str(system.get("OSArchitecture") or (data.get("machine") or {}).get("SystemType") or "")
     if cores and clock:
-        checks.append(("processeur 64 bits, 2 cœurs, 1 GHz", cores >= 2 and clock >= 1000 and "64" in arch))
+        checks.append((_("processeur 64 bits, 2 cœurs, 1 GHz"), cores >= 2 and clock >= 1000 and "64" in arch))
     else:
-        checks.append(("processeur 64 bits, 2 cœurs, 1 GHz", None))
+        checks.append((_("processeur 64 bits, 2 cœurs, 1 GHz"), None))
     return checks
 
 
@@ -356,18 +369,18 @@ def rule_windows(data: dict) -> list[Finding]:
         end = windows10_end(caption, build)
         left = (end - _today(data)).days
         if left <= 0:
-            level, title = FIX, "Windows 10 n'est plus pris en charge"
+            level, title = FIX, _("Windows 10 n'est plus pris en charge")
         elif left <= SUPPORT_WATCH_DAYS:
-            level, title = WATCH, "Fin de prise en charge de Windows 10 proche"
+            level, title = WATCH, _("Fin de prise en charge de Windows 10 proche")
         else:
-            level, title = INFO, f"Windows 10 pris en charge jusqu'en {end.year}"
+            level, title = INFO, _("Windows 10 pris en charge jusqu'en {0}", end.year)
         found.append(
             Finding(
                 level,
                 "Windows",
                 title,
-                f"Fin du support le {end:%d/%m/%Y} : ensuite, plus de correctifs de sécurité hors programme ESU.",
-                "Passer à Windows 11 si la machine est éligible, sinon envisager le programme ESU ou un remplacement.",
+                _("Fin du support le {0} : ensuite, plus de correctifs de sécurité hors programme ESU.", f.fmt_day(end)),
+                _("Passer à Windows 11 si la machine est éligible, sinon envisager le programme ESU ou un remplacement."),
                 "Système",
             )
         )
@@ -379,9 +392,9 @@ def rule_windows(data: dict) -> list[Finding]:
                 Finding(
                     WATCH,
                     "Windows",
-                    "Non éligible à Windows 11 en l'état",
-                    "Manque : " + ", ".join(failed) + ".",
-                    "Le TPM et l'UEFI s'activent souvent dans le BIOS (fTPM, PTT, mode UEFI) avant de conclure à un remplacement.",
+                    _("Non éligible à Windows 11 en l'état"),
+                    _("Manque : ") + ", ".join(failed) + ".",
+                    _("Le TPM et l'UEFI s'activent souvent dans le BIOS (fTPM, PTT, mode UEFI) avant de conclure à un remplacement."),
                     "Système",
                 )
             )
@@ -390,9 +403,9 @@ def rule_windows(data: dict) -> list[Finding]:
                 Finding(
                     INFO,
                     "Windows",
-                    "Éligibilité à Windows 11 à confirmer",
-                    "Non vérifiable ici : " + ", ".join(unknown) + ".",
-                    "Relancer en administrateur pour lire le TPM.",
+                    _("Éligibilité à Windows 11 à confirmer"),
+                    _("Non vérifiable ici : ") + ", ".join(unknown) + ".",
+                    _("Relancer en administrateur pour lire le TPM."),
                     "Système",
                 )
             )
@@ -401,9 +414,9 @@ def rule_windows(data: dict) -> list[Finding]:
                 Finding(
                     OK,
                     "Windows",
-                    "Configuration minimale de Windows 11 respectée",
-                    "TPM 2.0, UEFI, mémoire, stockage et processeur conformes.",
-                    "Vérifier encore que le processeur figure dans la liste de Microsoft.",
+                    _("Configuration minimale de Windows 11 respectée"),
+                    _("TPM 2.0, UEFI, mémoire, stockage et processeur conformes."),
+                    _("Vérifier encore que le processeur figure dans la liste de Microsoft."),
                     "Système",
                 )
             )
@@ -415,9 +428,9 @@ def rule_windows(data: dict) -> list[Finding]:
                 Finding(
                     FIX,
                     "Windows",
-                    "Windows n'est pas activé",
+                    _("Windows n'est pas activé"),
                     f.fmt_code(status, f.LICENSE_STATUS) + ".",
-                    "Paramètres › Système › Activation.",
+                    _("Paramètres › Système › Activation."),
                     "Système",
                 )
             )
@@ -429,9 +442,9 @@ def rule_windows(data: dict) -> list[Finding]:
             Finding(
                 WATCH,
                 "Windows",
-                "Démarrage sécurisé désactivé",
-                "Secure Boot est coupé dans le firmware.",
-                "Le réactiver dans le BIOS sauf besoin particulier (autre système, pilote non signé).",
+                _("Démarrage sécurisé désactivé"),
+                _("Secure Boot est coupé dans le firmware."),
+                _("Le réactiver dans le BIOS sauf besoin particulier (autre système, pilote non signé)."),
                 "Système",
             )
         )
@@ -449,9 +462,9 @@ def rule_windows(data: dict) -> list[Finding]:
             Finding(
                 WATCH,
                 "Windows",
-                f"Pas de redémarrage depuis {days} jours",
-                "Des mises à jour peuvent attendre un redémarrage.",
-                "Utiliser « Redémarrer » : avec le démarrage rapide, « Arrêter » ne remet pas ce compteur à zéro.",
+                _("Pas de redémarrage depuis {0} jours", days),
+                _("Des mises à jour peuvent attendre un redémarrage."),
+                _("Utiliser « Redémarrer » : avec le démarrage rapide, « Arrêter » ne remet pas ce compteur à zéro."),
                 "Système",
             )
         )
@@ -467,7 +480,7 @@ def device_name(device: dict) -> str:
     if name != f.EMPTY:
         return name
     kind = f.clean(device.get("PNPClass"))
-    return "Périphérique inconnu" + (f" (classe {kind})" if kind != f.EMPTY else "")
+    return _("Périphérique inconnu") + (_(" (classe {0})", kind) if kind != f.EMPTY else "")
 
 
 def rule_devices(data: dict) -> list[Finding]:
@@ -481,9 +494,9 @@ def rule_devices(data: dict) -> list[Finding]:
                 Finding(
                     FIX,
                     "Pilotes",
-                    "Pilote graphique générique",
-                    f"{name} : aucun pilote du fabricant installé.",
-                    "Installer le pilote NVIDIA, AMD ou Intel : sans lui, ni accélération 3D ni bonne résolution.",
+                    _("Pilote graphique générique"),
+                    _("{0} : aucun pilote du fabricant installé.", name),
+                    _("Installer le pilote NVIDIA, AMD ou Intel : sans lui, ni accélération 3D ni bonne résolution."),
                     "Graphiques",
                 )
             )
@@ -497,9 +510,9 @@ def rule_devices(data: dict) -> list[Finding]:
                 Finding(
                     WATCH,
                     "Pilotes",
-                    "Pilote graphique ancien",
-                    f"{name} : pilote du {released:%d/%m/%Y} (environ {months} mois).",
-                    "Mettre à jour depuis le site du fabricant de la carte ou de l'ordinateur.",
+                    _("Pilote graphique ancien"),
+                    _("{0} : pilote du {1} (environ {2} mois).", name, f.fmt_day(released), months),
+                    _("Mettre à jour depuis le site du fabricant de la carte ou de l'ordinateur."),
                     "Graphiques",
                 )
             )
@@ -509,16 +522,16 @@ def rule_devices(data: dict) -> list[Finding]:
         code = _int(device.get("ConfigManagerErrorCode"))
         if not code or code == 45:  # 45 : simplement débranché
             continue
-        line = f"{device_name(device)} — code {code} : {f.PNP_ERRORS.get(code, 'erreur inconnue')}"
+        line = _("{0} — code {1} : {2}", device_name(device), code, _(f.PNP_ERRORS.get(code, N_("erreur inconnue"))))
         (disabled if code == 22 else broken).append(line)
     if broken:
         found.append(
             Finding(
                 FIX,
                 "Pilotes",
-                f"{len(broken)} périphérique(s) en erreur",
+                _("{0} périphérique(s) en erreur", len(broken)),
                 "\n".join(broken),
-                "Ouvrir le Gestionnaire de périphériques (devmgmt.msc) : réinstaller le pilote ou le mettre à jour.",
+                _("Ouvrir le Gestionnaire de périphériques (devmgmt.msc) : réinstaller le pilote ou le mettre à jour."),
                 "Système",
             )
         )
@@ -527,9 +540,9 @@ def rule_devices(data: dict) -> list[Finding]:
             Finding(
                 INFO,
                 "Pilotes",
-                f"{len(disabled)} périphérique(s) désactivé(s)",
+                _("{0} périphérique(s) désactivé(s)", len(disabled)),
                 "\n".join(disabled),
-                "Normal s'ils ont été coupés volontairement.",
+                _("Normal s'ils ont été coupés volontairement."),
                 "Système",
             )
         )
@@ -552,21 +565,28 @@ def rule_battery(data: dict) -> list[Finding]:
         wear = battery_wear(battery)
         if wear is None:
             continue
-        detail = f"Usure de {int(round(wear))} % : capacité ramenée à {int(round(100 - wear))} % de l'origine."
+        detail = _("Usure de {0} % : capacité ramenée à {1} % de l'origine.", int(round(wear)), int(round(100 - wear)))
         if wear >= BATTERY_WEAR_FIX:
             found.append(
                 Finding(
                     FIX,
                     "Batterie",
-                    "Batterie à remplacer",
+                    _("Batterie à remplacer"),
                     detail,
-                    "L'autonomie a fortement baissé ; une batterie très usée peut aussi gonfler.",
+                    _("L'autonomie a fortement baissé ; une batterie très usée peut aussi gonfler."),
                     "Batterie",
                 )
             )
         elif wear >= BATTERY_WEAR_WATCH:
             found.append(
-                Finding(WATCH, "Batterie", "Batterie usée", detail, "Générer un rapport détaillé avec powercfg /batteryreport.", "Batterie")
+                Finding(
+                    WATCH,
+                    "Batterie",
+                    _("Batterie usée"),
+                    detail,
+                    _("Générer un rapport détaillé avec powercfg /batteryreport."),
+                    "Batterie",
+                )
             )
     return found
 
@@ -582,9 +602,9 @@ def rule_scope(data: dict) -> list[Finding]:
         Finding(
             INFO,
             "Analyse",
-            "Analyse partielle sans droits administrateur",
-            "TPM, démarrage sécurisé, BitLocker et compteurs de fiabilité des disques ne sont pas lus.",
-            "Relancer en administrateur pour des constats complets.",
+            _("Analyse partielle sans droits administrateur"),
+            _("TPM, démarrage sécurisé, BitLocker et compteurs de fiabilité des disques ne sont pas lus."),
+            _("Relancer en administrateur pour des constats complets."),
             "Système",
         )
     ]
@@ -605,24 +625,28 @@ def _all_clear(data: dict, found: list[Finding]) -> list[Finding]:
     clear = []
     if sticks and "Mémoire" not in flagged:
         detail = " · ".join(
-            [f.fmt_binary((data.get("memory") or {}).get("installed")), f"{len(sticks)} barrette(s)", *f.memory_types(sticks)]
+            [f.fmt_binary((data.get("memory") or {}).get("installed")), _("{0} barrette(s)", len(sticks)), *f.memory_types(sticks)]
         )
-        clear.append(Finding(OK, "Mémoire", "Mémoire : rien à signaler", detail, page="Mémoire"))
+        clear.append(Finding(OK, "Mémoire", _("Mémoire : rien à signaler"), detail, page="Mémoire"))
     if disks and "Stockage" not in flagged:
         clear.append(
             Finding(
-                OK, "Stockage", "Stockage : rien à signaler", f"{len(disks)} disque(s) sain(s), espace libre suffisant.", page="Stockage"
+                OK,
+                "Stockage",
+                _("Stockage : rien à signaler"),
+                _("{0} disque(s) sain(s), espace libre suffisant.", len(disks)),
+                page="Stockage",
             )
         )
     if data.get("os") and "Windows" not in flagged:
-        clear.append(Finding(OK, "Windows", "Windows : rien à signaler", f.clean((data.get("os") or {}).get("Caption")), page="Système"))
+        clear.append(Finding(OK, "Windows", _("Windows : rien à signaler"), f.clean((data.get("os") or {}).get("Caption")), page="Système"))
     if data.get("os") and "pnp" not in errors and "Pilotes" not in flagged:
         clear.append(
-            Finding(OK, "Pilotes", "Aucun périphérique en erreur", "Gestionnaire de périphériques sans point jaune.", page="Système")
+            Finding(OK, "Pilotes", _("Aucun périphérique en erreur"), _("Gestionnaire de périphériques sans point jaune."), page="Système")
         )
     wears = [w for w in (battery_wear(b) for b in data.get("battery") or []) if w is not None]
     if wears and "Batterie" not in flagged:
-        clear.append(Finding(OK, "Batterie", "Batterie en bon état", f"Usure de {int(round(max(wears)))} %.", page="Batterie"))
+        clear.append(Finding(OK, "Batterie", _("Batterie en bon état"), _("Usure de {0} %.", int(round(max(wears)))), page="Batterie"))
     return clear
 
 
@@ -653,8 +677,8 @@ def summary(found: list[Finding]) -> dict[str, int]:
 def summary_text(found: list[Finding]) -> str:
     counts = summary(found)
     if not found:
-        return "Aucun constat"
+        return _("Aucun constat")
     if not counts[FIX] and not counts[WATCH]:
-        return "Rien à corriger"
-    parts = [f"{counts[FIX]} à corriger" if counts[FIX] else "", f"{counts[WATCH]} à surveiller" if counts[WATCH] else ""]
+        return _("Rien à corriger")
+    parts = [_("{0} à corriger", counts[FIX]) if counts[FIX] else "", _("{0} à surveiller", counts[WATCH]) if counts[WATCH] else ""]
     return " · ".join(p for p in parts if p)

@@ -16,27 +16,6 @@ from conftest import PAYLOAD  # noqa: E402
 from PySide6.QtGui import QGuiApplication  # noqa: E402
 
 
-@pytest.fixture
-def win(qtbot, monkeypatch, tmp_path):
-    monkeypatch.setenv("APPDATA", str(tmp_path))
-    from atlas import collect
-    from atlas.gui import theme, window
-
-    monkeypatch.setattr(collect, "is_windows", lambda: True)
-    theme.load_fonts()
-    theme.set_theme("dark")
-
-    def fake_scan():
-        return collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), ""))
-
-    w = window.MainWindow(scanner=fake_scan)
-    qtbot.addWidget(w)
-    w.resize(1320, 900)
-    w.show()
-    qtbot.waitUntil(lambda: bool(w.data) and not w._scanning, timeout=5000)
-    return w
-
-
 def texts(widget):
     from PySide6.QtWidgets import QLabel
 
@@ -301,7 +280,13 @@ def test_saved_sharing_mode_is_shown_at_startup(qtbot, monkeypatch, tmp_path):
     settings.save_config({"sharing": True})
     w = window.MainWindow(scanner=lambda: collect.scan(runner=lambda: (0, json.dumps(PAYLOAD), "")))
     qtbot.addWidget(w)
+    w.show()
+    w.resize(1300, 800)
+    qtbot.wait(30)
     assert w.sharing_button.isChecked() and w.sharing_button.text() == "Partage activé"
+    w.resize(w.minimumWidth(), 800)  # fenêtre étroite : icône seule, l'info-bulle reste
+    qtbot.wait(30)
+    assert w.sharing_button.isChecked() and w.sharing_button.text() == "" and w.sharing_button.toolTip()
 
 
 def test_theme_switch_keeps_narrow_header(win, qtbot):

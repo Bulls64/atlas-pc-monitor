@@ -15,7 +15,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[("atlas/gui/fonts", "atlas/gui/fonts")],  # polices OFL et leurs licences
-    hiddenimports=[],
+    hiddenimports=["atlas.locale_en"],  # catalogue anglais, importé seulement à la demande
     excludes=["pytest", "pytestqt", "tkinter"],
 )
 

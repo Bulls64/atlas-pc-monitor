@@ -17,6 +17,7 @@ from PySide6.QtWidgets import (
 
 from .. import fiche
 from .. import findings as F
+from ..i18n import N_, _
 from . import theme
 from .widgets import CopyTable, card, icon, label
 
@@ -24,23 +25,25 @@ from .widgets import CopyTable, card, icon, label
 class FicheDialog(QDialog):
     """Saisie de la fiche ; laissés vides, les champs s'impriment comme des lignes à remplir à la main."""
 
-    FIELDS = (("technician", "Technicien"), ("client", "Client"), ("contact", "Contact"), ("reference", "Référence"))
-    TEXTS = (("request", "Demande du client"), ("work", "Travaux réalisés"), ("recommendations", "Recommandations"))
+    FIELDS = (("technician", N_("Technicien")), ("client", N_("Client")), ("contact", N_("Contact")), ("reference", N_("Référence")))
+    TEXTS = (("request", N_("Demande du client")), ("work", N_("Travaux réalisés")), ("recommendations", N_("Recommandations")))
 
     def __init__(self, win, info: fiche.FicheInfo):
         super().__init__(win)
         self.win, self.info = win, info
-        self.setWindowTitle("Atlas PC Monitor — Fiche d'intervention")
+        self.setWindowTitle(_("Atlas PC Monitor — Fiche d'intervention"))
         self.setWindowIcon(win.windowIcon())
         self.resize(660, 760)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 22, 24, 22)
         layout.setSpacing(10)
-        layout.addWidget(label("FICHE D'INTERVENTION", "eyebrow"))
-        layout.addWidget(label("Préparer la fiche", "h2"))
+        layout.addWidget(label(_("FICHE D'INTERVENTION"), "eyebrow"))
+        layout.addWidget(label(_("Préparer la fiche"), "h2"))
         layout.addWidget(
             label(
-                "Tous les champs sont facultatifs : laissés vides, ils s'impriment comme des lignes à remplir à la main.", "dim", wrap=True
+                _("Tous les champs sont facultatifs : laissés vides, ils s'impriment comme des lignes à remplir à la main."),
+                "dim",
+                wrap=True,
             )
         )
         layout.addSpacing(6)
@@ -50,7 +53,7 @@ class FicheDialog(QDialog):
         self.entries: dict[str, QLineEdit] = {}
         for row, (key, text) in enumerate(self.FIELDS):
             entry = QLineEdit(getattr(info, key))
-            name = label(text.upper(), "field")
+            name = label(_(text).upper(), "field")
             name.setBuddy(entry)
             grid.addWidget(name, row, 0)
             grid.addWidget(entry, row, 1)
@@ -60,15 +63,15 @@ class FicheDialog(QDialog):
         self.texts: dict[str, QPlainTextEdit] = {}
         for key, text in self.TEXTS:
             head = QHBoxLayout()
-            head.addWidget(label(text.upper(), "field"))
+            head.addWidget(label(_(text).upper(), "field"))
             head.addStretch(1)
             box = QPlainTextEdit(getattr(info, key))
             box.setTabChangesFocus(True)
             box.setMinimumHeight(84)
             if key == "recommendations":
-                link = QPushButton("Reprendre les conseils des constats")
+                link = QPushButton(_("Reprendre les conseils des constats"))
                 link.setProperty("kind", "link")
-                link.clicked.connect(lambda _=False, target=box: self.insert_advice(target))
+                link.clicked.connect(lambda checked=False, target=box: self.insert_advice(target))
                 head.addWidget(link)
             layout.addSpacing(6)
             layout.addLayout(head)
@@ -76,11 +79,11 @@ class FicheDialog(QDialog):
             self.texts[key] = box
         bar = QHBoxLayout()
         bar.setContentsMargins(0, 12, 0, 0)
-        close = QPushButton("Fermer")
+        close = QPushButton(_("Fermer"))
         close.clicked.connect(self.close)
-        save = QPushButton("Enregistrer…")
+        save = QPushButton(_("Enregistrer…"))
         save.clicked.connect(lambda: self.win.save_fiche(self.collect(), self))
-        printing = QPushButton("Ouvrir pour imprimer")
+        printing = QPushButton(_("Ouvrir pour imprimer"))
         printing.setProperty("kind", "primary")
         printing.setIcon(icon("print", theme.P.primary_text))
         printing.clicked.connect(lambda: self.win.print_fiche(self.collect()))
@@ -95,10 +98,10 @@ class FicheDialog(QDialog):
     def insert_advice(self, box: QPlainTextEdit) -> None:
         """Ajoute les conseils des constats à corriger et à surveiller, sans doublon."""
         current = box.toPlainText()
-        lines = [f"- {i.title} : {i.advice}" for i in self.win.findings if i.level in (F.FIX, F.WATCH) and i.advice]
+        lines = [_("- {0} : {1}", i.title, i.advice) for i in self.win.findings if i.level in (F.FIX, F.WATCH) and i.advice]
         new = [line for line in lines if line not in current]
         if not new:
-            self.win.flash("Aucun conseil à ajouter")
+            self.win.flash(_("Aucun conseil à ajouter"))
             return
         box.setPlainText((current.rstrip() + "\n" if current.strip() else "") + "\n".join(new))
 
@@ -119,13 +122,13 @@ class FicheDialog(QDialog):
 class CompareDialog(QDialog):
     def __init__(self, win, title: str, changes: list[tuple]):
         super().__init__(win)
-        self.setWindowTitle("Atlas PC Monitor — Comparaison de rapports")
+        self.setWindowTitle(_("Atlas PC Monitor — Comparaison de rapports"))
         self.setWindowIcon(win.windowIcon())
         self.resize(1000, 600)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(24, 22, 24, 22)
         layout.setSpacing(12)
-        layout.addWidget(label("COMPARAISON", "eyebrow"))
+        layout.addWidget(label(_("COMPARAISON"), "eyebrow"))
         layout.addWidget(label(title, "h3", wrap=True))
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
@@ -133,13 +136,13 @@ class CompareDialog(QDialog):
         il = QVBoxLayout(inner)
         il.setContentsMargins(0, 0, 0, 0)
         frame, fl = card("true", (8, 12, 8, 12), 0)
-        self.table = CopyTable(["Emplacement", "Propriété", "Avant", "Maintenant"], changes, show_header=True)
+        self.table = CopyTable([_("Emplacement"), _("Propriété"), _("Avant"), _("Maintenant")], changes, show_header=True)
         self.table.copied.connect(win.flash)
         fl.addWidget(self.table)
         il.addWidget(frame)
         il.addStretch(1)
         scroll.setWidget(inner)
         layout.addWidget(scroll, 1)
-        close = QPushButton("Fermer")
+        close = QPushButton(_("Fermer"))
         close.clicked.connect(self.close)
         layout.addWidget(close, 0, Qt.AlignRight)

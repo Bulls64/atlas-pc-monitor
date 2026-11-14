@@ -10,6 +10,7 @@ from PySide6.QtCore import QPointF, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import QSizePolicy, QWidget
 
+from ..i18n import _
 from . import theme
 from .model import Chip
 from .widgets import draw_glow, draw_via
@@ -53,7 +54,7 @@ class BoardMap(QWidget):
         policy.setHeightForWidth(True)
         self.setSizePolicy(policy)
         self.setMinimumWidth(560)
-        self.setAccessibleName("Plan de la carte : composants détectés et leur état")
+        self.setAccessibleName(_("Plan de la carte : composants détectés et leur état"))
 
     # ---------------------------------------------------------------- géométrie
 
@@ -87,7 +88,9 @@ class BoardMap(QWidget):
             self.setCursor(Qt.PointingHandCursor if key else Qt.ArrowCursor)
             chip = self.chips.get(key) if key else None
             self.setToolTip(
-                f"{chip.issue}\nOuvrir la page {chip.page}" if chip and chip.issue else (f"Ouvrir la page {chip.page}" if chip else "")
+                _("{0}\nOuvrir la page {1}", chip.issue, _(chip.page))
+                if chip and chip.issue
+                else (_("Ouvrir la page {0}", _(chip.page)) if chip else "")
             )
             self.update()
 

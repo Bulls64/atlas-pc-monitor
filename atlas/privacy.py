@@ -11,8 +11,11 @@ import copy
 import ipaddress
 import re
 
-MASK = "[masqué]"
-HOST_MASK = "POSTE-MASQUÉ"
+from .i18n import N_, _
+
+# Valeurs de remplacement, écrites dans la langue courante au moment du masquage.
+MASK = N_("[masqué]")
+HOST_MASK = N_("POSTE-MASQUÉ")
 
 # (section, champ) des numéros de série et identifiants à masquer entièrement.
 SERIAL_FIELDS = (
@@ -30,7 +33,7 @@ def mask_mac(value) -> str:
     text = str(value or "").strip()
     match = _MAC.match(text)
     if not match:
-        return MASK if text else text
+        return _(MASK) if text else text
     sep = "-" if "-" in text else ":"
     return sep.join([*match.groups(), "xx", "xx", "xx"])
 
@@ -45,12 +48,12 @@ def mask_ip(value) -> str:
         try:
             ip = ipaddress.ip_address(address.split("%")[0])
         except ValueError:
-            masked.append(MASK)
+            masked.append(_(MASK))
             continue
         if ip.version == 4:
             masked.append(".".join(address.split(".")[:3] + ["x"]))
         else:
-            masked.append("fe80::[masqué]" if ip.is_link_local else MASK)
+            masked.append("fe80::" + _(MASK) if ip.is_link_local else _(MASK))
     return ", ".join(masked)
 
 
@@ -68,14 +71,14 @@ def anonymize(data: dict) -> dict:
     shared["anonymized"] = True
     host = shared.get("system")
     if isinstance(host, dict) and host.get("computer"):
-        host["computer"] = HOST_MASK
+        host["computer"] = _(HOST_MASK)
     machine = shared.get("machine")
     if isinstance(machine, dict) and machine.get("PartOfDomain") and machine.get("Domain"):
-        machine["Domain"] = MASK
+        machine["Domain"] = _(MASK)
     for section, key in SERIAL_FIELDS:
         for row in _rows(shared.get(section)):
             if str(row.get(key) or "").strip():
-                row[key] = MASK
+                row[key] = _(MASK)
     for adapter in _rows(shared.get("adapters")):
         if adapter.get("MacAddress"):
             adapter["MacAddress"] = mask_mac(adapter["MacAddress"])

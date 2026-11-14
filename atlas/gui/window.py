@@ -27,12 +27,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .. import __version__, collect, export, fiche, privacy, settings
+from .. import __version__, collect, export, fiche, i18n, privacy, settings
 from ..collect import base_report, scan
 from ..findings import FIX, WATCH, Finding, analyze, summary
 from ..formatting import fmt_number, fmt_stamp, to_number
+from ..i18n import _
 from ..pages import FINDINGS, OVERVIEW, PAGES, diff_reports
-from . import model, screens, theme
+from . import model, qtlang, screens, theme
 from .dialogs import CompareDialog, FicheDialog
 from .widgets import BusLine, DotBackground, Led, icon, label, logo_pixmap, screen_size, separator
 
@@ -52,13 +53,13 @@ class NavButton(QPushButton):
         self.setProperty("kind", "nav")
         self.setCheckable(True)
         self.setCursor(Qt.PointingHandCursor)
-        self.setAccessibleName(name)
+        self.setAccessibleName(_(name))
         row = QHBoxLayout(self)
         row.setContentsMargins(12, 0, 12, 0)
         row.setSpacing(10)
         self.designator = designator = label(model.DESIGNATORS.get(name, ""), "designator")
         designator.setFixedWidth(32)
-        self.title = label(name, "navName")
+        self.title = label(_(name), "navName")
         self.badge = label("", "badge")
         self.badge.setFixedHeight(18)
         self.badge.setAlignment(Qt.AlignCenter)
@@ -102,7 +103,7 @@ class MainWindow(QMainWindow):
         self._flash_timer = QTimer(self, singleShot=True, interval=2500, timeout=self._update_status)
         self._search_timer = QTimer(self, singleShot=True, interval=200, timeout=self._run_search)
 
-        self.setWindowTitle("Atlas PC Monitor — Informations système")
+        self.setWindowTitle(_("Atlas PC Monitor — Informations système"))
         self.setWindowIcon(QIcon(logo_pixmap(64)))
         available = screen_size()
         self.resize(min(1320, available.width() - 60), min(900, available.height() - 60))
@@ -184,7 +185,7 @@ class MainWindow(QMainWindow):
         bl.setSpacing(4)
         self.brand = label("ATLAS PC MONITOR", "brand")
         bl.addWidget(self.brand)
-        self.brand_sub = label(f"INVENTAIRE · DIAGNOSTIC · v{__version__}", "brandSub")
+        self.brand_sub = label(_("INVENTAIRE · DIAGNOSTIC · v{0}", __version__), "brandSub")
         bl.addWidget(self.brand_sub)
         row.addWidget(brand)
         row.addStretch(1)
@@ -194,12 +195,12 @@ class MainWindow(QMainWindow):
         row.addWidget(self.status)
         row.addSpacing(8)
         self.search = QLineEdit(self.query)
-        self.search.setPlaceholderText("Rechercher…   Ctrl+F")
+        self.search.setPlaceholderText(_("Rechercher…   Ctrl+F"))
         self.search.setClearButtonEnabled(True)
         self.search.addAction(icon("search", p.dim), QLineEdit.LeadingPosition)
         self.search.setMinimumWidth(170)
         self.search.setMaximumWidth(260)
-        self.search.setAccessibleName("Rechercher dans l'inventaire")
+        self.search.setAccessibleName(_("Rechercher dans l'inventaire"))
         self.search.textChanged.connect(lambda _text: self._search_timer.start())
         escape = QAction(self.search)
         escape.setShortcut(QKeySequence("Escape"))
@@ -212,7 +213,7 @@ class MainWindow(QMainWindow):
         self.sharing_button.setCheckable(True)
         self._show_sharing()
         self.sharing_button.setToolTip(
-            "Masque nom du poste, numéros de série, MAC et IP à l'écran, dans les copies, les exports et la fiche"
+            _("Masque nom du poste, numéros de série, MAC et IP à l'écran, dans les copies, les exports et la fiche")
         )
         self.sharing_button.clicked.connect(self.toggle_sharing)
         row.addWidget(self.sharing_button)
@@ -220,11 +221,18 @@ class MainWindow(QMainWindow):
         self.theme_button = QPushButton()
         self.theme_button.setProperty("kind", "icon")
         self.theme_button.setIcon(icon("sun" if dark else "moon", p.silk, 18))
-        self.theme_button.setToolTip("Passer en thème clair" if dark else "Passer en thème sombre")
+        self.theme_button.setToolTip(_("Passer en thème clair") if dark else _("Passer en thème sombre"))
         self.theme_button.setAccessibleName(self.theme_button.toolTip())
         self.theme_button.clicked.connect(self.toggle_theme)
         row.addWidget(self.theme_button)
-        self.refresh_button = QPushButton("Actualiser")
+        self.language_button = QPushButton(i18n.language().upper())
+        self.language_button.setProperty("kind", "language")
+        self.language_button.setIcon(icon("globe", p.silk, 16))
+        self.language_button.setToolTip(_("Langue : français. Passer en anglais (English)"))
+        self.language_button.setAccessibleName(self.language_button.toolTip())
+        self.language_button.clicked.connect(self.toggle_language)
+        row.addWidget(self.language_button)
+        self.refresh_button = QPushButton(_("Actualiser"))
         self.refresh_button.setProperty("kind", "primary")
         self.refresh_button.setIcon(icon("refresh", p.primary_text))
         self.refresh_button.clicked.connect(self.refresh)
@@ -238,12 +246,12 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(side)
         layout.setContentsMargins(0, 0, 10, 16)
         layout.setSpacing(3)
-        layout.addWidget(label("MATÉRIEL", "eyebrowDim"))
+        layout.addWidget(label(_("MATÉRIEL"), "eyebrowDim"))
         layout.addSpacing(6)
         self.nav: dict[str, NavButton] = {}
         for name, _icon in PAGES:
             button = NavButton(name)
-            button.clicked.connect(lambda _=False, page=name: self.open_page(page))
+            button.clicked.connect(lambda checked=False, page=name: self.open_page(page))
             layout.addWidget(button)
             self.nav[name] = button
         layout.addSpacing(10)
@@ -259,15 +267,15 @@ class MainWindow(QMainWindow):
             layout.addWidget(button)
             return button
 
-        self.data_actions = [action("Fiche d'intervention", "print", self.open_fiche, primary=True)]
+        self.data_actions = [action(_("Fiche d'intervention"), "print", self.open_fiche, primary=True)]
         layout.addSpacing(4)
         self.data_actions += [
-            action("Exporter le rapport", "export", self.export),
-            action("Copier le rapport", "copy", self.copy_report),
-            action("Comparer à un rapport", "compare", self.compare),
+            action(_("Exporter le rapport"), "export", self.export),
+            action(_("Copier le rapport"), "copy", self.copy_report),
+            action(_("Comparer à un rapport"), "compare", self.compare),
         ]
-        action("Ouvrir un rapport", "open", self.open_report).setToolTip("Afficher un rapport JSON d'Atlas PC Monitor (Ctrl+O)")
-        self.admin_button = action("Relancer en administrateur", "admin", self.relaunch_as_admin)
+        action(_("Ouvrir un rapport"), "open", self.open_report).setToolTip(_("Afficher un rapport JSON d'Atlas PC Monitor (Ctrl+O)"))
+        self.admin_button = action(_("Relancer en administrateur"), "admin", self.relaunch_as_admin)
         self.admin_button.hide()
         layout.addStretch(1)
         return side
@@ -278,19 +286,19 @@ class MainWindow(QMainWindow):
         if self._closing:
             return
         if self._scanning:
-            text, level = "Analyse en cours…", "watch"
+            text, level = _("Analyse en cours…"), "watch"
         elif self.source:
-            text, level = f"Rapport ouvert : {self.source}", "info"
+            text, level = _("Rapport ouvert : {0}", self.source), "info"
         elif self.data.get("note") and not self.data.get("os"):
-            text, level = "Inventaire partiel", "watch"
+            text, level = _("Inventaire partiel"), "watch"
         elif self.data:
             seconds = to_number(self.data.get("scan_seconds"))
-            text = "Analyse terminée" + (f" · {fmt_number(seconds, 2)} s" if seconds else "")
+            text = _("Analyse terminée") + (f" · {fmt_number(seconds, 2)} s" if seconds else "")
             level = "ok"
         elif collect.is_windows():
-            text, level = "Analyse en attente", None
+            text, level = _("Analyse en attente"), None
         else:
-            text, level = "Aucun rapport ouvert", None
+            text, level = _("Aucun rapport ouvert"), None
         self.status.setText(text)
         self.status.setProperty("role", "status" if level in ("ok", "info") else "statusWarn")
         self.status.style().unpolish(self.status)
@@ -298,8 +306,8 @@ class MainWindow(QMainWindow):
         self.status_led.level = level
         self.status_led.update()
         self.refresh_button.setEnabled(not self._scanning)
-        self.refresh_button.setText("Analyser ce poste" if self.source else "Actualiser")
-        self.refresh_button.setToolTip("Revenir à l'inventaire de ce poste (F5)" if self.source else "Relancer l'analyse (F5)")
+        self.refresh_button.setText(_("Analyser ce poste") if self.source else _("Actualiser"))
+        self.refresh_button.setToolTip(_("Revenir à l'inventaire de ce poste (F5)") if self.source else _("Relancer l'analyse (F5)"))
         for button in self.data_actions:
             button.setEnabled(bool(self.data))
         live = collect.is_windows() and not self.source  # un rapport ouvert ne se relance pas en administrateur
@@ -348,7 +356,9 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(content)
         layout.setContentsMargins(16, 8, 32, 40)
         if not self.data and (self._scanning or collect.is_windows()):
-            layout.addWidget(screens.heading("Atlas PC Monitor", "Analyse en cours…", "L'inventaire du poste est en cours de lecture."))
+            layout.addWidget(
+                screens.heading("Atlas PC Monitor", _("Analyse en cours…"), _("L'inventaire du poste est en cours de lecture."))
+            )
             layout.addStretch(1)
         elif not self.data:
             layout.addWidget(screens.welcome(self))
@@ -380,7 +390,7 @@ class MainWindow(QMainWindow):
             result = self.scanner()
         except Exception as error:  # la collecte ne doit jamais faire tomber l'interface
             log.exception("Collecte interrompue")
-            result = base_report(f"Erreur inattendue pendant la collecte : {error}")
+            result = base_report(_("Erreur inattendue pendant la collecte : {0}", error))
         with contextlib.suppress(RuntimeError):  # fenêtre déjà fermée
             self.bridge.done.emit(result)
 
@@ -403,13 +413,15 @@ class MainWindow(QMainWindow):
         if self._scanning:
             return False
         if not path:
-            path, _ = QFileDialog.getOpenFileName(self, "Ouvrir un rapport JSON d'Atlas PC Monitor", "", "Rapport JSON (*.json)")
+            path, _chosen = QFileDialog.getOpenFileName(
+                self, _("Ouvrir un rapport JSON d'Atlas PC Monitor"), "", _("Rapport JSON (*.json)")
+            )
             if not path:
                 return False
         try:
             data = export.load(path)
         except (OSError, ValueError) as error:
-            QMessageBox.critical(self, "Rapport illisible", f"{Path(path).name} : {error}")
+            QMessageBox.critical(self, _("Rapport illisible"), f"{Path(path).name} : {error}")
             return False
         self.source = Path(path).name
         self._show(data)
@@ -442,12 +454,29 @@ class MainWindow(QMainWindow):
         self.query = self.search.text().strip()
         self.build()
 
+    def toggle_language(self) -> None:
+        """Bascule français ↔ anglais : tout est reconstruit, constats compris (ils sont rédigés à l'analyse)."""
+        code = i18n.set_language("en" if i18n.language() == "fr" else "fr")
+        self.config["language"] = code
+        settings.save_config(self.config)
+        qtlang.apply(code)
+        self.setWindowTitle(_("Atlas PC Monitor — Informations système"))
+        if self.fiche_dialog is not None:  # ses libellés sont figés : on le refera à la prochaine ouverture
+            self.fiche_dialog.collect()
+            self.fiche_dialog.close()
+            self.fiche_dialog.deleteLater()
+            self.fiche_dialog = None
+        self.findings = analyze(self.data) if self.data else []
+        self.query = self.search.text().strip()
+        self.build()
+        self.flash(_("Interface en français") if code == "fr" else _("Interface en anglais"))
+
     def toggle_sharing(self) -> None:
         self.sharing = not self.sharing
         self.config["sharing"] = self.sharing
         settings.save_config(self.config)
         self._show_sharing()
-        self.flash("Identifiants masqués" if self.sharing else "Identifiants affichés")
+        self.flash(_("Identifiants masqués") if self.sharing else _("Identifiants affichés"))
         if self.data:
             self.render()
 
@@ -455,13 +484,14 @@ class MainWindow(QMainWindow):
         p = theme.P
         self.sharing_button.setChecked(self.sharing)
         self.sharing_button.setIcon(icon("share", p.primary_text if self.sharing else p.bright))
-        self.sharing_button.setText("Partage activé" if self.sharing else "Mode partage")
+        wide = self.width() >= 960  # en fenêtre étroite, icône seule (voir _fit_header)
+        self.sharing_button.setText((_("Partage activé") if self.sharing else _("Mode partage")) if wide else "")
 
     # ------------------------------------------------------------------ copie, export, comparaison
 
     def copy_menu(self, widget: QWidget, position, text: str) -> None:
         menu = QMenu(self)
-        menu.addAction("Copier ce constat", lambda: self._to_clipboard(text, "Constat copié"))
+        menu.addAction(_("Copier ce constat"), lambda: self._to_clipboard(text, _("Constat copié")))
         menu.exec(widget.mapToGlobal(position))
 
     def _to_clipboard(self, text: str, message: str) -> None:
@@ -470,32 +500,34 @@ class MainWindow(QMainWindow):
 
     def copy_report(self) -> None:
         if self.data:
-            self._to_clipboard(export.to_text(self.shown), "Rapport copié")
+            self._to_clipboard(export.to_text(self.shown), _("Rapport copié"))
 
     def export(self) -> None:
         if not self.data:
             return
-        filters = ";;".join(f"{name} (*{suffix})" for suffix, name in export.FORMATS.items())
-        path, chosen = QFileDialog.getSaveFileName(self, "Exporter le rapport", f"atlas-pc-monitor-{datetime.now():%Y%m%d-%H%M}", filters)
+        filters = ";;".join(f"{_(name)} (*{suffix})" for suffix, name in export.FORMATS.items())
+        path, chosen = QFileDialog.getSaveFileName(
+            self, _("Exporter le rapport"), f"atlas-pc-monitor-{datetime.now():%Y%m%d-%H%M}", filters
+        )
         if not path:
             return
         try:
             target = export.save(self.shown, path, chosen)
         except OSError as error:
-            QMessageBox.critical(self, "Export impossible", str(error))
+            QMessageBox.critical(self, _("Export impossible"), str(error))
             return
-        self.flash(f"Rapport enregistré : {target.name}")
+        self.flash(_("Rapport enregistré : {0}", target.name))
 
     def compare(self) -> None:
         if not self.data:
             return
-        path, _ = QFileDialog.getOpenFileName(self, "Choisir un rapport JSON d'Atlas PC Monitor", "", "Rapport JSON (*.json)")
+        path, _chosen = QFileDialog.getOpenFileName(self, _("Choisir un rapport JSON d'Atlas PC Monitor"), "", _("Rapport JSON (*.json)"))
         if not path:
             return
         try:
             previous = export.load(path)
         except (OSError, ValueError) as error:
-            QMessageBox.critical(self, "Rapport illisible", str(error))
+            QMessageBox.critical(self, _("Rapport illisible"), str(error))
             return
         other = (previous.get("system") or {}).get("computer") or ""
         # Un rapport anonymisé ne dit plus de quel poste il vient : on ne peut pas prévenir.
@@ -506,11 +538,11 @@ class MainWindow(QMainWindow):
         changes = diff_reports(previous, current)
         when = fmt_stamp(previous.get("captured_at"))
         if not changes:
-            QMessageBox.information(self, "Comparaison", f"Aucune différence matérielle avec le rapport du {when}.")
+            QMessageBox.information(self, _("Comparaison"), _("Aucune différence matérielle avec le rapport du {0}.", when))
             return
-        title = f"{len(changes)} différence(s) entre le rapport du {when} et l'inventaire actuel"
+        title = _("{0} différence(s) entre le rapport du {1} et l'inventaire actuel", len(changes), when)
         if other and elsewhere:
-            title += " — attention, ce rapport vient d'un autre poste" + ("" if self.sharing else f" ({other})")
+            title += _(" — attention, ce rapport vient d'un autre poste") + ("" if self.sharing else f" ({other})")
         CompareDialog(self, title, changes).show()
 
     # ------------------------------------------------------------------ fiche d'intervention
@@ -547,16 +579,18 @@ class MainWindow(QMainWindow):
             folder.mkdir(parents=True, exist_ok=True)
             target.write_text(self.fiche_html(info), encoding="utf-8")
         except OSError as error:
-            QMessageBox.critical(self, "Fiche impossible", str(error))
+            QMessageBox.critical(self, _("Fiche impossible"), str(error))
             return None
         if not webbrowser.open(target.as_uri()):
-            QMessageBox.information(self, "Fiche d'intervention", f"Ouvrez ce fichier dans un navigateur pour l'imprimer :\n{target}")
-        self.flash("Fiche ouverte dans le navigateur")
+            QMessageBox.information(
+                self, _("Fiche d'intervention"), _("Ouvrez ce fichier dans un navigateur pour l'imprimer :\n{0}", target)
+            )
+        self.flash(_("Fiche ouverte dans le navigateur"))
         return target
 
     def save_fiche(self, info: fiche.FicheInfo, parent=None) -> Path | None:
-        path, _ = QFileDialog.getSaveFileName(
-            parent or self, "Enregistrer la fiche d'intervention", f"fiche-{self._safe(info.reference)}.html", "Page HTML (*.html)"
+        path, _chosen = QFileDialog.getSaveFileName(
+            parent or self, _("Enregistrer la fiche d'intervention"), f"fiche-{self._safe(info.reference)}.html", _("Page HTML (*.html)")
         )
         if not path:
             return None
@@ -564,9 +598,9 @@ class MainWindow(QMainWindow):
         try:
             target.write_text(self.fiche_html(info), encoding="utf-8")
         except OSError as error:
-            QMessageBox.critical(parent or self, "Enregistrement impossible", str(error))
+            QMessageBox.critical(parent or self, _("Enregistrement impossible"), str(error))
             return None
-        self.flash("Fiche enregistrée")
+        self.flash(_("Fiche enregistrée"))
         return target
 
     # ------------------------------------------------------------------ élévation et fermeture
@@ -575,7 +609,7 @@ class MainWindow(QMainWindow):
         if settings.relaunch_as_admin():
             self.close()
         else:
-            self.flash("Élévation annulée")
+            self.flash(_("Élévation annulée"))
 
     def _fit_header(self, width: int) -> None:
         """En fenêtre étroite, l'en-tête se resserre : le message d'état cède la place en premier,
@@ -583,11 +617,13 @@ class MainWindow(QMainWindow):
         self.status.setVisible(width >= 1180)
         self.status_led.setVisible(width >= 1180)
         wide = width >= 960
+        # Bouton « Mode partage » réduit à son icône (l'info-bulle reste) quand la place manque.
+        self.sharing_button.setText((_("Partage activé") if self.sharing else _("Mode partage")) if wide else "")
         self.brand.setText("ATLAS PC MONITOR" if wide else "ATLAS PC")
         if not wide:
             self.brand_sub.setText("MONITOR")
         else:
-            self.brand_sub.setText(f"INVENTAIRE · DIAGNOSTIC{' · v' + __version__ if width >= 1100 else ''}")
+            self.brand_sub.setText(_("INVENTAIRE · DIAGNOSTIC{0}", " · v" + __version__ if width >= 1100 else ""))
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
