@@ -105,6 +105,12 @@ jobs:
           $p = Start-Process -FilePath dist\AtlasPCMonitor\AtlasPCMonitor.exe -ArgumentList "--json", "-o", "built.json" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "AtlasPCMonitor.exe (dossier) a renvoyé $($p.ExitCode)" }
           python tools/check_scan.py built.json
+          # Export PDF par l'exe (mise en page Qt) à partir du rapport qu'il vient d'écrire.
+          # PDF export by the exe (Qt layout) from the report it has just written.
+          $p = Start-Process -FilePath dist\AtlasPCMonitor\AtlasPCMonitor.exe -ArgumentList "built.json", "--pdf", "-o", "built.pdf" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Export PDF (dossier) : code $($p.ExitCode)" }
+          $head = [System.Text.Encoding]::ASCII.GetString((Get-Content built.pdf -AsByteStream -TotalCount 4))
+          if ($head -ne "%PDF" -or (Get-Item built.pdf).Length -lt 10000) { throw "built.pdf invalide" }
           # Propriétés de l'exe (onglet « Détails ») : même version que le code.
           # Exe properties ("Details" tab): same version as the code.
           $version = python -c "import atlas; print(atlas.__version__)"
@@ -124,6 +130,9 @@ jobs:
           $p = Start-Process -FilePath dist\AtlasPCMonitor.exe -ArgumentList "--json", "-o", "onefile.json" -Wait -PassThru
           if ($p.ExitCode -ne 0) { throw "AtlasPCMonitor.exe (fichier unique) a renvoyé $($p.ExitCode)" }
           python tools/check_scan.py onefile.json
+          $p = Start-Process -FilePath dist\AtlasPCMonitor.exe -ArgumentList "onefile.json", "--pdf", "-o", "onefile.pdf" -Wait -PassThru
+          if ($p.ExitCode -ne 0) { throw "Export PDF (fichier unique) : code $($p.ExitCode)" }
+          if ((Get-Item onefile.pdf).Length -lt 10000) { throw "onefile.pdf invalide" }
           Get-Item dist\AtlasPCMonitor.exe, AtlasPCMonitor-windows.zip | Format-Table Name, @{n="Mo"; e={[math]::Round($_.Length / 1MB, 1)}}
       - uses: actions/upload-artifact@v7
         with:
@@ -166,6 +175,9 @@ jobs:
           "$app" --version
           "$app" --text exemple.json | grep -q "CONSTATS"
           "$app" --fiche exemple.json -o fiche.html && grep -q "Fiche d'intervention" fiche.html
+          # PDF sans serveur graphique : Qt passe seul en mode « offscreen ».
+          # PDF without a display server: Qt switches to "offscreen" on its own.
+          "$app" exemple.json --pdf -o rapport.pdf && head -c 4 rapport.pdf | grep -q "%PDF"
           # Interface sur un vrai serveur X : elle doit s'ouvrir et rester ouverte.
           # Interface on a real X server: it must open and stay open.
           xvfb-run -a sh -c "\"$app\" exemple.json & pid=\$!; sleep 10; kill -0 \$pid && kill \$pid"

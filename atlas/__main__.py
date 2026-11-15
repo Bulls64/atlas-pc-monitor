@@ -27,12 +27,13 @@ def build_parser() -> argparse.ArgumentParser:
     group.add_argument("--json", action="store_true", help=_("imprime l'inventaire en JSON, sans interface"))
     group.add_argument("--text", action="store_true", help=_("imprime le rapport texte, sans interface"))
     group.add_argument("--html", action="store_true", help=_("imprime le rapport HTML, sans interface"))
+    group.add_argument("--pdf", action="store_true", help=_("enregistre le rapport en PDF, sans interface (avec -o)"))
     group.add_argument("--fiche", action="store_true", help=_("fiche d'intervention HTML imprimable, sans interface"))
     parser.add_argument("--anonyme", action="store_true", help=_("masque nom du poste, numéros de série, MAC et IP"))
     parser.add_argument("--technicien", default="", help=_("nom du technicien sur la fiche"))
     parser.add_argument("--client", default="", help=_("nom du client sur la fiche"))
     parser.add_argument("--reference", default="", help=_("référence de l'intervention sur la fiche"))
-    parser.add_argument("-o", "--output", metavar=_("FICHIER"), help=_("écrit le rapport dans ce fichier (.json, .txt ou .html)"))
+    parser.add_argument("-o", "--output", metavar=_("FICHIER"), help=_("écrit le rapport dans ce fichier (.json, .pdf, .html ou .txt)"))
     parser.add_argument("--debug", action="store_true", help=_("journal détaillé dans le dossier temporaire (atlas-debug.log)"))
     parser.add_argument(
         "--lang",
@@ -72,7 +73,10 @@ def main(argv: list[str] | None = None) -> int:
     log_path = setup_logging(args.debug)
     if log_path:
         print(_("Journal de débogage : {0}", log_path), file=sys.stderr)
-    if not (args.json or args.text or args.html or args.fiche or args.output):
+    if args.pdf and not args.output:
+        print(_("--pdf demande un fichier de sortie : -o rapport.pdf"), file=sys.stderr)
+        return 2
+    if not (args.json or args.text or args.html or args.pdf or args.fiche or args.output):
         try:
             from .gui.app import run  # PySide6 n'est chargé que pour l'interface — PySide6 is only loaded for the interface
         except ImportError as error:
@@ -97,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         data = scan()
     if args.anonyme:
         data = privacy.anonymize(data)
-    forced = ".txt" if args.text else ".html" if args.html or args.fiche else ".json" if args.json else ""
+    forced = ".txt" if args.text else ".html" if args.html or args.fiche else ".pdf" if args.pdf else ".json" if args.json else ""
 
     def content(suffix: str) -> str:
         if args.fiche:
@@ -108,7 +112,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.output:
         target = Path(args.output) if forced else export.resolve_path(args.output)
         try:
-            target.write_text(content(forced or target.suffix), encoding="utf-8")
+            if (forced or target.suffix).lower() == ".pdf":
+                export.save(data, str(target.with_suffix(".pdf")))
+                target = target.with_suffix(".pdf")
+            else:
+                target.write_text(content(forced or target.suffix), encoding="utf-8")
         except OSError as error:
             print(_("Impossible d'écrire {0} : {1}", target, error.strerror or error), file=sys.stderr)
             return 2

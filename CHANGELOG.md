@@ -15,12 +15,14 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 #### Added
 
 - "About" section in the settings: version, link to the GitHub repository, license.
+- PDF export of the report (A4, findings in color, one table per section), from the export button or with `--pdf -o report.pdf`.
 
 ### Français
 
 #### Ajouts
 
 - Section « À propos » dans les paramètres : version, lien vers le dépôt GitHub, licence.
+- Export du rapport en PDF (A4, constats en couleur, un tableau par section), depuis le bouton d'export ou avec `--pdf -o rapport.pdf`.
 
 ## [1.1.0] - 2026-11-14
 

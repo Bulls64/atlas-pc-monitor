@@ -1,6 +1,6 @@
-"""Exports du rapport : JSON (réimportable), texte et HTML autonome.
+"""Exports du rapport : JSON (réimportable), texte, HTML autonome et PDF (atlas/pdf.py, avec Qt).
 
-Report exports: JSON (re-importable), text and standalone HTML.
+Report exports: JSON (re-importable), text, standalone HTML and PDF (atlas/pdf.py, with Qt).
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from .formatting import fmt_stamp
 from .i18n import N_, _, language
 from .pages import build_all
 
-FORMATS = {".json": N_("Rapport JSON"), ".txt": N_("Fichier texte"), ".html": N_("Page HTML")}
+FORMATS = {".json": N_("Rapport JSON"), ".pdf": N_("Document PDF"), ".html": N_("Page HTML"), ".txt": N_("Fichier texte")}
 
 
 def to_json(data: dict) -> str:
@@ -103,7 +103,7 @@ def to_html(data: dict) -> str:
                 cells = "".join(f"<tr><td>{esc(r.label)}</td><td>{esc(r.value)}</td></tr>" for r in section.rows)
                 parts.append(f"<table>{cells}</table>")
             if section.note or not section.rows:
-                parts.append(f'<p class="note">{esc(section.note or "Aucune information détectée.")}</p>')
+                parts.append(f'<p class="note">{esc(section.note or _("Aucune information détectée."))}</p>')
             if section.tip:
                 parts.append(f'<p class="meta">{esc(section.tip)}</p>')
     parts.append("</body></html>")
@@ -139,6 +139,10 @@ def resolve_path(path: str, chosen_filter: str = "") -> Path:
 
 def save(data: dict, path: str, chosen_filter: str = "") -> Path:
     target = resolve_path(path, chosen_filter)
+    if target.suffix.lower() == ".pdf":
+        from . import pdf  # Qt, chargé seulement pour le PDF — Qt, loaded only for the PDF
+
+        return pdf.write(data, target)
     target.write_text(render(data, target.suffix), encoding="utf-8")
     return target
 

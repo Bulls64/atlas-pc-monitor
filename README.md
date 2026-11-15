@@ -29,7 +29,7 @@ like a circuit board.
 - **Memory upgrade advisor**: which modules to buy, and how to reach the next capacity.
 - **Sharing mode**: hides the machine's identifiers before a screenshot or an export.
 - **Comparison** with an older report: what changed on the machine.
-- **JSON, text and HTML exports**, and a **command line** to do everything without the interface.
+- **JSON, PDF, HTML and text exports**, and a **command line** to do everything without the interface.
 - **Report viewer**, on Windows as well as on Linux (AppImage): open a JSON report made on another PC,
   with its findings, intervention sheet and comparison.
 - **English and French**: interface, findings, reports and intervention sheet, switched with the **EN/FR**
@@ -150,7 +150,8 @@ the help, messages and reports in English.
 ```
 python atlas_pc.py --json                    JSON inventory on standard output
 python atlas_pc.py --text                    text report
-python atlas_pc.py -o report.html            report to a file (.json, .txt or .html)
+python atlas_pc.py -o report.html            report to a file (.json, .pdf, .html or .txt)
+python atlas_pc.py --pdf -o report.pdf       A4 PDF report
 python atlas_pc.py --fiche -o sheet.html --client "Jane Smith" --technicien Chris
                                              intervention sheet
 python atlas_pc.py --json --anonyme          inventory without identifiers
@@ -235,6 +236,7 @@ The manual checks to run on real PCs are listed (in French) in [`docs/ESSAIS-WIN
 | `atlas/fiche.py` | A4 intervention sheet |
 | `atlas/privacy.py` | sharing mode (identifier masking) |
 | `atlas/export.py` | JSON, text and HTML exports |
+| `atlas/pdf.py` | A4 PDF report, laid out by Qt |
 | `atlas/formatting.py` | value formatting (numbers, units and dates follow the language) |
 | `atlas/i18n.py`, `atlas/locale_en.py` | language choice and English catalog |
 | `atlas/settings.py` | preferences, restart as administrator |
@@ -283,7 +285,7 @@ carte électronique.
 - **Conseiller d'évolution mémoire** : quelles barrettes acheter, et comment passer à la capacité supérieure.
 - **Mode partage** : masque les identifiants du poste avant une capture ou un export.
 - **Comparaison** avec un ancien rapport : ce qui a changé sur le poste.
-- **Exports** JSON, texte et HTML, et une **ligne de commande** pour tout faire sans interface.
+- **Exports** JSON, PDF, HTML et texte, et une **ligne de commande** pour tout faire sans interface.
 - **Visionneuse de rapports**, sous Windows comme sous Linux (AppImage) : ouvrir un rapport JSON fait
   sur un autre PC, avec ses constats, sa fiche d'intervention et la comparaison.
 - **Français et anglais** : interface, constats, rapports et fiche d'intervention, au choix avec le bouton
@@ -406,7 +408,8 @@ Les commandes sans interface n'ont pas besoin de PySide6.
 ```
 python atlas_pc.py --json                    inventaire JSON sur la sortie standard
 python atlas_pc.py --text                    rapport texte
-python atlas_pc.py -o rapport.html           rapport dans un fichier (.json, .txt ou .html)
+python atlas_pc.py -o rapport.html           rapport dans un fichier (.json, .pdf, .html ou .txt)
+python atlas_pc.py --pdf -o rapport.pdf      rapport PDF au format A4
 python atlas_pc.py --fiche -o fiche.html --client "Mme Dupont" --technicien Chris
                                              fiche d'intervention
 python atlas_pc.py --json --anonyme          inventaire sans identifiants
@@ -491,6 +494,7 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 | `atlas/fiche.py` | fiche d'intervention A4 |
 | `atlas/privacy.py` | mode partage (masquage des identifiants) |
 | `atlas/export.py` | exports JSON, texte et HTML |
+| `atlas/pdf.py` | rapport PDF A4, mis en page par Qt |
 | `atlas/formatting.py` | mise en forme des valeurs (nombres, unités et dates suivent la langue) |
 | `atlas/i18n.py`, `atlas/locale_en.py` | choix de la langue et catalogue anglais |
 | `atlas/settings.py` | préférences, relance en administrateur |
