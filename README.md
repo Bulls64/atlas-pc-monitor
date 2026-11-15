@@ -186,10 +186,10 @@ Windows PCs (“Export report” button, or `AtlasPCMonitor.exe --json -o report
 findings, the intervention sheet, exports and comparison from them.
 
 ```
-chmod +x AtlasPCMonitor-1.1.0-x86_64.AppImage
-./AtlasPCMonitor-1.1.0-x86_64.AppImage                    interface
-./AtlasPCMonitor-1.1.0-x86_64.AppImage report.json        opens a report directly
-./AtlasPCMonitor-1.1.0-x86_64.AppImage --fiche report.json -o sheet.html
+chmod +x AtlasPCMonitor-1.2.0-x86_64.AppImage
+./AtlasPCMonitor-1.2.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-1.2.0-x86_64.AppImage report.json        opens a report directly
+./AtlasPCMonitor-1.2.0-x86_64.AppImage --fiche report.json -o sheet.html
 ```
 
 A report can also be opened by dragging it onto the window, or with Ctrl+O. If the AppImage does not
@@ -444,10 +444,10 @@ JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPCMoni
 et en tire constats, fiche d'intervention, exports et comparaison.
 
 ```
-chmod +x AtlasPCMonitor-1.1.0-x86_64.AppImage
-./AtlasPCMonitor-1.1.0-x86_64.AppImage                    interface
-./AtlasPCMonitor-1.1.0-x86_64.AppImage rapport.json       ouvre directement un rapport
-./AtlasPCMonitor-1.1.0-x86_64.AppImage --fiche rapport.json -o fiche.html
+chmod +x AtlasPCMonitor-1.2.0-x86_64.AppImage
+./AtlasPCMonitor-1.2.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-1.2.0-x86_64.AppImage rapport.json       ouvre directement un rapport
+./AtlasPCMonitor-1.2.0-x86_64.AppImage --fiche rapport.json -o fiche.html
 ```
 
 Un rapport s'ouvre aussi par glisser-déposer sur la fenêtre, ou avec Ctrl+O. Si l'AppImage ne démarre

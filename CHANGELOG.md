@@ -8,7 +8,7 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les numéros de version suivent
 [le versionnage sémantique](https://semver.org/lang/fr/).
 
-## [Unreleased]
+## [1.2.0] - 2026-11-15
 
 ### English
 
@@ -17,12 +17,20 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 - "About" section in the settings: version, link to the GitHub repository, license.
 - PDF export of the report (A4, findings in color, one table per section), from the export button or with `--pdf -o report.pdf`.
 
+#### Fixed
+
+- HTML report in English: "No information detected." was left in French.
+
 ### Français
 
 #### Ajouts
 
 - Section « À propos » dans les paramètres : version, lien vers le dépôt GitHub, licence.
 - Export du rapport en PDF (A4, constats en couleur, un tableau par section), depuis le bouton d'export ou avec `--pdf -o rapport.pdf`.
+
+#### Corrections
+
+- Rapport HTML en anglais : « Aucune information détectée. » restait en français.
 
 ## [1.1.0] - 2026-11-14
 
@@ -82,5 +90,6 @@ Première version publique. Atlas PC Monitor prend la suite d'Atlas PC, un outil
 - Exécutables Windows (fichier unique et dossier) avec leurs propriétés de fichier, et AppImage Linux, construits et vérifiés par la CI sur un vrai inventaire Windows.
 - Mentions tierces et textes de licence livrés avec chaque version (Qt et PySide6 sous LGPL-3.0).
 
+[1.2.0]: https://github.com/Bulls64/atlas-pc-monitor/releases/tag/v1.2.0
 [1.1.0]: https://github.com/Bulls64/atlas-pc-monitor/releases/tag/v1.1.0
 [1.0.0]: https://github.com/Bulls64/atlas-pc-monitor/releases/tag/v1.0.0
