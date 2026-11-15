@@ -345,3 +345,19 @@ def test_startup_check_shows_the_waiting_update(qtbot, monkeypatch, tmp_path):
     qtbot.addWidget(w)
     qtbot.waitUntil(lambda: w.available_release is not None)
     assert w.settings_button.text() == "v9.1.0" and "9.1.0" in w.settings_button.toolTip()
+
+
+def test_settings_about_section(win):
+    from atlas import i18n
+
+    win.open_settings()
+    dialog = win.settings_dialog
+    link = dialog.repository_link
+    assert link.openExternalLinks() and 'href="https://github.com/Bulls64/atlas-pc-monitor"' in link.text()
+    labels = [child.text() for child in dialog.findChildren(type(link))]
+    assert f"Version {__version__}" in labels and "À PROPOS" in labels
+    dialog._set_language("en")
+    labels = [child.text() for child in dialog.findChildren(type(link))]
+    assert "ABOUT" in labels and "MIT License · © 2026 Bulls64" in labels
+    assert dialog.repository_link.text().startswith("GitHub repository: ")
+    i18n.set_language("fr")

@@ -625,4 +625,9 @@ EN: dict[str, str] = {
     "Nouveautés de la v{0}": "What's new in v{0}",
     "Aucune note de version pour cette version.": "No release notes for this version.",
     "Nouveautés de cette version": "What's new in this version",
+    "À PROPOS": "ABOUT",
+    "Version {0}": "Version {0}",
+    "Inventaire matériel et diagnostic pour PC Windows.": "Hardware inventory and diagnostics for Windows PCs.",
+    "Dépôt GitHub : {0}": "GitHub repository: {0}",
+    "Licence MIT · © 2026 Bulls64": "MIT License · © 2026 Bulls64",
 }

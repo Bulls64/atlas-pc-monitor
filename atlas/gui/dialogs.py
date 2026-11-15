@@ -175,9 +175,9 @@ class _UpdateBridge(QObject):
 
 
 class SettingsDialog(QDialog):
-    """Paramètres : langue, thème et mises à jour depuis les releases GitHub.
+    """Paramètres : langue, thème, mises à jour depuis les releases GitHub et « À propos ».
 
-    Settings: language, theme and updates from the GitHub releases.
+    Settings: language, theme, updates from the GitHub releases and "About".
     """
 
     MODES = {
@@ -191,7 +191,7 @@ class SettingsDialog(QDialog):
         super().__init__(win)
         self.win = win
         self.setWindowIcon(win.windowIcon())
-        self.resize(620, 640)
+        self.resize(620, 800)
         self.error = ""
         self.busy = False
         self.bridge = _UpdateBridge(self)
@@ -275,6 +275,20 @@ class SettingsDialog(QDialog):
         ul.addWidget(self.auto_check)
         privacy = _("La recherche interroge GitHub (api.github.com) : aucune donnée de l'inventaire n'est envoyée.")
         ul.addWidget(label(privacy, "small", wrap=True))
+        layout.addWidget(frame)
+
+        frame, al = card("true")
+        al.addWidget(label(_("À PROPOS"), "eyebrow"))
+        al.addWidget(label("Atlas PC Monitor", "h3"))
+        al.addWidget(label(_("Version {0}", __version__), "body", selectable=True))
+        al.addWidget(label(_("Inventaire matériel et diagnostic pour PC Windows."), "dim", wrap=True))
+        address = update.REPOSITORY_URL.replace("https://", "")
+        link = f'<a href="{update.REPOSITORY_URL}" style="color: {theme.P.link}; text-decoration: none;">{address}</a>'
+        self.repository_link = label(_("Dépôt GitHub : {0}", link), "body", rich=True)
+        self.repository_link.setOpenExternalLinks(True)
+        self.repository_link.setToolTip(update.REPOSITORY_URL)
+        al.addWidget(self.repository_link)
+        al.addWidget(label(_("Licence MIT · © 2026 Bulls64"), "small"))
         layout.addWidget(frame)
         layout.addStretch(1)
         close = QPushButton(_("Fermer"))

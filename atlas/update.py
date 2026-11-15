@@ -56,7 +56,8 @@ log = logging.getLogger("atlas")
 
 REPOSITORY = "Bulls64/atlas-pc-monitor"
 LATEST_URL = f"https://api.github.com/repos/{REPOSITORY}/releases/latest"
-RELEASES_PAGE = f"https://github.com/{REPOSITORY}/releases"
+REPOSITORY_URL = f"https://github.com/{REPOSITORY}"
+RELEASES_PAGE = f"{REPOSITORY_URL}/releases"
 TIMEOUT_SECONDS = 15
 EXE_NAME = "AtlasPCMonitor.exe"
 ZIP_NAME = "AtlasPCMonitor-windows.zip"

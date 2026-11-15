@@ -8,6 +8,20 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les numéros de version suivent
 [le versionnage sémantique](https://semver.org/lang/fr/).
 
+## [Unreleased]
+
+### English
+
+#### Added
+
+- "About" section in the settings: version, link to the GitHub repository, license.
+
+### Français
+
+#### Ajouts
+
+- Section « À propos » dans les paramètres : version, lien vers le dépôt GitHub, licence.
+
 ## [1.1.0] - 2026-11-14
 
 ### English
