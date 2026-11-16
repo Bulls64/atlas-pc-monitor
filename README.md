@@ -186,10 +186,10 @@ Windows PCs (“Export report” button, or `AtlasPCMonitor.exe --json -o report
 findings, the intervention sheet, exports and comparison from them.
 
 ```
-chmod +x AtlasPCMonitor-1.2.0-x86_64.AppImage
-./AtlasPCMonitor-1.2.0-x86_64.AppImage                    interface
-./AtlasPCMonitor-1.2.0-x86_64.AppImage report.json        opens a report directly
-./AtlasPCMonitor-1.2.0-x86_64.AppImage --fiche report.json -o sheet.html
+chmod +x AtlasPCMonitor-1.3.0-x86_64.AppImage
+./AtlasPCMonitor-1.3.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-1.3.0-x86_64.AppImage report.json        opens a report directly
+./AtlasPCMonitor-1.3.0-x86_64.AppImage --fiche report.json -o sheet.html
 ```
 
 A report can also be opened by dragging it onto the window, or with Ctrl+O. If the AppImage does not
@@ -199,9 +199,9 @@ The same viewer also comes as a package, which adds the `atlas-pc-monitor` comma
 (installed in `/opt/atlas-pc-monitor`):
 
 ```
-sudo apt install ./atlas-pc-monitor_1.2.0-1_amd64.deb                 Debian 12+, Ubuntu 22.04+, Linux Mint 21+
-sudo dnf install ./atlas-pc-monitor-1.2.0-1.x86_64.rpm                Fedora
-sudo zypper install --allow-unsigned-rpm ./atlas-pc-monitor-1.2.0-1.x86_64.rpm     openSUSE
+sudo apt install ./atlas-pc-monitor_1.3.0-1_amd64.deb                 Debian 12+, Ubuntu 22.04+, Linux Mint 21+
+sudo dnf install ./atlas-pc-monitor-1.3.0-1.x86_64.rpm                Fedora
+sudo zypper install --allow-unsigned-rpm ./atlas-pc-monitor-1.3.0-1.x86_64.rpm     openSUSE
 atlas-pc-monitor report.json
 ```
 
@@ -459,10 +459,10 @@ JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPCMoni
 et en tire constats, fiche d'intervention, exports et comparaison.
 
 ```
-chmod +x AtlasPCMonitor-1.2.0-x86_64.AppImage
-./AtlasPCMonitor-1.2.0-x86_64.AppImage                    interface
-./AtlasPCMonitor-1.2.0-x86_64.AppImage rapport.json       ouvre directement un rapport
-./AtlasPCMonitor-1.2.0-x86_64.AppImage --fiche rapport.json -o fiche.html
+chmod +x AtlasPCMonitor-1.3.0-x86_64.AppImage
+./AtlasPCMonitor-1.3.0-x86_64.AppImage                    interface
+./AtlasPCMonitor-1.3.0-x86_64.AppImage rapport.json       ouvre directement un rapport
+./AtlasPCMonitor-1.3.0-x86_64.AppImage --fiche rapport.json -o fiche.html
 ```
 
 Un rapport s'ouvre aussi par glisser-déposer sur la fenêtre, ou avec Ctrl+O. Si l'AppImage ne démarre
@@ -472,9 +472,9 @@ La même visionneuse existe aussi en paquet, qui ajoute la commande `atlas-pc-mo
 menu (installation dans `/opt/atlas-pc-monitor`) :
 
 ```
-sudo apt install ./atlas-pc-monitor_1.2.0-1_amd64.deb                 Debian 12+, Ubuntu 22.04+, Linux Mint 21+
-sudo dnf install ./atlas-pc-monitor-1.2.0-1.x86_64.rpm                Fedora
-sudo zypper install --allow-unsigned-rpm ./atlas-pc-monitor-1.2.0-1.x86_64.rpm     openSUSE
+sudo apt install ./atlas-pc-monitor_1.3.0-1_amd64.deb                 Debian 12+, Ubuntu 22.04+, Linux Mint 21+
+sudo dnf install ./atlas-pc-monitor-1.3.0-1.x86_64.rpm                Fedora
+sudo zypper install --allow-unsigned-rpm ./atlas-pc-monitor-1.3.0-1.x86_64.rpm     openSUSE
 atlas-pc-monitor rapport.json
 ```
 
