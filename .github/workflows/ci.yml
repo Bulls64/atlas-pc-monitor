@@ -142,7 +142,7 @@ jobs:
             dist/AtlasPCMonitor.exe
 
   linux-appimage:
-    name: AppImage Linux
+    name: Paquets Linux (AppImage, .deb, .rpm)
     # Ubuntu 22.04 (glibc 2.35) : l'AppImage tourne sur toutes les distributions au moins aussi récentes.
     # Ubuntu 22.04 (glibc 2.35): the AppImage runs on every distribution at least as recent.
     runs-on: ubuntu-22.04
@@ -154,10 +154,11 @@ jobs:
       - name: Bibliothèques X11 de Qt (embarquées) et outils
         run: |
           sudo apt-get update -q
-          sudo apt-get install -y -q squashfs-tools xvfb libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 \
+          sudo apt-get install -y -q squashfs-tools rpm xvfb libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 \
             libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xinerama0 libxcb-xkb1 libegl1
       - run: python -m pip install pyinstaller pytest -r requirements.txt
       - run: tools/build_appimage.sh
+      - run: tools/build_linux_packages.sh
       - name: Essayer l'AppImage
         env:
           APPIMAGE_EXTRACT_AND_RUN: "1"  # les machines de la CI n'ont pas FUSE — the CI machines have no FUSE
@@ -177,15 +178,71 @@ jobs:
           "$app" --fiche exemple.json -o fiche.html && grep -q "Fiche d'intervention" fiche.html
           # PDF sans serveur graphique : Qt passe seul en mode « offscreen ».
           # PDF without a display server: Qt switches to "offscreen" on its own.
-          "$app" exemple.json --pdf -o rapport.pdf && head -c 4 rapport.pdf | grep -q "%PDF"
+          env -u DISPLAY -u WAYLAND_DISPLAY "$app" exemple.json --pdf -o rapport.pdf && head -c 4 rapport.pdf | grep -q "%PDF"
           # Interface sur un vrai serveur X : elle doit s'ouvrir et rester ouverte.
           # Interface on a real X server: it must open and stay open.
           xvfb-run -a sh -c "\"$app\" exemple.json & pid=\$!; sleep 10; kill -0 \$pid && kill \$pid"
           ls -la "$app"
+      - name: Installer le paquet .deb sur Ubuntu 22.04
+        run: |
+          sudo apt-get install -y -q ./dist/atlas-pc-monitor_*_amd64.deb
+          sh tests/check_linux_package.sh exemple.json
+          sudo apt-get remove -y -q atlas-pc-monitor
+          test ! -e /opt/atlas-pc-monitor
+          ls -la dist/*.deb dist/*.rpm
       - uses: actions/upload-artifact@v7
         with:
-          name: AtlasPCMonitor-linux-appimage
-          path: dist/AtlasPCMonitor-*-x86_64.AppImage
+          name: AtlasPCMonitor-linux
+          path: |
+            dist/AtlasPCMonitor-*-x86_64.AppImage
+            dist/atlas-pc-monitor_*_amd64.deb
+            dist/atlas-pc-monitor-*.x86_64.rpm
+      - uses: actions/upload-artifact@v7
+        with:
+          name: essai-paquets
+          path: |
+            exemple.json
+            tests/check_linux_package.sh
+
+  linux-install:
+    name: Installer le paquet (${{ matrix.image }})
+    # Installation réelle avec le gestionnaire de paquets de chaque distribution : les dépendances
+    # déclarées doivent se résoudre, l'interface s'ouvrir et le PDF s'écrire sans écran.
+    # Real installation with each distribution's package manager: the declared dependencies must
+    # resolve, the interface must open and the PDF must be written without a display.
+    needs: linux-appimage
+    runs-on: ubuntu-latest
+    container: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: debian:12
+            install: apt-get update -q && apt-get install -y -q ./atlas-pc-monitor_*_amd64.deb xvfb xauth
+            remove: apt-get remove -y -q atlas-pc-monitor
+          - image: fedora:latest
+            install: dnf install -y -q ./atlas-pc-monitor-*.x86_64.rpm xorg-x11-server-Xvfb xorg-x11-xauth
+            remove: dnf remove -y -q atlas-pc-monitor
+          - image: opensuse/leap:15.6
+            install: zypper --non-interactive install --allow-unsigned-rpm ./atlas-pc-monitor-*.x86_64.rpm xvfb-run
+            remove: zypper --non-interactive remove atlas-pc-monitor
+    steps:
+      # Sans checkout : les images minimales n'ont pas toujours git ni tar.
+      # No checkout: minimal images do not always have git or tar.
+      - uses: actions/download-artifact@v8
+        with:
+          name: AtlasPCMonitor-linux
+          path: artefacts
+      - uses: actions/download-artifact@v8
+        with:
+          name: essai-paquets
+          path: essai
+      - name: Installer
+        run: cp artefacts/*.deb artefacts/*.rpm . && sh -c "${{ matrix.install }}"
+      - name: Essayer
+        run: sh essai/tests/check_linux_package.sh essai/exemple.json
+      - name: Désinstaller
+        run: sh -c "${{ matrix.remove }}" && test ! -e /opt/atlas-pc-monitor && test ! -e /usr/bin/atlas-pc-monitor
 
 
   release:
@@ -193,7 +250,7 @@ jobs:
     # Un tag « v1.0.0 » poussé publie une release GitHub avec les exécutables vérifiés plus haut.
     # Pushing a "v1.0.0" tag publishes a GitHub release with the executables checked above.
     if: startsWith(github.ref, 'refs/tags/v')
-    needs: [linux, windows-tests, windows-scan, windows-build, linux-appimage]
+    needs: [linux, windows-tests, windows-scan, windows-build, linux-appimage, linux-install]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -223,13 +280,17 @@ jobs:
           - `AtlasPCMonitor.exe`: single file for Windows 10/11, run it directly · fichier unique pour Windows 10/11, à lancer directement.
           - `AtlasPCMonitor-windows.zip`: the same application as a folder, faster start and fewer antivirus warnings · la même application en dossier, démarrage plus rapide et moins d'alertes antivirus.
           - `AtlasPCMonitor-*-x86_64.AppImage`: report viewer for Linux (glibc 2.35 or later) · visionneuse de rapports pour Linux (glibc 2.35 ou plus).
+          - `atlas-pc-monitor_*_amd64.deb`: the same viewer as a package for Debian, Ubuntu, Linux Mint · la même visionneuse en paquet pour Debian, Ubuntu, Linux Mint.
+          - `atlas-pc-monitor-*.x86_64.rpm`: the same viewer as a package for Fedora, openSUSE · la même visionneuse en paquet pour Fedora, openSUSE.
           - `SHA256SUMS.txt`: fingerprints of the files above · empreintes des fichiers ci-dessus.
 
           The executables are not code-signed: SmartScreen may ask for confirmation (More info → Run anyway). · Les exécutables ne sont pas signés : SmartScreen peut demander une confirmation (Informations complémentaires → Exécuter quand même).
           NOTES
           cp artefacts/dist/AtlasPCMonitor.exe artefacts/AtlasPCMonitor-windows.zip artefacts/AtlasPCMonitor-*-x86_64.AppImage .
-          sha256sum AtlasPCMonitor.exe AtlasPCMonitor-windows.zip AtlasPCMonitor-*-x86_64.AppImage > SHA256SUMS.txt
+          cp artefacts/atlas-pc-monitor_*_amd64.deb artefacts/atlas-pc-monitor-*.x86_64.rpm .
+          files="AtlasPCMonitor.exe AtlasPCMonitor-windows.zip $(ls AtlasPCMonitor-*-x86_64.AppImage atlas-pc-monitor_*_amd64.deb atlas-pc-monitor-*.x86_64.rpm)"
+          sha256sum $files > SHA256SUMS.txt
           cat SHA256SUMS.txt
           gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag \
             --title "Atlas PC Monitor $version" --notes-file notes.md \
-            AtlasPCMonitor.exe AtlasPCMonitor-windows.zip AtlasPCMonitor-*-x86_64.AppImage SHA256SUMS.txt
+            $files SHA256SUMS.txt

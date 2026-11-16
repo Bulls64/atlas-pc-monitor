@@ -184,6 +184,7 @@ class SettingsDialog(QDialog):
         update.EXE: N_("fichier unique Windows"),
         update.FOLDER: N_("dossier Windows"),
         update.APPIMAGE: N_("AppImage Linux"),
+        update.PACKAGE: N_("paquet Linux"),
         update.SOURCE: N_("sources Python"),
     }
 
@@ -331,7 +332,8 @@ class SettingsDialog(QDialog):
     def _show_release(self) -> None:
         release = self.win.available_release
         newer = release is not None and release.is_newer
-        installable = newer and self.win.updater.install_mode() != update.SOURCE
+        mode = self.win.updater.install_mode()
+        installable = newer and update.can_install(mode)
         if self.busy:
             pass
         elif self.error:
@@ -344,7 +346,7 @@ class SettingsDialog(QDialog):
             restart = _("L'application se fermera puis redémarrera dans la nouvelle version.")
             self.update_status.setText(f"{_('Version {0} disponible.', release.version)} {restart}")
         else:
-            self.update_status.setText(f"{_('Version {0} disponible.', release.version)} {_(update.FROM_SOURCE)}")
+            self.update_status.setText(f"{_('Version {0} disponible.', release.version)} {_(update.manual_reason(mode))}")
         self.update_status.setProperty("role", "note" if self.error else "dim")
         self.update_status.style().unpolish(self.update_status)
         self.update_status.style().polish(self.update_status)

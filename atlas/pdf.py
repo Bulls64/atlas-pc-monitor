@@ -102,8 +102,12 @@ def _application():
 
     app = QGuiApplication.instance()
     if app is None:
-        if sys.platform.startswith("linux") and not os.environ.get("DISPLAY") and not os.environ.get("WAYLAND_DISPLAY"):
-            os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+        # Sous Linux, le PDF n'a jamais besoin d'écran : le lanceur de l'AppImage ou des paquets impose
+        # pourtant X11 (xcb), qui échoue dans une session sans affichage (SSH, cron).
+        # On Linux, the PDF never needs a display: the AppImage or package launcher still forces X11
+        # (xcb), which fails in a session without a display (SSH, cron).
+        if sys.platform.startswith("linux"):
+            os.environ["QT_QPA_PLATFORM"] = "offscreen"
         app = QGuiApplication(sys.argv[:1])
     return app
 

@@ -70,11 +70,15 @@ TOKEN_VARIABLE = "ATLAS_GITHUB_TOKEN"
 
 # Façons dont l'application peut être installée.
 # Ways the application can be installed.
-EXE, FOLDER, APPIMAGE, SOURCE = "exe", "folder", "appimage", "source"
+EXE, FOLDER, APPIMAGE, PACKAGE, SOURCE = "exe", "folder", "appimage", "package", "source"
 
 Progress = Callable[[int, int], None]
 FROM_SOURCE = N_(
     "Lancée depuis les sources, l'application ne se remplace pas elle-même : récupérez la nouvelle version (git pull) ou téléchargez-la."
+)
+FROM_PACKAGE = N_(
+    "Installée par un paquet (.deb ou .rpm), l'application ne se remplace pas elle-même : téléchargez le nouveau paquet "
+    "depuis la release et installez-le avec le gestionnaire de paquets."
 )
 
 
@@ -197,9 +201,9 @@ def notes_for(body: str, language: str) -> str:
 
 
 def install_mode() -> str:
-    """Comment l'application tourne : exe (fichier unique), folder (dossier), appimage ou source.
+    """Comment l'application tourne : exe (fichier unique), folder (dossier), appimage, package (.deb/.rpm) ou source.
 
-    How the application runs: exe (single file), folder, appimage or source.
+    How the application runs: exe (single file), folder, appimage, package (.deb/.rpm) or source.
     """
     if os.environ.get("APPIMAGE") and sys.platform.startswith("linux"):
         return APPIMAGE
@@ -207,11 +211,23 @@ def install_mode() -> str:
         internal = Path(sys.executable).parent / "_internal"
         bundle = Path(getattr(sys, "_MEIPASS", ""))
         return FOLDER if internal.is_dir() and bundle == internal else EXE
+    if getattr(sys, "frozen", False) and sys.platform.startswith("linux"):
+        # Version empaquetée sous Linux hors AppImage : installée par un paquet .deb ou .rpm.
+        # Packaged version on Linux outside an AppImage: installed by a .deb or .rpm package.
+        return PACKAGE
     return SOURCE
 
 
 def can_install(mode: str | None = None) -> bool:
-    return (mode or install_mode()) != SOURCE
+    return (mode or install_mode()) in (EXE, FOLDER, APPIMAGE)
+
+
+def manual_reason(mode: str) -> str:
+    """Pourquoi l'application ne s'installe pas toute seule dans ce mode (message à traduire).
+
+    Why the application does not install itself in this mode (message to translate).
+    """
+    return FROM_PACKAGE if mode == PACKAGE else FROM_SOURCE
 
 
 def asset_for(release: Release, mode: str) -> Asset:
@@ -435,8 +451,8 @@ def install(release: Release, progress: Progress | None = None, opener=None) -> 
     Downloads, checks and installs the release. Returns the command to start right before quitting.
     """
     mode = install_mode()
-    if mode == SOURCE:
-        raise UpdateError(_(FROM_SOURCE))
+    if not can_install(mode):
+        raise UpdateError(_(manual_reason(mode)))
     current = Path(os.environ["APPIMAGE"]) if mode == APPIMAGE else Path(sys.executable)
     app_folder = current.parent
     _writable(app_folder)

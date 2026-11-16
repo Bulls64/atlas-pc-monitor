@@ -179,7 +179,7 @@ SmartScreen flag it less often. The single file is easier to carry around, but u
 temporary folder on every launch. Pushing a `v*` tag makes the CI publish both, along with the AppImage,
 as a GitHub release.
 
-### Linux: AppImage
+### Linux: AppImage, .deb and .rpm packages
 
 The inventory is done on Windows. On Linux, Atlas PC Monitor is a **viewer**: it opens JSON reports made on
 Windows PCs (“Export report” button, or `AtlasPCMonitor.exe --json -o report.json`) and derives
@@ -195,6 +195,19 @@ chmod +x AtlasPCMonitor-1.2.0-x86_64.AppImage
 A report can also be opened by dragging it onto the window, or with Ctrl+O. If the AppImage does not
 start because FUSE is missing, install `libfuse2` (or run it with `--appimage-extract-and-run`).
 
+The same viewer also comes as a package, which adds the `atlas-pc-monitor` command and a menu entry
+(installed in `/opt/atlas-pc-monitor`):
+
+```
+sudo apt install ./atlas-pc-monitor_1.2.0-1_amd64.deb                 Debian 12+, Ubuntu 22.04+, Linux Mint 21+
+sudo dnf install ./atlas-pc-monitor-1.2.0-1.x86_64.rpm                Fedora
+sudo zypper install --allow-unsigned-rpm ./atlas-pc-monitor-1.2.0-1.x86_64.rpm     openSUSE
+atlas-pc-monitor report.json
+```
+
+The packages are not signed. Installed this way, the application does not update itself: the settings
+point to the new package, to install the same way.
+
 The CI AppImage (“AppImage Linux” job) is built on Ubuntu 22.04: it runs on distributions with
 glibc 2.35 or later. To build it yourself:
 
@@ -202,6 +215,8 @@ glibc 2.35 or later. To build it yourself:
 sudo apt install libxcb-cursor0 squashfs-tools
 python -m pip install -r requirements-dev.txt
 tools/build_appimage.sh                            → dist/AtlasPCMonitor-<version>-x86_64.AppImage
+sudo apt install rpm
+tools/build_linux_packages.sh                      → dist/atlas-pc-monitor_<version>-1_amd64.deb and .x86_64.rpm
 ```
 
 The script assembles the AppImage without appimagetool: a squashfs image of the PyInstaller folder,
@@ -244,8 +259,8 @@ The manual checks to run on real PCs are listed (in French) in [`docs/ESSAIS-WIN
 | `atlas/changelog.py` | "What's new" notes of a version, read from the shipped CHANGELOG.md |
 | `atlas/gui/` | PySide6 interface: theme, board map, memory modules, screens, window |
 | `tests/` | tests (pytest, pytest-qt) |
-| `tools/` | real inventory check, screenshots, icon, AppImage build |
-| `packaging/linux/` | AppImage launcher and `.desktop` shortcut |
+| `tools/` | real inventory check, screenshots, icon, AppImage, .deb and .rpm builds |
+| `packaging/linux/` | AppImage and package launchers, `.desktop` shortcut |
 
 ### License
 
@@ -437,7 +452,7 @@ SmartScreen le signalent moins souvent. Le fichier unique se transporte plus fac
 décompresse dans le dossier temporaire à chaque lancement. Un tag `v*` poussé fait publier les deux par
 la CI, avec l'AppImage, dans une release GitHub.
 
-### Linux : AppImage
+### Linux : AppImage, paquets .deb et .rpm
 
 L'inventaire se fait sous Windows. Sous Linux, Atlas PC Monitor est une **visionneuse** : il ouvre les rapports
 JSON faits sur des PC Windows (bouton « Exporter le rapport », ou `AtlasPCMonitor.exe --json -o rapport.json`)
@@ -453,6 +468,19 @@ chmod +x AtlasPCMonitor-1.2.0-x86_64.AppImage
 Un rapport s'ouvre aussi par glisser-déposer sur la fenêtre, ou avec Ctrl+O. Si l'AppImage ne démarre
 pas faute de FUSE, installer `libfuse2` (ou lancer avec `--appimage-extract-and-run`).
 
+La même visionneuse existe aussi en paquet, qui ajoute la commande `atlas-pc-monitor` et une entrée de
+menu (installation dans `/opt/atlas-pc-monitor`) :
+
+```
+sudo apt install ./atlas-pc-monitor_1.2.0-1_amd64.deb                 Debian 12+, Ubuntu 22.04+, Linux Mint 21+
+sudo dnf install ./atlas-pc-monitor-1.2.0-1.x86_64.rpm                Fedora
+sudo zypper install --allow-unsigned-rpm ./atlas-pc-monitor-1.2.0-1.x86_64.rpm     openSUSE
+atlas-pc-monitor rapport.json
+```
+
+Les paquets ne sont pas signés. Installée ainsi, l'application ne se met pas à jour elle-même : les
+paramètres renvoient vers le nouveau paquet, à installer de la même façon.
+
 L'AppImage de la CI (job « AppImage Linux ») est construite sur Ubuntu 22.04 : elle tourne sur les
 distributions dont la glibc vaut 2.35 ou plus. Pour la construire soi-même :
 
@@ -460,6 +488,8 @@ distributions dont la glibc vaut 2.35 ou plus. Pour la construire soi-même :
 sudo apt install libxcb-cursor0 squashfs-tools
 python -m pip install -r requirements-dev.txt
 tools/build_appimage.sh                            → dist/AtlasPCMonitor-<version>-x86_64.AppImage
+sudo apt install rpm
+tools/build_linux_packages.sh                      → dist/atlas-pc-monitor_<version>-1_amd64.deb et .x86_64.rpm
 ```
 
 Le script assemble l'AppImage sans appimagetool : image squashfs du dossier PyInstaller, précédée du
@@ -502,8 +532,8 @@ Les essais à faire à la main sur de vrais PC sont listés dans [`docs/ESSAIS-W
 | `atlas/changelog.py` | « Nouveautés » d'une version, lues dans le CHANGELOG.md livré avec l'application |
 | `atlas/gui/` | interface PySide6 : thème, plan de carte, barrettes, écrans, fenêtre |
 | `tests/` | tests (pytest, pytest-qt) |
-| `tools/` | vérification d'un inventaire réel, captures, icône, construction de l'AppImage |
-| `packaging/linux/` | lanceur et raccourci `.desktop` de l'AppImage |
+| `tools/` | vérification d'un inventaire réel, captures, icône, construction de l'AppImage et des paquets .deb et .rpm |
+| `packaging/linux/` | lanceurs de l'AppImage et des paquets, raccourci `.desktop` |
 
 ### Licence
 

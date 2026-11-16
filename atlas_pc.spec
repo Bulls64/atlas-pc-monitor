@@ -43,7 +43,7 @@ a = Analysis(
 # Qt modules pulled in by plugins but useless here (QML, Quick, virtual keyboard, PDF, Wayland:
 # on Linux the AppImage goes through X11/XWayland): removing them makes the folder much lighter.
 # Only Qt's French translation is kept.
-UNUSED = ("qt6qml", "qt6quick", "virtualkeyboard", "qt6pdf", "qpdf", "/qml/", "webengine", "wayland", "eglfs")
+UNUSED = ("qt6qml", "qt6quick", "virtualkeyboard", "qt6pdf", "qpdf", "/qml/", "webengine", "wayland", "wlshell", "eglfs")
 
 
 def keep(entry):

@@ -144,6 +144,8 @@ def test_install_mode(monkeypatch, tmp_path):
     monkeypatch.setenv("APPIMAGE", "/opt/AtlasPCMonitor.AppImage")
     assert update.install_mode() == update.APPIMAGE
     monkeypatch.delenv("APPIMAGE")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    assert update.install_mode() == update.PACKAGE and not update.can_install()
     monkeypatch.setattr(sys, "platform", "win32")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(tmp_path / "AtlasPCMonitor.exe"))
@@ -361,3 +363,13 @@ def test_settings_about_section(win):
     assert "ABOUT" in labels and "MIT License · © 2026 Bulls64" in labels
     assert dialog.repository_link.text().startswith("GitHub repository: ")
     i18n.set_language("fr")
+
+
+def test_settings_from_a_linux_package_offers_the_release_page(win, qtbot):
+    win.updater = FakeUpdater(update.Release("9.1.0", "v9.1.0", ""), mode=update.PACKAGE)
+    win.open_settings()
+    dialog = win.settings_dialog
+    dialog.check()
+    qtbot.waitUntil(lambda: not dialog.busy)
+    assert ".deb ou .rpm" in dialog.update_status.text() and "git pull" not in dialog.update_status.text()
+    assert not dialog.install_button.isVisibleTo(dialog) and dialog.page_button.isVisibleTo(dialog)

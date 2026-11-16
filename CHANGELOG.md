@@ -8,6 +8,28 @@ Toutes les évolutions notables d'Atlas PC Monitor sont décrites ici. Le format
 [Keep a Changelog](https://keepachangelog.com/fr/1.1.0/) et les numéros de version suivent
 [le versionnage sémantique](https://semver.org/lang/fr/).
 
+## [Unreleased]
+
+### English
+
+#### Added
+
+- Linux packages: `.deb` (Debian, Ubuntu, Linux Mint) and `.rpm` (Fedora, openSUSE), with the `atlas-pc-monitor` command and a menu entry. Installed this way, the settings point to the new package instead of updating the application.
+
+#### Fixed
+
+- PDF export from the command line of the AppImage in a session without a display (SSH): Qt no longer tries to open X11.
+
+### Français
+
+#### Ajouts
+
+- Paquets Linux : `.deb` (Debian, Ubuntu, Linux Mint) et `.rpm` (Fedora, openSUSE), avec la commande `atlas-pc-monitor` et une entrée de menu. Installée ainsi, l'application renvoie dans les paramètres vers le nouveau paquet au lieu de se mettre à jour.
+
+#### Corrections
+
+- Export PDF en ligne de commande avec l'AppImage dans une session sans écran (SSH) : Qt ne cherche plus à ouvrir X11.
+
 ## [1.2.0] - 2026-11-15
 
 ### English
